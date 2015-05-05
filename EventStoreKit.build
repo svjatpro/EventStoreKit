@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Compile">
+    
+    <PropertyGroup>
+        <Configuration>Release</Configuration>
+        <MSBuildExtensionsPath>$(MSBuildProjectDirectory)\_build</MSBuildExtensionsPath>
+    </PropertyGroup>
+    
+    <Import Project="$(MSBuildExtensionsPath)\MSBuild.Community.Tasks.Targets"/>
+    <Import Project="$(MSBuildExtensionsPath)\OSMD.targets"/>
+
+    <Target Name="Compile" DependsOnTargets="EnablePackageRestore; GenerateBuildVersion">
+        <MSBuild Projects="OSMD.sln" Properties="Configuration=$(Configuration)" />
+    </Target>
+
+    <Target Name="Package">
+        <Message Text="Publishing Application ... "></Message>        
+        <CallTarget Targets="SenchaBuild" />
+        <CallTarget Targets="PublishApp" />
+        <CallTarget Targets="ZipApp" />
+        <CallTarget Targets="FtpUpload" />
+    </Target>
+
+    <Target Name="Test" DependsOnTargets="Compile">
+        <CallTarget Targets="UnitTests" />
+    </Target>
+
+    <Target Name="Res">
+        <CallTarget Targets="Resources" />
+    </Target>
+    
+
+</Project>

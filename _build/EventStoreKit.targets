@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <PropertyGroup>
+        <Environment>Dev</Environment>
+        <FormattedVersion>0.0.0.0</FormattedVersion>
+        <GeneralVersion>0.0.0</GeneralVersion>
+        <RootDir>$(MSBuildProjectDirectory)\</RootDir>
+        <WebDir>$(RootDir)OSMD.Web\</WebDir>
+        <SenchaBuildDir>$(WebDir)build\ClientLink\production</SenchaBuildDir>
+        <PackageDirectory Condition="'$(PackageDirectory)' == '' ">$(RootDir)_package</PackageDirectory>
+    </PropertyGroup>
+
+    <UsingTask TaskName="SetEnvironmentVariable" TaskFactory="CodeTaskFactory" AssemblyName="Microsoft.Build.Tasks.v4.0">
+        <ParameterGroup>
+            <EnvKey ParameterType="System.String" Required="true" />
+            <EnvValue ParameterType="System.String" Required="true" />
+        </ParameterGroup>
+        <Task>
+            <Using Namespace="System" />
+            <Code Type="Fragment" Language="cs">
+                <![CDATA[
+                try {
+                    Environment.SetEnvironmentVariable(EnvKey, EnvValue, System.EnvironmentVariableTarget.Process);
+                }
+                catch  {
+                }
+            ]]>
+            </Code>
+        </Task>
+    </UsingTask>
+    
+     
+     <!-- Set Environment variable, which enables NuGet package restoring before Build -->
+    <Target Name="EnablePackageRestore">
+        <SetEnvironmentVariable EnvKey="EnableNuGetPackageRestore" EnvValue="true"/>
+    </Target>
+
+
+    <!-- Format version -->
+    <Target Name="FormatVersion">
+        <CreateProperty Condition=" '$(BUILD_NUMBER)' != '' " Value="$(BUILD_NUMBER)">
+            <Output TaskParameter="Value" PropertyName="FormattedVersion" />
+        </CreateProperty>    
+        <RegexReplace Condition=" '$(BUILD_NUMBER)' != '' " Input="$(BUILD_NUMBER)" Expression="\.\d+$" Replacement="">
+            <Output PropertyName = "GeneralVersion" TaskParameter="Output" />
+        </RegexReplace>
+    </Target>
+
+
+    <!-- Generation of AssemblyInfo file with actual version -->
+    <Target Name="GenerateBuildVersion" DependsOnTargets="FormatVersion">
+        <Message Text="Building version: $(FormattedVersion)"></Message>
+        <AssemblyInfo Condition=" '$(BUILD_NUMBER)' != '' "      
+            CodeLanguage="CS"
+            OutputFile="$(RootDir)_build\AssemblyInfo.cs"
+            AssemblyVersion="$(FormattedVersion)"
+            AssemblyFileVersion="$(FormattedVersion)" 
+        />        
+    </Target>
+
+    <!-- NUnit tests -->
+    <Target Name="UnitTests">
+        <NUnit Assemblies="$(RootDir)OSMD.Web.Tests\bin\$(Configuration)\OSMD.Web.Tests.dll" ToolPath="packages\NUnit.Runners.2.6.2\tools" ContinueOnError="true" />
+    </Target>
+
+</Project>
