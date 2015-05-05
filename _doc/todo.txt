@@ -1,0 +1,30 @@
+
+
+    .   [ESKIT-1] Initial project creation
+
+        .   rename IPersistanceManager (?)
+
+        .   ITrackableAggregate - try to avoid base class
+
+        .   remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
+
+        .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+
+        .   remove log4net dependency
+
+        .   remove reactive dependency ?
+
+        .   remove monads
+
+        .   remove ThreadSafeDictionary
+
+        .   remove DateTimeUtility.GetMonthPreposition
+
+        .   remove JSon serialization
+
+        .   create repository in butbucket
+
+        ?   research the idea of implementation event store functionality instead of using NEventStore
+
+
+ // ***************************************************************************************************************************************
