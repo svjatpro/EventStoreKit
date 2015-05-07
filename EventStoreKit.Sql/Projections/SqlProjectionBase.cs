@@ -121,8 +121,8 @@ namespace EventStoreKit.Sql.Projections
         {
             return PersistanceManagerFactory.Run( db => db.PerformQuery(
                 options, 
-                FilterMapping, 
-                SorterMapping, 
+                FilterMapping,
+                SorterMapping,
                 securityManager,
                 summaryAggregate: summaryAggregate ) );
         }
