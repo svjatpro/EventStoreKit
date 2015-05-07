@@ -100,7 +100,7 @@ namespace EventStoreKit.Services
         #endregion
 
         public EventStoreAdapter( 
-            Wireup wireup, 
+            Wireup wireup,
             ILogger<EventStoreAdapter> logger,
             IEventPublisher eventPublisher,
             ICommandBus commandBus )

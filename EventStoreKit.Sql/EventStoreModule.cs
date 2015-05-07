@@ -145,6 +145,7 @@ namespace EventStoreKit.Sql
 
             builder.RegisterType<SequentialIdgenerator>().As<IIdGenerator>();
             builder.RegisterType<EntityFactory>().As<IConstructAggregates>();
+            builder.RegisterType<SagaFactory>().As<IConstructSagas>();
             
             builder.RegisterType<EventSequence>().SingleInstance();
 
