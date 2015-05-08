@@ -13,15 +13,11 @@
 
     .   remove reactive dependency ?
 
-    .   remove monads
-
     .   remove ThreadSafeDictionary
 
     .   remove DateTimeUtility.GetMonthPreposition
 
     .   remove JSon serialization
-
-    .   create repository in butbucket
 
     ?   research the idea of implementation event store functionality instead of using NEventStore
 
@@ -33,6 +29,8 @@
     ---
 
     *   [ESKIT-1] Initial project creation
+
+        *   remove monads
 
 
  // ***************************************************************************************************************************************

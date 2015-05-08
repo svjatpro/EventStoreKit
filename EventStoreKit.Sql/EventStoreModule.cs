@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Monads;
 using System.Reactive.Concurrency;
 using System.Reflection;
 using System.Threading;
@@ -20,6 +19,7 @@ using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Services.IdGenerators;
+using EventStoreKit.Utility;
 using NEventStore;
 using NEventStore.Persistence.Sql.SqlDialects;
 using Module = Autofac.Module;

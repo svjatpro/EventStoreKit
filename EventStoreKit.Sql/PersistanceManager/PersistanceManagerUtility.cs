@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Monads;
 using EventStoreKit.Constants;
 using EventStoreKit.ReadModels;
 using EventStoreKit.SearchOptions;
@@ -93,7 +92,7 @@ namespace EventStoreKit.Sql.PersistanceManager
             var query = db.Query<TEntity>();
 
             // apply filters
-            if ( options.IsNotNull() && options.Filters.IsNotNull() )
+            if ( options != null && options.Filters != null )
             {
                 // Organization related entity
                 var currentUser = securityManager.With( sm => sm.CurrentUser );
@@ -128,7 +127,7 @@ namespace EventStoreKit.Sql.PersistanceManager
                 sorters.InsertRange( 0, grouperSort );
             }
             //if ( options.IsNotNull() && options.Sorters.With( s => s.Any() ) && sorterMapping.IsNotNull() )
-            if ( sorters.Any() && sorterMapping.IsNotNull() )
+            if ( sorters.Any() && sorterMapping != null )
             {
                 //var sorters = options.Sorters.ToList();
                 for ( var index = 0; index < sorters.Count; index++ )
@@ -157,7 +156,7 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         public static IQueryable<TEntity> ApplyPaging<TEntity>( this IQueryable<TEntity> source, SearchOptions.SearchOptions options, int total )
         {
-            if ( options.IsNotNull() && options.PageSize > 0 )
+            if ( options != null && options.PageSize > 0 )
             {
                 var start = ( options.PageIndex - 1 ) * options.PageSize;
                 // if the result page is beyond of the scope, then we return first page, 

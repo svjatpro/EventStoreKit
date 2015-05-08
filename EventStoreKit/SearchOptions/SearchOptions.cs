@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Monads;
 using EventStoreKit.Constants;
+using EventStoreKit.Utility;
 using Newtonsoft.Json;
 
 namespace EventStoreKit.SearchOptions
@@ -24,7 +24,7 @@ namespace EventStoreKit.SearchOptions
             if ( filter == null )
                 filter = new List<SearchFilterInfo>();
 
-            if ( quickSearch.IsNotNull() )
+            if ( quickSearch != null )
             {
                 filter.Add( new SearchFilterInfo
                 {

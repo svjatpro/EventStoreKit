@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Monads;
 using System.Reflection;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;

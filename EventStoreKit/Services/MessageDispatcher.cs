@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Monads;
 using EventStoreKit.CommandBus;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
+using EventStoreKit.Utility;
 
 namespace EventStoreKit.Services
 {
