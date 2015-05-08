@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2010
+# Visual Studio 2012
+VisualStudioVersion = 12.0.30501.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit", "EventStoreKit\EventStoreKit.csproj", "{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Sql", "EventStoreKit.Sql\EventStoreKit.Sql.csproj", "{E45A5FA9-498C-4326-B644-46802038CC6F}"
