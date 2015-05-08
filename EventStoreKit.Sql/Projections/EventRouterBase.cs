@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Monads;
 using System.Reactive.Concurrency;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;

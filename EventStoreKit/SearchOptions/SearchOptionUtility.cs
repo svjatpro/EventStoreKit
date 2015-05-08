@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Monads;
 using System.Threading;
 using EventStoreKit.Constants;
+using EventStoreKit.Utility;
 
 namespace EventStoreKit.SearchOptions
 {

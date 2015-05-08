@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Monads;
 using EventStoreKit.Constants;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -115,7 +114,9 @@ namespace EventStoreKit.Services
                     return Projections;
                 case RebuildStatus.WaitingForProjections:
                     return EventSequence.GetActiveProjections( EventStoreConstants.RebuildSessionIdentity ).ToList();
+// ReSharper disable RedundantCaseLabel
                 case RebuildStatus.Ready:
+// ReSharper restore RedundantCaseLabel
                 default:
                     return new List<IProjection>();
             }

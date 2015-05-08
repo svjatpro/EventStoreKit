@@ -2,13 +2,13 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Monads;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reflection;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
+using EventStoreKit.Utility;
 using log4net;
 using Newtonsoft.Json;
 
@@ -37,7 +37,9 @@ namespace EventStoreKit.Projections
 
         #region Private methods
 
+// ReSharper disable UnusedMember.Local
         private void RegisterHandler<TMessage>() where TMessage : Message
+// ReSharper restore UnusedMember.Local
         {
             this.OfType<IEventHandler<TMessage>>()
                 .Do( handler => Register( 

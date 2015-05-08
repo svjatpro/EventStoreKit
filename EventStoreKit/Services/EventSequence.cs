@@ -2,10 +2,10 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Monads;
 using System.Threading;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
+using EventStoreKit.Utility;
 
 namespace EventStoreKit.Services
 {

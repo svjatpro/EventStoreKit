@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Monads;
 using EventStoreKit.CommandBus;
 using EventStoreKit.Constants;
 using EventStoreKit.Logging;

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Monads;
 using System.Reflection;
 
 namespace EventStoreKit.Utility
@@ -55,7 +54,7 @@ namespace EventStoreKit.Utility
             PropertyInfo property = null;
             foreach ( var propertyName in properties.Where( p => p != null ).Distinct().ToList() )
             {
-                if ( ( property = type.GetProperty( propertyName ) ).IsNotNull() )
+                if ( ( property = type.GetProperty( propertyName ) ) != null )
                     break;
             }
             return property;

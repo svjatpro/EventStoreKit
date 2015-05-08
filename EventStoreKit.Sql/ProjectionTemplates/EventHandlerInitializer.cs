@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Monads;
 using System.Reflection;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
@@ -193,7 +192,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<TEvent, bool> validator, Func<IPersistanceManager, TEvent, object> getter, PropertyInfo property )
         {
-            if ( property.IsNotNull() && !PropertiesMap.ContainsKey( property ) )
+            if ( property != null && !PropertiesMap.ContainsKey( property ) )
                 PropertiesMap.Add( property, new EventFieldInfo { Validator = validator ?? ( e => true ), Getter = getter } );
             return this;
         }

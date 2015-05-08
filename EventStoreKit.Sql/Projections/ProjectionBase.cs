@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Monads;
 using System.Reactive.Concurrency;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Sql.ProjectionTemplates;
+using EventStoreKit.Utility;
 using log4net;
 
 namespace EventStoreKit.Sql.Projections
