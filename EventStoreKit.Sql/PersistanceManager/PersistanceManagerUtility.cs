@@ -91,22 +91,18 @@ namespace EventStoreKit.Sql.PersistanceManager
         {
             var query = db.Query<TEntity>();
 
+            // Organization related entity
+            var currentUser = securityManager.With( sm => sm.CurrentUser );
+            if ( typeof( IOrganizationReadModel ).IsAssignableFrom( typeof( TEntity ) ) && currentUser != null )
+            {
+                options.EnsureFilterAtStart<IOrganizationReadModel>( 
+                    e => e.OrganizationId,
+                    () => new SearchFilterInfo.SearchFilterData{ Value = currentUser.OrganizationId } );
+            }
+
             // apply filters
             if ( options != null && options.Filters != null )
             {
-                // Organization related entity
-                var currentUser = securityManager.With( sm => sm.CurrentUser );
-                if ( typeof( IOrganizationReadModel ).IsAssignableFrom( typeof( TEntity ) ) && currentUser != null )
-                {
-                    
-                    options.Filters.Add( 
-                        new SearchFilterInfo
-                        {
-                            Field = BaseEntityUtility.GetPropertyName<IOrganizationReadModel,Guid>( e => e.OrganizationId ),
-                            Data = new SearchFilterInfo.SearchFilterData { Value = currentUser.OrganizationId }
-                        } );
-                }
-
                 if ( filterMapping != null )
                 {
                     foreach ( var filter in options.Filters )
