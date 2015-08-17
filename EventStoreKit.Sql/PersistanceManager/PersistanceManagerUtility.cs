@@ -14,11 +14,11 @@ namespace EventStoreKit.Sql.PersistanceManager
     public static class PersistanceManagerUtility
     {
         /// <summary>
-        /// Performs action/method with separate instance of PersistanceManager within Sql Transaction on demand
+        /// Performs action/method with separate instance of DbProvider within Sql Transaction on demand
         /// </summary>
-        public static void RunLazy( this Func<IPersistanceManager> persistanceManagerCreator, Action<IPersistanceManager> action )
+        public static void RunLazy( this Func<IDbProvider> persistanceManagerCreator, Action<IDbProvider> action )
         {
-            using ( var persistanceManager = new PersistanceManagerProxy( persistanceManagerCreator ) )
+            using ( var persistanceManager = new DbProviderProxy( persistanceManagerCreator ) )
             {
                 try
                 {
@@ -36,9 +36,9 @@ namespace EventStoreKit.Sql.PersistanceManager
         }
 
         /// <summary>
-        /// Performs action/method with separate instance of PersistanceManager within Sql Transaction
+        /// Performs action/method with separate instance of DbProvider within Sql Transaction
         /// </summary>
-        public static void Run( this Func<IPersistanceManager> persistanceManagerCreator, Action<IPersistanceManager> action )
+        public static void Run( this Func<IDbProvider> persistanceManagerCreator, Action<IDbProvider> action )
         {
             using ( var persistanceManager = persistanceManagerCreator() )
             {
@@ -57,11 +57,11 @@ namespace EventStoreKit.Sql.PersistanceManager
             }
         }
         /// <summary>
-        /// Performs action/method with separate instance of PersistanceManager within Sql Transaction.
+        /// Performs action/method with separate instance of DbProvider within Sql Transaction.
         ///   If the result is query result / list, then use ToList(). 
         ///   The reason is, than deffered materialization will be failed because of disposed connection ( and commited transaction )
         /// </summary>
-        public static TResult Run<TResult>( this Func<IPersistanceManager> persistanceManagerCreator, Func<IPersistanceManager, TResult> action )
+        public static TResult Run<TResult>( this Func<IDbProvider> persistanceManagerCreator, Func<IDbProvider, TResult> action )
         {
             using ( var persistanceManager = persistanceManagerCreator() )
             {
@@ -82,7 +82,7 @@ namespace EventStoreKit.Sql.PersistanceManager
         }
 
         public static IQueryable<TEntity> PerformQueryLazy<TEntity>(
-            this IPersistanceManager db, 
+            this IDbProvider db, 
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
@@ -167,7 +167,7 @@ namespace EventStoreKit.Sql.PersistanceManager
         }
 
         public static QueryResult<TEntity> PerformQuery<TEntity>(
-            this IPersistanceManager db, 
+            this IDbProvider db, 
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,

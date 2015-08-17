@@ -6,7 +6,7 @@ using System.Linq.Expressions;
 
 namespace EventStoreKit.Sql.PersistanceManager
 {
-    public interface IPersistanceManager : IDisposable
+    public interface IDbProvider : IDisposable
     {
         void CreateDataBase( string connectionStringName, string dataBaseName );
 

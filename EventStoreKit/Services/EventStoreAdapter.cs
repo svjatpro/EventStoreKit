@@ -111,7 +111,7 @@ namespace EventStoreKit.Services
             InternalStore = 
                 new AsynchronousDispatchSchedulerWireup( 
                     wireup.CheckNull( "wireup" ), 
-                    new DelegateMessageDispatcher( DispatchCommit ), 
+                    new DelegateMessageDispatcher( DispatchCommit ),
                     DispatcherSchedulerStartup.Auto )
                 .UsingEventUpconversion()
                 .WithConvertersFrom( AppDomain.CurrentDomain.GetAssemblies() /*.Where( a => a.FullName.StartsWith( "Code.CL.Domain" ) )*/.ToArray() )
