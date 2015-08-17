@@ -9,14 +9,6 @@
  
         check with some transport bus system
 
-        
-    .   rename IPersistanceManager (?) 
-    
-        DbProvider : IDbProvider
-        Func<IDbProvider> DbProviderFactory
-
-        SqlManager
-
     .   ITrackableAggregate - try to avoid base class
 
     .   remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
@@ -27,25 +19,33 @@
 
         // use NEventStore.Logging.ILog
 
-    .   remove reactive dependency ?
-
-    .   remove ThreadSafeDictionary
-
     .   remove DateTimeUtility.GetMonthPreposition
 
     .   remove JSon serialization
 
     ?   research the idea of implementation event store functionality instead of using NEventStore
+                 
 
-        
-    .   versioning
+ // ---------------------------------------------------------------------
+ // iteration #2 v.0.2.0.0  // membership starting, payment management improvements, tenants management
+ // ---------------------------------------------------------------------
 
-    .   [ESKIT-2]
+    .   [SK-5] rename IPersistanceManager (?)
+    
+        DbProvider : IDbProvider
+        Func<IDbProvider> DbProviderFactory
 
+        SqlManager
+
+    .   [SK-4] remove ThreadSafeDictionary
+
+    .   [SK-3] Versioning
+
+    .   [SK-2] Simplify register DbProviders stuff
 
     ---
 
-    *   [ESKIT-1] Initial project creation
+    *   [SK-1] Initial project creation
 
         *   remove monads
 
