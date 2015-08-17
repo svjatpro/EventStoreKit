@@ -25,6 +25,8 @@
 
     .   remove log4net dependency
 
+        // use NEventStore.Logging.ILog
+
     .   remove reactive dependency ?
 
     .   remove ThreadSafeDictionary
@@ -47,7 +49,7 @@
 
         *   remove monads
 
-            .   move to namespace: ...Monads and use Nuget monads in OSMD
+            ?   move to namespace: ...Monads and use Nuget monads in OSMD
 
 
  // ***************************************************************************************************************************************

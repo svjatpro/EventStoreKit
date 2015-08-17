@@ -10,7 +10,7 @@ using BLToolkit.Data.Sql;
 
 namespace EventStoreKit.Sql.PersistanceManager
 {
-    public class PersistanceManager : IPersistanceManager
+    public class DbProvider : IDbProvider
     {
         #region Private fields
 
@@ -19,13 +19,13 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         #endregion
 
-        public PersistanceManager( string connectionStringName )
+        public DbProvider( string connectionStringName )
         {
             DbManager = new OSMDDbManager( connectionStringName );
             QueryComposer = new MSSQLQueryComposer();
         }
 
-        #region Implementation of IPersistanceManager
+        #region Implementation of IDbProvider
 
         #region Infrastructure
 

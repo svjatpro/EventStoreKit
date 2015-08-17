@@ -26,7 +26,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         private class EventFieldInfo
         {
             public Func<TEvent, bool> Validator;
-            public Func<IPersistanceManager, TEvent, object> Getter;
+            public Func<IDbProvider, TEvent, object> Getter;
         }
 
         private readonly ThreadSafeDictionary<Guid, TReadModel> Cache; // todo: replace with ConcurrentDictionary
@@ -44,17 +44,17 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         private readonly Dictionary<TReadModel, TEvent> EntitiesInsertBuffer = new Dictionary<TReadModel, TEvent>();
         private readonly Action<Type, Action<Message>> EventRegister;
         private readonly Action<Type, Action<Message>> EventRegisterMultiple;
-        private readonly Func<IPersistanceManagerProjection> DbFactory;
+        private readonly Func<IDbProviderProjection> DbFactory;
         private readonly Dictionary<PropertyInfo, EventFieldInfo> PropertiesMap = new Dictionary<PropertyInfo, EventFieldInfo>();
         private Func<TEvent, Expression<Func<TReadModel, bool>>> ReadModelPredicat;
         private readonly Dictionary<PropertyInfo, Func<TEvent, object>> ReadModelGetters = new Dictionary<PropertyInfo, Func<TEvent, object>>();
-        private Func<Action<IPersistanceManager, IEnumerable<TEvent>>> BufferedInsertAction;
+        private Func<Action<IDbProvider, IEnumerable<TEvent>>> BufferedInsertAction;
 
-        private Action<IPersistanceManager, TEvent, TReadModel> InitNewEntityExpression;
-        private Func<IPersistanceManager, TEvent, Expression<Func<TReadModel, TReadModel>>> UpdateExpression;
-        private Func<IPersistanceManager, TEvent, bool> ValidateExpression;
-        private Action<IPersistanceManager, TEvent> AfterExpression;
-        private Action<IPersistanceManager, TEvent> BeforeExpression;
+        private Action<IDbProvider, TEvent, TReadModel> InitNewEntityExpression;
+        private Func<IDbProvider, TEvent, Expression<Func<TReadModel, TReadModel>>> UpdateExpression;
+        private Func<IDbProvider, TEvent, bool> ValidateExpression;
+        private Action<IDbProvider, TEvent> AfterExpression;
+        private Action<IDbProvider, TEvent> BeforeExpression;
 
         #endregion
 
@@ -86,7 +86,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             }
             return predicat;
         }
-        private void InsertEntities( IPersistanceManager db, bool flush )
+        private void InsertEntities( IDbProvider db, bool flush )
         {
             var bufferAny = EntitiesInsertBuffer.Any();
             if ( !BufferedInsertEnabled )
@@ -147,7 +147,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public EventHandlerInitializer(
             Action<Type, Action<Message>, bool> eventRegister, 
-            Func<IPersistanceManagerProjection> dbFactory,
+            Func<IDbProviderProjection> dbFactory,
             ThreadSafeDictionary<Guid, TReadModel> cache = null )
         {
             EventRegisterMultiple = ( type, action ) => eventRegister( type, action, true );
@@ -173,11 +173,11 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             return WithProperty( null, ( db, @event ) => getter( @event ), property );
         }
-        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<IPersistanceManager, TEvent, object> getter, params string[] properties )
+        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<IDbProvider, TEvent, object> getter, params string[] properties )
         {
             return WithProperty( null, getter, typeof( TReadModel ).ResolveProperty( properties ) );
         }
-        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<IPersistanceManager, TEvent, object> getter, PropertyInfo property )
+        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<IDbProvider, TEvent, object> getter, PropertyInfo property )
         {
             return WithProperty( null, getter, property );
         }
@@ -185,12 +185,12 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             return WithProperty( validator, ( db, e ) => getter( e ), property );
         }
-        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<TEvent, bool> validator, Func<IPersistanceManager, TEvent, object> getter, params string[] properties )
+        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<TEvent, bool> validator, Func<IDbProvider, TEvent, object> getter, params string[] properties )
         {
             return WithProperty( validator, getter, typeof( TReadModel ).ResolveProperty( properties ) );
         }
 
-        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<TEvent, bool> validator, Func<IPersistanceManager, TEvent, object> getter, PropertyInfo property )
+        public EventHandlerInitializer<TReadModel, TEvent> WithProperty( Func<TEvent, bool> validator, Func<IDbProvider, TEvent, object> getter, PropertyInfo property )
         {
             if ( property != null && !PropertiesMap.ContainsKey( property ) )
                 PropertiesMap.Add( property, new EventFieldInfo { Validator = validator ?? ( e => true ), Getter = getter } );
@@ -218,7 +218,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 .ToDictionary(
                     prop => prop.Key,
                     prop =>
-                        new Action<IPersistanceManager, TEvent, PropertyInfo, TReadModel>(
+                        new Action<IDbProvider, TEvent, PropertyInfo, TReadModel>(
                             ( db, e, p, u ) =>
                             {
                                 if ( prop.Value.Validator( e ) )
@@ -265,9 +265,9 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             //var readModelType = typeof( TReadModel );
             //var ctor = Expression.New( readModelType );
-            //var parameterDb = Expression.Parameter( typeof( IPersistanceManager ), "db" );
+            //var parameterDb = Expression.Parameter( typeof( IDbProvider ), "db" );
             //var parameterEvent = Expression.Parameter( typeof( TEvent ), "e" );
-            //Func<IPersistanceManager, TEvent, TReadModel> entityCreator = ( db, e ) => (TReadModel)Activator.CreateInstance( readModelType );
+            //Func<IDbProvider, TEvent, TReadModel> entityCreator = ( db, e ) => (TReadModel)Activator.CreateInstance( readModelType );
             //if ( PropertiesMap.Any() )
             //{
             //    var binders = PropertiesMap
@@ -276,12 +276,12 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             //        //.Where( p => p.Value.Validator( (TEvent)@event ) ) 
             //        .Select( p =>
             //                 {
-            //                     Expression<Func<IPersistanceManager, TEvent, object>> expr = ( db, e ) => p.Value.Getter( db, e );
+            //                     Expression<Func<IDbProvider, TEvent, object>> expr = ( db, e ) => p.Value.Getter( db, e );
             //                     return Expression.Bind( p.Key, Expression.Convert( Expression.Invoke( expr, parameterDb, parameterEvent ), p.Key.PropertyType ) );
             //                 } )
             //        .ToList();
             //    var memberInit = Expression.MemberInit( ctor, binders );
-            //    var evaluator = Expression.Lambda<Func<IPersistanceManager, TEvent, TReadModel>>( memberInit, parameterDb, parameterEvent );
+            //    var evaluator = Expression.Lambda<Func<IDbProvider, TEvent, TReadModel>>( memberInit, parameterDb, parameterEvent );
             //    entityCreator = evaluator.Compile();
             //}
             //
@@ -291,7 +291,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                .ToDictionary(
                    prop => prop.Key,
                    prop =>
-                       new Action<IPersistanceManager, TEvent, PropertyInfo, TReadModel>(
+                       new Action<IDbProvider, TEvent, PropertyInfo, TReadModel>(
                            ( db, e, p, u ) =>
                            {
                                if ( prop.Value.Validator( e ) )
@@ -375,7 +375,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         /// <summary>
         /// Initialize additional custom action when imsert buffer flush
         /// </summary>
-        public EventHandlerInitializer<TReadModel, TEvent> OnFlushInsertBuffer( Func<Action<IPersistanceManager, IEnumerable<TEvent>>> insertAction = null )
+        public EventHandlerInitializer<TReadModel, TEvent> OnFlushInsertBuffer( Func<Action<IDbProvider, IEnumerable<TEvent>>> insertAction = null )
         {
             BufferedInsertAction = insertAction;
             return this;
@@ -472,7 +472,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         /// Initialize handler to Delete entity;
         /// </summary>
         public void AsDeleteAction(
-            Func<Action<IPersistanceManager, TEvent>> deleteAction = null,
+            Func<Action<IDbProvider, TEvent>> deleteAction = null,
             Func<Func<TEvent, bool>> validateEvent = null )
         {
             EventRegister(
@@ -504,27 +504,27 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #region Customization methods
 
-        public void InitNewEntityWith( Action<IPersistanceManager, TEvent, TReadModel> initNewEntityExpression )
+        public void InitNewEntityWith( Action<IDbProvider, TEvent, TReadModel> initNewEntityExpression )
         {
             InitNewEntityExpression = initNewEntityExpression;
         }
 
-        public void UpdateWith( Func<IPersistanceManager, TEvent, Expression<Func<TReadModel, TReadModel>>> updateExpression )
+        public void UpdateWith( Func<IDbProvider, TEvent, Expression<Func<TReadModel, TReadModel>>> updateExpression )
         {
             UpdateExpression = updateExpression;
         }
 
-        public void ValidateWith( Func<IPersistanceManager, TEvent, bool> validateExpression )
+        public void ValidateWith( Func<IDbProvider, TEvent, bool> validateExpression )
         {
             ValidateExpression = validateExpression;
         }
 
-        public void RunBeforeHandle( Action<IPersistanceManager, TEvent> beforeExpression )
+        public void RunBeforeHandle( Action<IDbProvider, TEvent> beforeExpression )
         {
             BeforeExpression = beforeExpression;
         }
 
-        public void RunAfterHandle( Action<IPersistanceManager, TEvent> afterExpression )
+        public void RunAfterHandle( Action<IDbProvider, TEvent> afterExpression )
         {
             AfterExpression = afterExpression;
         }

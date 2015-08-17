@@ -6,13 +6,13 @@ using System.Linq.Expressions;
 
 namespace EventStoreKit.Sql.PersistanceManager
 {
-    public class PersistanceManagerProxy : IPersistanceManager
+    public class DbProviderProxy : IDbProvider
     {
         #region Private members
 
-        private readonly Func<IPersistanceManager> PersistanceManagerBuilder;
-        private IPersistanceManager InternalInstance;
-        private IPersistanceManager Instance 
+        private readonly Func<IDbProvider> PersistanceManagerBuilder;
+        private IDbProvider InternalInstance;
+        private IDbProvider Instance 
         { 
             get
             {
@@ -31,7 +31,7 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         #endregion
 
-        public PersistanceManagerProxy( Func<IPersistanceManager> persistanceManagerBuilder ) 
+        public DbProviderProxy( Func<IDbProvider> persistanceManagerBuilder ) 
         {
             PersistanceManagerBuilder = persistanceManagerBuilder;
         }
@@ -67,7 +67,7 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         #endregion
 
-        #region Implementation of IPersistanceManager
+        #region Implementation of IDbProvider
 
         public void CreateDataBase( string connectionStringName, string dataBaseName )
         {
