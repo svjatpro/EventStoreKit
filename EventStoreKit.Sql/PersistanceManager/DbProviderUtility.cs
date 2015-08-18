@@ -11,7 +11,7 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Sql.PersistanceManager
 {
-    public static class PersistanceManagerUtility
+    public static class DbProviderUtility
     {
         /// <summary>
         /// Performs action/method with separate instance of DbProvider within Sql Transaction on demand
