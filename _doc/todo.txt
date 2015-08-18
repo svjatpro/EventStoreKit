@@ -37,6 +37,10 @@
 
         SqlManager
 
+        .   add protected method to SqlBaseProjection,  equal to DbProvider.Run(...)
+
+        ?   Inherit routerBase from SqlBase
+
     .   [SK-4] remove ThreadSafeDictionary
 
     .   [SK-3] Versioning

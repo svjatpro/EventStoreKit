@@ -85,7 +85,7 @@
     <Compile Include="PersistanceManager\OSMDDbManager.cs" />
     <Compile Include="PersistanceManager\DbProvider.cs" />
     <Compile Include="PersistanceManager\DbProviderProxy.cs" />
-    <Compile Include="PersistanceManager\PersistanceManagerUtility.cs" />
+    <Compile Include="PersistanceManager\DbProviderUtility.cs" />
     <Compile Include="PersistanceManager\SqlBulkCopyDataReader.cs" />
     <Compile Include="Projections\EventRouterBase.cs" />
     <Compile Include="Projections\ProjectionBase.cs" />
