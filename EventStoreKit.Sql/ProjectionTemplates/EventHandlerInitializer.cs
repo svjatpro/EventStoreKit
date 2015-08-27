@@ -322,6 +322,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                         AddToCache( (TEvent) @event, entity );
                         // add to buffer and call lazy insert
                         EntitiesInsertBuffer.Add( entity, (TEvent) @event );
+                        InsertEntities( db, false );
 
                         // run custom action after insert
                         AfterExpression.Do( a => a( db, (TEvent)@event ) );
@@ -336,7 +337,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             new[] { flushEvent }
                 .Concat( flushEvents )
-                .ToList().ForEach( eventType => EventRegisterMultiple( eventType, e =>DbFactory.Run( db => InsertEntities( db, true ) ) ) );
+                .ToList().ForEach( eventType => EventRegisterMultiple( eventType, e => DbFactory.Run( db => InsertEntities( db, true ) ) ) );
             return this;
         }
         
