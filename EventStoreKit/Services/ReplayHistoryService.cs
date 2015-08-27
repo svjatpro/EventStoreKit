@@ -51,6 +51,10 @@ namespace EventStoreKit.Services
                 Projections = projections.ToList();
             }
 
+            var cleanEvent = new SystemCleanedUpEvent();
+            foreach ( var model in projections )
+                model.Replay( cleanEvent );
+
             var commits = Store.Advanced.GetFrom( new DateTime( 2010, 1, 1 ) ).ToList();
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
