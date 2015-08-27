@@ -116,6 +116,7 @@
     <Compile Include="Utility\CollectionUtility.cs" />
     <Compile Include="Utility\DateTimeUtility.cs" />
     <Compile Include="Utility\EnumUtility.cs" />
+    <Compile Include="Utility\EventSagaProcessorUtility.cs" />
     <Compile Include="Utility\EventStoreUtility.cs" />
     <Compile Include="Utility\ExpressionsUtility.cs" />
     <Compile Include="Utility\MonadsUtility.cs" />
