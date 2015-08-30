@@ -57,7 +57,10 @@ namespace EventStoreKit.Sql
                     {
                         Entity = repository.GetById<TEntity>( cmd.Id )
                     };
-                    SecurityManager.CurrentUser.Do( user => context.Entity.IssuedBy = user.UserId );
+                    if ( cmd.CreatedBy != Guid.Empty )
+                        context.Entity.IssuedBy = cmd.CreatedBy;
+                    else
+                        SecurityManager.CurrentUser.Do( user => context.Entity.IssuedBy = user.UserId );
 
                     handler.Handle( cmd, context );
                     Logger.InfoFormat( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
