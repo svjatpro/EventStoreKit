@@ -20,6 +20,15 @@ namespace EventStoreKit.Utility
 
         #endregion
 
+        public static string Left( this string source, int length )
+        {
+            var actualLength = source.Length;
+            return 
+                actualLength <= length ?
+                source :
+                source.Substring( 0, length );
+        }
+
         public static string FormatHtmlException( this string exception )
         {
             var strings = exception
