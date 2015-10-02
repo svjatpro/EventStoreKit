@@ -199,5 +199,56 @@ namespace EventStoreKit.Utility
 
             return lambda.Compile()( source );
         }
+
+        /// <summary>
+        /// Initialize the given object's public properties with random data
+        /// </summary>
+        public static TObj GenerateData<TObj>( this TObj obj, Action<TObj> customAssigns = null )
+        {
+            var type = obj.GetType();
+            var properties = type.GetProperties( BindingFlags.Public | BindingFlags.Instance ).ToList();
+            properties.ForEach( property =>
+            {
+                object value;
+                var random = new Random( (int) DateTime.Now.Ticks );
+                var typeKey = property.PropertyType.GetTypeKey();
+                byte[] buf;
+                switch ( typeKey )
+                {
+                    case "String":
+                        buf = new byte[10];
+                        random.NextBytes( buf );
+                        value = BitConverter.ToString( buf );
+                        break;
+                    case "Guid":
+                        value = Guid.NewGuid();
+                        break;
+                    case "Guid?":
+                        value = (Guid?)Guid.NewGuid();
+                        break;
+                    case "Int32":
+                        value = random.Next( 1, 100 );
+                        break;
+                    case "Decimal":
+                        value = (decimal)random.NextDouble();
+                        break;
+                    case "Boolean":
+                        value = random.Next( 0, 1 ) == 1;
+                        break;
+                    case "DateTime":
+                        value = DateTime.Now.AddDays( random.Next( 0, 100 ) );
+                        break;
+                    case "DateTime?":
+                        value = (DateTime?)( DateTime.Now.AddDays( random.Next( 0, 100 ) ) );
+                        break;
+                    default:
+                        return;
+                }
+                property.SetValue( obj, value, new object[]{} );
+            } );
+
+            customAssigns.Do( assign => assign( obj ) );
+            return obj;
+        }
     }
 }

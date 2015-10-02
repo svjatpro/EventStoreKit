@@ -120,5 +120,9 @@ namespace EventStoreKit.Utility
 
             return saga;
         }
+        public static TSaga ProcessSaga<TSaga>( this Message message, ISagaRepository repository, ICommandBus commandBus ) where TSaga : class, ISaga, new()
+        {
+            return message.ProcessSaga( string.Empty, repository, commandBus, new TSaga() );
+        }
     }
 }
