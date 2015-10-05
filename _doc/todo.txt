@@ -24,7 +24,8 @@
     .   remove JSon serialization
 
     ?   research the idea of implementation event store functionality instead of using NEventStore
-                 
+
+    .   copyTo: check properties Type and throw exception if types is different
 
  // ---------------------------------------------------------------------
  // iteration #2 v.0.2.0.0  // membership starting, payment management improvements, tenants management
