@@ -102,7 +102,7 @@
     <Compile Include="Services\EntityFactory.cs" />
     <Compile Include="Services\EventSequence.cs" />
     <Compile Include="Services\EventStoreAdapter.cs" />
-    <Compile Include="Services\IdGenerators\DefaultIdGenerator.cs" />
+    <Compile Include="Services\IdGenerators\SimpleIdGenerator.cs" />
     <Compile Include="Services\IdGenerators\IIdGenerator.cs" />
     <Compile Include="Services\IdGenerators\SequentialIdgenerator.cs" />
     <Compile Include="Services\IEventDispatcher.cs" />
