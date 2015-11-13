@@ -115,9 +115,9 @@ namespace EventStoreKit.Projections
 
         #endregion
 
-        protected EventQueueSubscriber( ILog clientLinkLogger, IScheduler scheduler )
+        protected EventQueueSubscriber( ILog logger, IScheduler scheduler )
         {
-            Log = clientLinkLogger.CheckNull( "logger" );
+            Log = logger.CheckNull( "logger" );
 
             Actions = new Dictionary<Type, Action<Message>>();
             MessageQueue = new BlockingCollection<EventInfo>();
