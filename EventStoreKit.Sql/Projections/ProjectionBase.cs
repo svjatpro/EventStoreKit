@@ -61,5 +61,26 @@ namespace EventStoreKit.Sql.Projections
         {
             ProjectionTemplates.ForEach( t => t.PreprocessEvent( message ) );
         }
+
+        /// <summary>
+        /// Executes .net events in secure way: 
+        ///  - check if there is any subscribers
+        ///  - prevent execution during rebuild
+        ///  - prevent execution for bulk messages
+        /// </summary>
+        /// <param name="event">Event handler</param>
+        /// <param name="sender">Sender object</param>
+        /// <param name="args">Generic event argument</param>
+        /// <param name="message"></param>
+        protected void Execute<TArgs>( EventHandler<TArgs> @event, object sender, TArgs args, Message message = null ) where TArgs : EventArgs
+        {
+            if ( @event != null && !IsRebuild && ( message == null || !message.IsBulk ) )
+                @event.Invoke( sender, args );
+        }
+        protected void Execute( EventHandler @event, object sender, EventArgs args, Message message = null )
+        {
+            if ( @event != null && !IsRebuild && ( message == null || !message.IsBulk ) )
+                @event.Invoke( sender, args );
+        }
     }
 }
