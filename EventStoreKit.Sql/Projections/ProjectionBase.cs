@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
+using System.Runtime.Remoting.Messaging;
+using System.Threading.Tasks;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Sql.ProjectionTemplates;
@@ -75,12 +77,28 @@ namespace EventStoreKit.Sql.Projections
         protected void Execute<TArgs>( EventHandler<TArgs> @event, object sender, TArgs args, Message message = null ) where TArgs : EventArgs
         {
             if ( @event != null && !IsRebuild && ( message == null || !message.IsBulk ) )
-                @event.Invoke( sender, args );
+                @event.BeginInvoke( sender, args, result =>
+                {
+                    try { ( (EventHandler<TArgs>)( (AsyncResult)result ).AsyncDelegate ).EndInvoke( result ); }
+                    catch ( Exception ex )
+                    {
+                        Log.Error( string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", @event.GetType().Name, GetType().Name, ex.Message ), ex );
+                    }
+                }, null );
         }
         protected void Execute( EventHandler @event, object sender, EventArgs args, Message message = null )
         {
             if ( @event != null && !IsRebuild && ( message == null || !message.IsBulk ) )
-                @event.Invoke( sender, args );
+            {
+                @event.BeginInvoke( sender, args, result =>
+                {
+                    try { ( (EventHandler)( (AsyncResult)result ).AsyncDelegate ).EndInvoke( result ); }
+                    catch ( Exception ex )
+                    {
+                        Log.Error( string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", @event.GetType().Name, GetType().Name, ex.Message ), ex );
+                    }
+                }, null );
+            }
         }
     }
 }

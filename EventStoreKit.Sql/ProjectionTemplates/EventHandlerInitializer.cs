@@ -55,6 +55,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         private Func<IDbProvider, TEvent, bool> ValidateExpression;
         private Action<IDbProvider, TEvent> AfterExpression;
         private Action<IDbProvider, TEvent> BeforeExpression;
+        private Action<TEvent> PostProcessExpression;
 
         #endregion
 
@@ -229,31 +230,35 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
             EventRegister(
                 typeof( TEvent ),
-                @event => DbFactory.Run(
-                    db =>
-                    {
-                        // run validation expression
-                        if ( !ValidateExpression.Return( v => v( db, (TEvent)@event ), true ) )
-                            return;
+                @event =>
+                {
+                    DbFactory.Run(
+                        db =>
+                        {
+                            // run validation expression
+                            if ( !ValidateExpression.Return( v => v( db, (TEvent) @event ), true ) )
+                                return;
 
-                        // run custom action before insert
-                        BeforeExpression.Do( a => a( db, (TEvent)@event ) );
+                            // run custom action before insert
+                            BeforeExpression.Do( a => a( db, (TEvent) @event ) );
 
-                        var entity = (TReadModel)Activator.CreateInstance( readModelType );
-                        properties.ForEach( p => p.Value( db, (TEvent)@event, p.Key, entity ) );
-                        
-                        // run custom initialization for new entity
-                        InitNewEntityExpression.Do( a => a( db, (TEvent) @event, entity ) );
+                            var entity = (TReadModel) Activator.CreateInstance( readModelType );
+                            properties.ForEach( p => p.Value( db, (TEvent) @event, p.Key, entity ) );
 
-                        db.Insert( entity );
-                        //db.InsertOrReplace( entity );
-                        
-                        // add to cache
-                        AddToCache( (TEvent) @event, entity );
+                            // run custom initialization for new entity
+                            InitNewEntityExpression.Do( a => a( db, (TEvent) @event, entity ) );
 
-                        // run custom action after insert
-                        AfterExpression.Do( a => a( db, (TEvent)@event ) );
-                    } ) );
+                            db.Insert( entity );
+                            //db.InsertOrReplace( entity );
+
+                            // add to cache
+                            AddToCache( (TEvent) @event, entity );
+
+                            // run custom action after insert
+                            AfterExpression.Do( a => a( db, (TEvent) @event ) );
+                        } );
+                    PostProcessExpression.Do( a => a( (TEvent) @event ) );
+                } );
             return this;
         }
 
@@ -302,31 +307,35 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
             EventRegister(
                 typeof( TEvent ),
-                @event => DbFactory.RunLazy(
-                    db =>
-                    {
-                        // run validation expression
-                        if ( !ValidateExpression.Return( v => v( db, (TEvent)@event ), true ) )
-                            return;
+                @event =>
+                {
+                    DbFactory.RunLazy(
+                        db =>
+                        {
+                            // run validation expression
+                            if ( !ValidateExpression.Return( v => v( db, (TEvent) @event ), true ) )
+                                return;
 
-                        // run custom action before insert
-                        BeforeExpression.Do( a => a( db, (TEvent)@event ) );
+                            // run custom action before insert
+                            BeforeExpression.Do( a => a( db, (TEvent) @event ) );
 
-                        var entity = (TReadModel)Activator.CreateInstance( readModelType );
-                        properties.ForEach( p => p.Value( db, (TEvent)@event, p.Key, entity ) );
+                            var entity = (TReadModel) Activator.CreateInstance( readModelType );
+                            properties.ForEach( p => p.Value( db, (TEvent) @event, p.Key, entity ) );
 
-                        // run custom initialization for new entity
-                        InitNewEntityExpression.Do( a => a( db, (TEvent)@event, entity ) );
+                            // run custom initialization for new entity
+                            InitNewEntityExpression.Do( a => a( db, (TEvent) @event, entity ) );
 
-                        // add to cache
-                        AddToCache( (TEvent) @event, entity );
-                        // add to buffer and call lazy insert
-                        EntitiesInsertBuffer.Add( entity, (TEvent) @event );
-                        InsertEntities( db, false );
+                            // add to cache
+                            AddToCache( (TEvent) @event, entity );
+                            // add to buffer and call lazy insert
+                            EntitiesInsertBuffer.Add( entity, (TEvent) @event );
+                            InsertEntities( db, false );
 
-                        // run custom action after insert
-                        AfterExpression.Do( a => a( db, (TEvent)@event ) );
-                    } ) );
+                            // run custom action after insert
+                            AfterExpression.Do( a => a( db, (TEvent) @event ) );
+                        } );
+                    PostProcessExpression.Do( a => a( (TEvent)@event ) );
+                } );
             return this;
         }
 
@@ -410,63 +419,66 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
             EventRegister(
                 typeof( TEvent ),
-                @event => DbFactory.Run(
-                    db =>
-                    {
-                        // run validation expression
-                        if ( !ValidateExpression.Return( v => v( db, (TEvent)@event ), true ) )
-                            return;
-
-                        // todo: make this Expression in advance with @event as parameter instead of constant
-                        Expression<Func<TReadModel, TReadModel>> evaluator = null;
-                        var udpateExpr = UpdateExpression.With( getter => getter( db, (TEvent)@event ) );
-                        var parameter = udpateExpr.Return(
-                            expr => expr.Parameters[0],
-                            Expression.Parameter( readmodelType, "entity" ) );
-                        var customBindings = udpateExpr
-                            .With( e => e.Body.OfType<MemberInitExpression>() )
-                            .With( m => m.Bindings )
-                            .Return( b => b.ToList(), new List<MemberBinding>() );
-
-                        if ( PropertiesMap.Any() )
+                @event =>
+                {
+                    DbFactory.Run(
+                        db =>
                         {
-                            var binders = customBindings.Union( PropertiesMap
-                                .Where( p => p.Value.Validator( (TEvent)@event ) && !customBindings.Any( b => b.Member.Name == p.Key.Name ) )
-                                .Select( 
-                                    p =>
-                                    {
-                                        var customBinding = customBindings.SingleOrDefault( b => b.Member.Name == p.Key.Name );
-                                        var valueConst = Expression.Constant( p.Value.Getter( db, (TEvent)@event), p.Key.PropertyType );
-                                        return customBinding ?? Expression.Bind( p.Key, valueConst );
-                                    } ) )
-                                .ToList();
-                            var memberInit = Expression.MemberInit( ctor, binders );
-                            evaluator = Expression.Lambda<Func<TReadModel, TReadModel>>( memberInit, parameter );
-                        }
+                            // run validation expression
+                            if ( !ValidateExpression.Return( v => v( db, (TEvent) @event ), true ) )
+                                return;
 
-                        // run custom action before update
-                        BeforeExpression.Do( a => a( db, (TEvent)@event ) );
+                            // todo: make this Expression in advance with @event as parameter instead of constant
+                            Expression<Func<TReadModel, TReadModel>> evaluator = null;
+                            var udpateExpr = UpdateExpression.With( getter => getter( db, (TEvent) @event ) );
+                            var parameter = udpateExpr.Return(
+                                expr => expr.Parameters[0],
+                                Expression.Parameter( readmodelType, "entity" ) );
+                            var customBindings = udpateExpr
+                                .With( e => e.Body.OfType<MemberInitExpression>() )
+                                .With( m => m.Bindings )
+                                .Return( b => b.ToList(), new List<MemberBinding>() );
 
-                        var predicat = GetReadModelPredicat( (TEvent)@event );
-                        if ( predicat != null && evaluator != null )
-                            db.Update( predicat, evaluator );
-
-                        // run custom action after update
-                        AfterExpression.Do( a => a( db, (TEvent) @event ) );
-
-                        // update cache
-                        if ( predicat != null && Cache != null )
-                        {
-                            // todo: compile expression and use it to update existing entity without additional DB query
-                            var entity = db.Query<TReadModel>().Where( predicat ).FirstOrDefault();
-                            if ( entity != null )
+                            if ( PropertiesMap.Any() )
                             {
-                                var id = GetReadModelId( (TEvent)@event );
-                                Cache.AddOrUpdate( id, entity );
+                                var binders = customBindings.Union( PropertiesMap
+                                    .Where( p => p.Value.Validator( (TEvent) @event ) && !customBindings.Any( b => b.Member.Name == p.Key.Name ) )
+                                    .Select(
+                                        p =>
+                                        {
+                                            var customBinding = customBindings.SingleOrDefault( b => b.Member.Name == p.Key.Name );
+                                            var valueConst = Expression.Constant( p.Value.Getter( db, (TEvent) @event ), p.Key.PropertyType );
+                                            return customBinding ?? Expression.Bind( p.Key, valueConst );
+                                        } ) )
+                                    .ToList();
+                                var memberInit = Expression.MemberInit( ctor, binders );
+                                evaluator = Expression.Lambda<Func<TReadModel, TReadModel>>( memberInit, parameter );
                             }
-                        }
-                    } )
-                 );
+
+                            // run custom action before update
+                            BeforeExpression.Do( a => a( db, (TEvent) @event ) );
+
+                            var predicat = GetReadModelPredicat( (TEvent) @event );
+                            if ( predicat != null && evaluator != null )
+                                db.Update( predicat, evaluator );
+
+                            // run custom action after update
+                            AfterExpression.Do( a => a( db, (TEvent) @event ) );
+
+                            // update cache
+                            if ( predicat != null && Cache != null )
+                            {
+                                // todo: compile expression and use it to update existing entity without additional DB query
+                                var entity = db.Query<TReadModel>().Where( predicat ).FirstOrDefault();
+                                if ( entity != null )
+                                {
+                                    var id = GetReadModelId( (TEvent) @event );
+                                    Cache.AddOrUpdate( id, entity );
+                                }
+                            }
+                        } );
+                    PostProcessExpression.Do( a => a( (TEvent)@event ) );
+                } );
         }
 
         /// <summary>
@@ -478,29 +490,33 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             EventRegister(
                 typeof( TEvent ),
-                @event => DbFactory.Run(
-                    db =>
-                    {
-                        var validate = validateEvent.With( a => a() );
-                        if ( validate != null && !validate( (TEvent)@event ) )
-                            return;
-
-                        var predicat = GetReadModelPredicat( (TEvent)@event );
-                        if ( predicat != null )
-                            db.Delete( predicat );
-
-                        // delete from cache
-                        if ( predicat != null && Cache != null )
+                @event =>
+                {
+                    DbFactory.Run(
+                        db =>
                         {
-                            var id = GetReadModelId( (TEvent)@event );
-                            Cache.RemoveIfExist( id );
-                        }
+                            var validate = validateEvent.With( a => a() );
+                            if ( validate != null && !validate( (TEvent) @event ) )
+                                return;
 
-                        // run custom action
-                        var action = deleteAction.With( a => a() );
-                        if ( action != null )
-                            action( db, (TEvent)@event );
-                    } ) );
+                            var predicat = GetReadModelPredicat( (TEvent) @event );
+                            if ( predicat != null )
+                                db.Delete( predicat );
+
+                            // delete from cache
+                            if ( predicat != null && Cache != null )
+                            {
+                                var id = GetReadModelId( (TEvent) @event );
+                                Cache.RemoveIfExist( id );
+                            }
+
+                            // run custom action
+                            var action = deleteAction.With( a => a() );
+                            if ( action != null )
+                                action( db, (TEvent) @event );
+                        } );
+                    PostProcessExpression.Do( a => a( (TEvent)@event ) );
+                } );
         }
 
         #region Customization methods
@@ -528,6 +544,11 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         public void RunAfterHandle( Action<IDbProvider, TEvent> afterExpression )
         {
             AfterExpression = afterExpression;
+        }
+
+        public void PostProcess( Action<TEvent> postProcessExpression )
+        {
+            PostProcessExpression = postProcessExpression;
         }
 
         #endregion

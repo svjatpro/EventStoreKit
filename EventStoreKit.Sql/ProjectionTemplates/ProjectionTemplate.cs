@@ -213,6 +213,15 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return this;
         }
 
+        public ProjectionTemplate<TReadModel> PostProcess<TEvent>( Action<TEvent> postProcessExpression ) where TEvent : Message
+        {
+            EventHandlerInitializers
+               .Get( typeof( TEvent ) )
+               .OfType<EventHandlerInitializer<TReadModel, TEvent>>()
+               .Do( handler => handler.PostProcess( postProcessExpression ) );
+            return this;
+        }
+
         #endregion
     }
 }
