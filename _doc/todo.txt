@@ -27,9 +27,13 @@
 
     .   copyTo: check properties Type and throw exception if types is different
 
+
+    .   [SK-7]
+
  // ---------------------------------------------------------------------
- // iteration #2 v.0.2.0.0  // membership starting, payment management improvements, tenants management
+ // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
  // ---------------------------------------------------------------------
+
 
     .   [SK-5] rename IPersistanceManager (?)
     
@@ -49,6 +53,22 @@
     .   [SK-2] Simplify register DbProviders stuff
 
     ---
+
+ // ---------------------------------------------------------------------
+ // iteration #2 v.0.1.2.0 
+ // ---------------------------------------------------------------------
+
+    *   [SK-6] Prevent events post processing for rebuild and bulk events
+
+        in some cases we don't need to post process events ( i.e. by signalR )
+
+        *   projections should not execute events during rebuild - execute .net events through the special methods in basic class only
+
+        *   add IsBulk field to basic message class and check in post process methods
+
+ // ---------------------------------------------------------------------
+ // iteration #1 v.0.1.1.0 
+ // ---------------------------------------------------------------------
 
     *   [SK-1] Initial project creation
 
