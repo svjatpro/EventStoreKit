@@ -63,10 +63,6 @@ namespace EventStoreKit.Projections
                     Log.InfoFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
                 }
             }
-            catch ( ArgumentException ex )
-            {
-                Log.Error( string.Format( "No events passed to read model {0}", GetType().Name ), ex );
-            }
             catch ( Exception ex )
             {
                 Log.Error( string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", e.GetType().Name, GetType().Name, ex.Message ), ex );

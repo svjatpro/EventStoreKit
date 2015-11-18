@@ -73,7 +73,7 @@ namespace EventStoreKit.Sql.Projections
         /// <param name="event">Event handler</param>
         /// <param name="sender">Sender object</param>
         /// <param name="args">Generic event argument</param>
-        /// <param name="message"></param>
+        /// <param name="message">Initial message</param>
         protected void Execute<TArgs>( EventHandler<TArgs> @event, object sender, TArgs args, Message message = null ) where TArgs : EventArgs
         {
             if ( @event != null && !IsRebuild && ( message == null || !message.IsBulk ) )
