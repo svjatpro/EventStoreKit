@@ -1,0 +1,80 @@
+
+ // ***************************************************************************************************************************************
+
+    .   Make SearchOptions abstract - try to distance from ExtJs structure
+
+    .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
+
+    .   Research [DataContract] importance for events and commands
+ 
+        check with some transport bus system
+
+    .   ITrackableAggregate - try to avoid base class
+
+    .   remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
+
+    .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+
+    .   remove log4net dependency
+
+        // use NEventStore.Logging.ILog
+
+    .   remove DateTimeUtility.GetMonthPreposition
+
+    .   remove JSon serialization
+
+    ?   research the idea of implementation event store functionality instead of using NEventStore
+
+    .   copyTo: check properties Type and throw exception if types is different
+
+
+    .   [SK-7]
+
+ // ---------------------------------------------------------------------
+ // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
+ // ---------------------------------------------------------------------
+
+
+    .   [SK-5] rename IPersistanceManager (?)
+    
+        DbProvider : IDbProvider
+        Func<IDbProvider> DbProviderFactory
+
+        SqlManager
+
+        .   add protected method to SqlBaseProjection,  equal to DbProvider.Run(...)
+
+        ?   Inherit routerBase from SqlBase
+
+    .   [SK-4] remove ThreadSafeDictionary
+
+    .   [SK-3] Versioning
+
+    .   [SK-2] Simplify register DbProviders stuff
+
+    ---
+
+ // ---------------------------------------------------------------------
+ // iteration #2 v.0.1.2.0 
+ // ---------------------------------------------------------------------
+
+    *   [SK-6] Prevent events post processing for rebuild and bulk events
+
+        in some cases we don't need to post process events ( i.e. by signalR )
+
+        *   projections should not execute events during rebuild - execute .net events through the special methods in basic class only
+
+        *   add IsBulk field to basic message class and check in post process methods
+
+ // ---------------------------------------------------------------------
+ // iteration #1 v.0.1.1.0 
+ // ---------------------------------------------------------------------
+
+    *   [SK-1] Initial project creation
+
+        *   remove monads
+
+            ?   move to namespace: ...Monads and use Nuget monads in OSMD
+
+
+ // ***************************************************************************************************************************************
