@@ -36,7 +36,6 @@
  // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
  // ---------------------------------------------------------------------
 
-
     .   [SK-5] rename IPersistanceManager (?)
     
         DbProvider : IDbProvider
@@ -52,7 +51,7 @@
 
     .   [SK-3] Versioning
 
-    .   [SK-2] Simplify register DbProviders stuff
+    *   [SK-2] Simplify register DbProviders stuff
 
     ---
 

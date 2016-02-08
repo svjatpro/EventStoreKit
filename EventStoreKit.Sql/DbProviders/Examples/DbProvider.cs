@@ -46,20 +46,20 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         public void DropTable( string tableName )
         {
-            DbManager.SetCommand( QueryComposer.DropTable(tableName) );
+            DbManager.SetCommand( QueryComposer.DropTable( tableName ) );
             DbManager.ExecuteNonQuery();
         }
 
         public void CreateTable<T>( bool overwrite = false ) where T : class
         {
-            if (overwrite)
+            if ( overwrite )
                 DropTable<T>();
 
             var table = new SqlTable<T>();
-            var createScript = QueryComposer.CreateTable(table);
+            var createScript = QueryComposer.CreateTable( table );
 
             DbManager.SetCommand( createScript ).ExecuteNonQuery();
-            foreach (var createIndexScript in QueryComposer.CreateIndices(table))
+            foreach ( var createIndexScript in QueryComposer.CreateIndices( table ) )
             {
                 DbManager.SetCommand( createIndexScript ).ExecuteNonQuery();
             }
@@ -77,7 +77,7 @@ namespace EventStoreKit.Sql.PersistanceManager
                 database = DbManager.Connection.Database;
             if ( string.IsNullOrWhiteSpace( owner ) )
                 owner = "dbo";
-            var truncateQuery = QueryComposer.TruncateTable(table, database, owner);
+            var truncateQuery = QueryComposer.TruncateTable( table, database, owner );
             DbManager.SetCommand( truncateQuery ).ExecuteNonQuery();
         }
 
@@ -150,10 +150,10 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         public void Insert<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class
         {
-            Insert<T,T>( predicat, evaluator );
+            Insert<T, T>( predicat, evaluator );
         }
         public int Insert<TSource, TDestination>( Expression<Func<TSource, bool>> predicat, Expression<Func<TSource, TDestination>> evaluator )
-            where TSource : class 
+            where TSource : class
             where TDestination : class
         {
             return DbManager
@@ -179,16 +179,16 @@ namespace EventStoreKit.Sql.PersistanceManager
             DbManager.GetTable<T>().Update( predicat, evaluator );
         }
 
-        public void Update<TSource,TDestination>( IQueryable<TSource> source, Expression<Func<TSource,TDestination>> evaluator )
-            where TSource : class 
+        public void Update<TSource, TDestination>( IQueryable<TSource> source, Expression<Func<TSource, TDestination>> evaluator )
+            where TSource : class
             where TDestination : class
         {
             source.Update( DbManager.GetTable<TDestination>(), evaluator );
         }
 
-        public int ExecuteNonQuery(string query)
+        public int ExecuteNonQuery( string query )
         {
-            return DbManager.SetCommand(query).ExecuteNonQuery();
+            return DbManager.SetCommand( query ).ExecuteNonQuery();
         }
 
         public void BeginTransaction( IsolationLevel isolationLevel )
