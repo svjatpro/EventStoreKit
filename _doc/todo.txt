@@ -38,13 +38,13 @@
 
     .   [SK-3] Versioning
 
+    ---
+
     *   [SK-8] Remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
 
         *   SqlIgnoreAttribute
 
         *   QueryComposer
-
-    ---
 
     *   [SK-2] Simplify register DbProviders stuff
 
