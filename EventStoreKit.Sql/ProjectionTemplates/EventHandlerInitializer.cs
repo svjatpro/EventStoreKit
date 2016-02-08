@@ -44,7 +44,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         private readonly Dictionary<TReadModel, TEvent> EntitiesInsertBuffer = new Dictionary<TReadModel, TEvent>();
         private readonly Action<Type, Action<Message>> EventRegister;
         private readonly Action<Type, Action<Message>> EventRegisterMultiple;
-        private readonly Func<IDbProviderProjection> DbFactory;
+        private readonly Func<IDbProvider> DbFactory;
         private readonly Dictionary<PropertyInfo, EventFieldInfo> PropertiesMap = new Dictionary<PropertyInfo, EventFieldInfo>();
         private Func<TEvent, Expression<Func<TReadModel, bool>>> ReadModelPredicat;
         private readonly Dictionary<PropertyInfo, Func<TEvent, object>> ReadModelGetters = new Dictionary<PropertyInfo, Func<TEvent, object>>();
@@ -148,7 +148,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public EventHandlerInitializer(
             Action<Type, Action<Message>, bool> eventRegister, 
-            Func<IDbProviderProjection> dbFactory,
+            Func<IDbProvider> dbFactory,
             ThreadSafeDictionary<Guid, TReadModel> cache = null )
         {
             EventRegisterMultiple = ( type, action ) => eventRegister( type, action, true );

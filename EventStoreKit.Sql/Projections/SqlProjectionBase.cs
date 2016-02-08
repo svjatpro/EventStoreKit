@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Concurrency;
-using BLToolkit.DataAccess;
 using EventStoreKit.Messages;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
@@ -18,13 +17,13 @@ namespace EventStoreKit.Sql.Projections
     {
         #region Protected fields
         
-        protected readonly Func<IDbProviderProjection> DbProviderFactory;
+        protected readonly Func<IDbProvider> DbProviderFactory;
         
         #endregion
 
         #region Private methods
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProviderProjection> dbFactory, bool caching )
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, bool caching )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
@@ -32,7 +31,7 @@ namespace EventStoreKit.Sql.Projections
                 .GetConstructor( new[]
                 {
                     typeof (Action<Type, Action<Message>, bool>),
-                    typeof (Func<IDbProviderProjection>),
+                    typeof (Func<IDbProvider>),
                     typeof (bool)
                 } );
             if( ctor == null )
@@ -45,7 +44,7 @@ namespace EventStoreKit.Sql.Projections
         protected SqlProjectionBase(
             ILog logger, 
             IScheduler scheduler,
-            Func<IDbProviderProjection> dbProviderFactory )
+            Func<IDbProvider> dbProviderFactory )
             : base( logger, scheduler )
         {
             DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
@@ -66,8 +65,8 @@ namespace EventStoreKit.Sql.Projections
             var dict = new Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>>();
             foreach ( var property in type.GetProperties() )
             {
-                if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
-                    continue;
+                //if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
+                //    continue;
                 var filter = property.GetFilterExpression<TModel>();
                 if ( filter != null )
                     dict.Add( property.Name.ToLower(), filter );
@@ -80,8 +79,8 @@ namespace EventStoreKit.Sql.Projections
             var dict = new Dictionary<string, Expression<Func<TModel, object>>>();
             foreach ( var property in type.GetProperties() )
             {
-                if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
-                    continue;
+                //if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
+                //    continue;
                 dict.Add( property.Name.ToLower(), property.GetAccessExpression<TModel>() );
             }
             return dict;
@@ -103,7 +102,7 @@ namespace EventStoreKit.Sql.Projections
         protected SqlProjectionBase(
             ILog logger, 
             IScheduler scheduler,
-            Func<IDbProviderProjection> dbProviderFactory ) : 
+            Func<IDbProvider> dbProviderFactory ) : 
             base( logger, scheduler, dbProviderFactory )
         {
             SorterMapping = InitializeSorters<TModel>();
