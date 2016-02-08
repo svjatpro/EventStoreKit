@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Concurrency;
-using BLToolkit.DataAccess;
 using EventStoreKit.Messages;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
@@ -66,8 +65,8 @@ namespace EventStoreKit.Sql.Projections
             var dict = new Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>>();
             foreach ( var property in type.GetProperties() )
             {
-                if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
-                    continue;
+                //if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
+                //    continue;
                 var filter = property.GetFilterExpression<TModel>();
                 if ( filter != null )
                     dict.Add( property.Name.ToLower(), filter );
@@ -80,8 +79,8 @@ namespace EventStoreKit.Sql.Projections
             var dict = new Dictionary<string, Expression<Func<TModel, object>>>();
             foreach ( var property in type.GetProperties() )
             {
-                if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
-                    continue;
+                //if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
+                //    continue;
                 dict.Add( property.Name.ToLower(), property.GetAccessExpression<TModel>() );
             }
             return dict;

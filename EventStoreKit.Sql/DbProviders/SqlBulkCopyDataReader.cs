@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace EventStoreKit.Sql.PersistanceManager
 {
-    internal class SqlBulkCopyDataReader<TReadModel> : IDataReader
+    public class SqlBulkCopyDataReader<TReadModel> : IDataReader
     {
         #region Useless stuff
 
