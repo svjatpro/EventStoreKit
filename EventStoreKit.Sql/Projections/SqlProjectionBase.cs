@@ -18,13 +18,13 @@ namespace EventStoreKit.Sql.Projections
     {
         #region Protected fields
         
-        protected readonly Func<IDbProviderProjection> DbProviderFactory;
+        protected readonly Func<IDbProvider> DbProviderFactory;
         
         #endregion
 
         #region Private methods
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProviderProjection> dbFactory, bool caching )
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, bool caching )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
@@ -32,7 +32,7 @@ namespace EventStoreKit.Sql.Projections
                 .GetConstructor( new[]
                 {
                     typeof (Action<Type, Action<Message>, bool>),
-                    typeof (Func<IDbProviderProjection>),
+                    typeof (Func<IDbProvider>),
                     typeof (bool)
                 } );
             if( ctor == null )
@@ -45,7 +45,7 @@ namespace EventStoreKit.Sql.Projections
         protected SqlProjectionBase(
             ILog logger, 
             IScheduler scheduler,
-            Func<IDbProviderProjection> dbProviderFactory )
+            Func<IDbProvider> dbProviderFactory )
             : base( logger, scheduler )
         {
             DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
@@ -103,7 +103,7 @@ namespace EventStoreKit.Sql.Projections
         protected SqlProjectionBase(
             ILog logger, 
             IScheduler scheduler,
-            Func<IDbProviderProjection> dbProviderFactory ) : 
+            Func<IDbProvider> dbProviderFactory ) : 
             base( logger, scheduler, dbProviderFactory )
         {
             SorterMapping = InitializeSorters<TModel>();
