@@ -37,10 +37,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
     </Reference>
-    <Reference Include="BLToolkit.4, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b1d3f6ab3aadaca3, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\BLToolkit.4.3.0\lib\net40\BLToolkit.4.dll</HintPath>
-    </Reference>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
       <Private>True</Private>
@@ -75,12 +71,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EventStoreModule.cs" />
-    <Compile Include="DbProviders\FieldIndexAttribute.cs" />
-    <Compile Include="DbProviders\FieldTypeAttribute.cs" />
     <Compile Include="DbProviders\IDbProvider.cs" />
-    <Compile Include="DbProviders\IQueryComposer.cs" />
-    <Compile Include="DbProviders\MSSQLQueryComposer.cs" />
-    <Compile Include="DbProviders\OSMDDbManager.cs" />
     <Compile Include="DbProviders\Examples\DbProvider.cs" />
     <Compile Include="DbProviders\DbProviderProxy.cs" />
     <Compile Include="DbProviders\DbProviderUtility.cs" />

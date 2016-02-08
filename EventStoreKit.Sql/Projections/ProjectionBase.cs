@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using System.Runtime.Remoting.Messaging;
-using System.Threading.Tasks;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Sql.ProjectionTemplates;
