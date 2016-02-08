@@ -11,8 +11,6 @@
 
     .   ITrackableAggregate - try to avoid base class
 
-    .   remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
-
     .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
     .   remove log4net dependency
@@ -27,15 +25,30 @@
 
     .   copyTo: check properties Type and throw exception if types is different
 
+    .   remove IOrganization read model stuff
 
-    .   [SK-7]
+
+    .   [SK-9]
 
  // ---------------------------------------------------------------------
  // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
  // ---------------------------------------------------------------------
 
+    .   [SK-4] remove ThreadSafeDictionary
 
-    .   [SK-5] rename IPersistanceManager (?)
+    .   [SK-3] Versioning
+
+    *   [SK-8] Remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
+
+        *   SqlIgnoreAttribute
+
+        *   QueryComposer
+
+    ---
+
+    *   [SK-2] Simplify register DbProviders stuff
+
+    *   [SK-5] rename IPersistanceManager (?)
     
         DbProvider : IDbProvider
         Func<IDbProvider> DbProviderFactory
@@ -46,17 +59,11 @@
 
         ?   Inherit routerBase from SqlBase
 
-    .   [SK-4] remove ThreadSafeDictionary
-
-    .   [SK-3] Versioning
-
-    .   [SK-2] Simplify register DbProviders stuff
-
-    ---
-
  // ---------------------------------------------------------------------
  // iteration #2 v.0.1.2.0 
  // ---------------------------------------------------------------------
+
+    *   [SK-7] Refactor exception logging in EventQueueBase
 
     *   [SK-6] Prevent events post processing for rebuild and bulk events
 

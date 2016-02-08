@@ -37,10 +37,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
     </Reference>
-    <Reference Include="BLToolkit.4, Version=4.3.0.0, Culture=neutral, PublicKeyToken=b1d3f6ab3aadaca3, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\BLToolkit.4.3.0\lib\net40\BLToolkit.4.dll</HintPath>
-    </Reference>
     <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
       <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
       <Private>True</Private>
@@ -75,18 +71,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EventStoreModule.cs" />
-    <Compile Include="PersistanceManager\FieldIndexAttribute.cs" />
-    <Compile Include="PersistanceManager\FieldTypeAttribute.cs" />
-    <Compile Include="PersistanceManager\IDbProvider.cs" />
-    <Compile Include="PersistanceManager\IDbProviderEventStore.cs" />
-    <Compile Include="PersistanceManager\IDbProviderProjection.cs" />
-    <Compile Include="PersistanceManager\IQueryComposer.cs" />
-    <Compile Include="PersistanceManager\MSSQLQueryComposer.cs" />
-    <Compile Include="PersistanceManager\OSMDDbManager.cs" />
-    <Compile Include="PersistanceManager\DbProvider.cs" />
-    <Compile Include="PersistanceManager\DbProviderProxy.cs" />
-    <Compile Include="PersistanceManager\DbProviderUtility.cs" />
-    <Compile Include="PersistanceManager\SqlBulkCopyDataReader.cs" />
+    <Compile Include="DbProviders\IDbProvider.cs" />
+    <Compile Include="DbProviders\Examples\DbProvider.cs" />
+    <Compile Include="DbProviders\DbProviderProxy.cs" />
+    <Compile Include="DbProviders\DbProviderUtility.cs" />
+    <Compile Include="DbProviders\SqlBulkCopyDataReader.cs" />
     <Compile Include="Projections\EventRouterBase.cs" />
     <Compile Include="Projections\ProjectionBase.cs" />
     <Compile Include="Projections\SagaEventHandlerBase.cs" />
