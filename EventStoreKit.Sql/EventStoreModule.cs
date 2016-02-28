@@ -21,16 +21,18 @@ using EventStoreKit.Services;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
+using NEventStore.Persistence.Sql;
 using NEventStore.Persistence.Sql.SqlDialects;
 using Module = Autofac.Module;
 
 namespace EventStoreKit.Sql
 {
-    public class EventStoreModule : Module
+    public class EventStoreModule<TSqlDialect> : Module
+        where TSqlDialect : ISqlDialect, new()
     {
         private class Startup : IStartable
         {
-            private readonly ILogger<EventStoreModule> Logger;
+            private readonly ILogger<EventStoreModule<TSqlDialect>> Logger;
             private readonly ISecurityManager SecurityManager;
             private readonly IComponentContext Container;
             private readonly IEventDispatcher Dispatcher;
@@ -74,7 +76,7 @@ namespace EventStoreKit.Sql
                 IComponentContext container, 
                 IEventDispatcher dispatcher, 
                 IEnumerable<ICommandHandler> commandHandlers,
-                ILogger<EventStoreModule> logger,
+                ILogger<EventStoreModule<TSqlDialect>> logger,
                 IEnumerable<IEventSubscriber> subscribers )
             {
                 SecurityManager = securityManager;
@@ -180,7 +182,8 @@ namespace EventStoreKit.Sql
             wireup.LogTo( type => new Log4NetLogger( type ) );
             var persistanceWireup = wireup
                 .UsingSqlPersistence( ctx.ResolveNamed<string>( EventStoreConstants.CommitsConfigNameTag ) )
-                .WithDialect( new MsSqlDialect() )
+                //.WithDialect( new MsSqlDialect() )
+                .WithDialect( new TSqlDialect() )
                 .PageEvery( 1024 );
 
             return persistanceWireup
