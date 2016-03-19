@@ -70,6 +70,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\_build\AssemblyInfo.cs">
+      <Link>AssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="EventStoreModule.cs" />
     <Compile Include="DbProviders\IDbProvider.cs" />
     <Compile Include="DbProviders\Examples\DbProvider.cs" />
