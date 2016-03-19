@@ -27,13 +27,14 @@
 
     .   copyTo: check properties Type and throw exception if types is different
 
+    .   remove IOrganization read model stuff
 
-    .   [SK-7]
+
+    .   [SK-8]
 
  // ---------------------------------------------------------------------
  // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
  // ---------------------------------------------------------------------
-
 
     .   [SK-5] rename IPersistanceManager (?)
     
@@ -50,13 +51,15 @@
 
     .   [SK-3] Versioning
 
-    .   [SK-2] Simplify register DbProviders stuff
+    *   [SK-2] Simplify register DbProviders stuff
 
     ---
 
  // ---------------------------------------------------------------------
  // iteration #2 v.0.1.2.0 
  // ---------------------------------------------------------------------
+
+    *   [SK-7] Refactor exception logging in EventQueueBase
 
     *   [SK-6] Prevent events post processing for rebuild and bulk events
 

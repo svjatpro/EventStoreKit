@@ -15,7 +15,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         #region Private members
 
         protected readonly Action<Type, Action<Message>, bool> EventRegister;
-        protected readonly Func<IDbProviderProjection> PersistanceManagerFactory;
+        protected readonly Func<IDbProvider> PersistanceManagerFactory;
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
 
         #endregion
@@ -42,7 +42,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #endregion
 
-        protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IDbProviderProjection> persistanceManagerFactory )
+        protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IDbProvider> persistanceManagerFactory )
         {
             EventRegister = eventRegister;
             PersistanceManagerFactory = persistanceManagerFactory;
@@ -102,7 +102,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public ProjectionTemplate( 
             Action<Type, Action<Message>, bool> eventRegister,
-            Func<IDbProviderProjection> persistanceManagerFactory,
+            Func<IDbProvider> persistanceManagerFactory,
             bool readModelCaching = false ): 
             base( eventRegister, persistanceManagerFactory )
         {
