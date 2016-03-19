@@ -2,6 +2,7 @@
 using EventStoreKit.Constants;
 using EventStoreKit.Utility;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace EventStoreKit.SearchOptions
 {
@@ -13,20 +14,56 @@ namespace EventStoreKit.SearchOptions
         public readonly IList<SorterInfo> Sorters;
         public readonly IList<SorterInfo> Groupers;
 
+        #region Private classes
+
+        private class FilterValueObject
+        {
+            public string gt { get; set; }
+            public string lt { get; set; }
+            public string eq { get; set; }
+        }
+
+        #endregion
+
         public static SearchOptions Init(
             int? page = null,
             int? limit = null,
-            /*[ModelBinder]*/ IList<SearchFilterInfo> filter = null,
+            IList<SearchFilterInfo> filters = null,
             string sort = null,
             string group = null,
             string quickSearch = null )
         {
-            if ( filter == null )
-                filter = new List<SearchFilterInfo>();
+            if ( filters == null )
+                filters = new List<SearchFilterInfo>();
+            foreach ( var filter in filters )
+            {
+                var value = filter.Data.Value as JObject;
+                if ( value != null )
+                {
+                    foreach ( var token in value )
+                    {
+                        if ( token.Key == SearchComparisonType.After )
+                        {
+                            filter.Data.Value = token.Value.Value<string>();
+                            filter.Data.Comparison = SearchComparisonType.After;
+                        }
+                        else if ( token.Key == SearchComparisonType.Before )
+                        {
+                            filter.Data.Value = token.Value.Value<string>();
+                            filter.Data.Comparison = SearchComparisonType.Before;
+                        }
+                        else if ( token.Key == SearchComparisonType.On )
+                        {
+                            filter.Data.Value = token.Value.Value<string>();
+                            filter.Data.Comparison = SearchComparisonType.On;
+                        }
+                    }
+                }
+            }
 
             if ( quickSearch != null )
             {
-                filter.Add( new SearchFilterInfo
+                filters.Add( new SearchFilterInfo
                 {
                     Data = new SearchFilterInfo.SearchFilterData { Type = "string", Value = quickSearch },
                     Field = SearchConstants.QuickSearch
@@ -38,8 +75,8 @@ namespace EventStoreKit.SearchOptions
 
             return
                 page.HasValue && limit.HasValue ?
-                new SearchOptions( page.Value, limit.Value, filters: filter, sorters: sorters, groupers: groupers ) :
-                new SearchOptions( filters: filter, sorters: sorters, groupers: groupers );
+                new SearchOptions( page.Value, limit.Value, filters: filters, sorters: sorters, groupers: groupers ) :
+                new SearchOptions( filters: filters, sorters: sorters, groupers: groupers );
         }
 
         public SearchOptions( IList<SearchFilterInfo> filters = null, IList<SorterInfo> sorters = null, IList<SorterInfo> groupers = null  )

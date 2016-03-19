@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Concurrency;
-using BLToolkit.DataAccess;
 using EventStoreKit.Messages;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
@@ -18,13 +17,13 @@ namespace EventStoreKit.Sql.Projections
     {
         #region Protected fields
         
-        protected readonly Func<IPersistanceManagerProjection> PersistanceManagerFactory;
+        protected readonly Func<IDbProvider> DbProviderFactory;
         
         #endregion
 
         #region Private methods
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IPersistanceManagerProjection> dbFactory, bool caching )
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, bool caching )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
@@ -32,7 +31,7 @@ namespace EventStoreKit.Sql.Projections
                 .GetConstructor( new[]
                 {
                     typeof (Action<Type, Action<Message>, bool>),
-                    typeof (Func<IPersistanceManagerProjection>),
+                    typeof (Func<IDbProvider>),
                     typeof (bool)
                 } );
             if( ctor == null )
@@ -45,15 +44,15 @@ namespace EventStoreKit.Sql.Projections
         protected SqlProjectionBase(
             ILog logger, 
             IScheduler scheduler,
-            Func<IPersistanceManagerProjection> persistanceManagerFactory )
+            Func<IDbProvider> dbProviderFactory )
             : base( logger, scheduler )
         {
-            PersistanceManagerFactory = persistanceManagerFactory.CheckNull( "persistanceManagerFactory" );
+            DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
         }
 
         protected TTemplate RegisterTemplate<TTemplate>( bool readModelCaching = false ) where TTemplate : IProjectionTemplate
         {
-            var template = CreateTemplate<TTemplate>( Register, PersistanceManagerFactory, readModelCaching );
+            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, readModelCaching );
             ProjectionTemplates.Add( template );
             return template;
         }
@@ -66,8 +65,8 @@ namespace EventStoreKit.Sql.Projections
             var dict = new Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>>();
             foreach ( var property in type.GetProperties() )
             {
-                if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
-                    continue;
+                //if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
+                //    continue;
                 var filter = property.GetFilterExpression<TModel>();
                 if ( filter != null )
                     dict.Add( property.Name.ToLower(), filter );
@@ -80,8 +79,8 @@ namespace EventStoreKit.Sql.Projections
             var dict = new Dictionary<string, Expression<Func<TModel, object>>>();
             foreach ( var property in type.GetProperties() )
             {
-                if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
-                    continue;
+                //if ( property.GetCustomAttributes( typeof( SqlIgnoreAttribute ), false ).Length > 0 )
+                //    continue;
                 dict.Add( property.Name.ToLower(), property.GetAccessExpression<TModel>() );
             }
             return dict;
@@ -103,8 +102,8 @@ namespace EventStoreKit.Sql.Projections
         protected SqlProjectionBase(
             ILog logger, 
             IScheduler scheduler,
-            Func<IPersistanceManagerProjection> persistanceManagerFactory ) : 
-            base( logger, scheduler, persistanceManagerFactory )
+            Func<IDbProvider> dbProviderFactory ) : 
+            base( logger, scheduler, dbProviderFactory )
         {
             SorterMapping = InitializeSorters<TModel>();
             FilterMapping = InitializeFilters<TModel>();
@@ -118,7 +117,7 @@ namespace EventStoreKit.Sql.Projections
             ISecurityManager securityManager = null, // required for IOrganizationModel
             Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
         {
-            return PersistanceManagerFactory.Run( db => db.PerformQuery(
+            return DbProviderFactory.Run( db => db.PerformQuery(
                 options, 
                 FilterMapping,
                 SorterMapping,
@@ -128,11 +127,11 @@ namespace EventStoreKit.Sql.Projections
 
         public QueryResult<TResult> Search<TResult>(
             SearchOptions.SearchOptions options,
-            Func<IPersistanceManager,Func<TModel, TResult>> getEvaluator,
+            Func<IDbProvider,Func<TModel, TResult>> getEvaluator,
             ISecurityManager securityManager = null, // required for IOrganizationModel
             Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
         {
-            return PersistanceManagerFactory.Run( db =>
+            return DbProviderFactory.Run( db =>
             {
                 var evaluator = getEvaluator( db );
                 var result = db.PerformQuery( 
@@ -153,7 +152,7 @@ namespace EventStoreKit.Sql.Projections
             Expression<Func<TModel,bool>> predicat = null,
             Func<TModel, TModel, TModel> summaryAggregate = null )
         {
-            var result = PersistanceManagerFactory.Run( db =>
+            var result = DbProviderFactory.Run( db =>
             {
                 var query = db.Query<TModel>();
                 if ( predicat != null )

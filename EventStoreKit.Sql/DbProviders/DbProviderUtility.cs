@@ -11,19 +11,18 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Sql.PersistanceManager
 {
-    public static class PersistanceManagerUtility
+    public static class DbProviderUtility
     {
         /// <summary>
-        /// Performs action/method with separate instance of PersistanceManager within Sql Transaction on demand
+        /// Performs action/method with separate instance of DbProvider within Sql Transaction on demand
         /// </summary>
-        public static void RunLazy( this Func<IPersistanceManager> persistanceManagerCreator, Action<IPersistanceManager> action )
+        public static void RunLazy( this Func<IDbProvider> persistanceManagerCreator, Action<IDbProvider> action, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted )
         {
-            using ( var persistanceManager = new PersistanceManagerProxy( persistanceManagerCreator ) )
+            using ( var persistanceManager = new DbProviderProxy( persistanceManagerCreator ) )
             {
                 try
                 {
-                    persistanceManager.BeginTransaction( IsolationLevel.ReadCommitted );
-                    //persistanceManager.BeginTransaction( IsolationLevel.Snapshot );
+                    persistanceManager.BeginTransaction( isolationLevel );
                     action( persistanceManager );
                     persistanceManager.CommitTransaction();
                 }
@@ -36,16 +35,15 @@ namespace EventStoreKit.Sql.PersistanceManager
         }
 
         /// <summary>
-        /// Performs action/method with separate instance of PersistanceManager within Sql Transaction
+        /// Performs action/method with separate instance of DbProvider within Sql Transaction
         /// </summary>
-        public static void Run( this Func<IPersistanceManager> persistanceManagerCreator, Action<IPersistanceManager> action )
+        public static void Run( this Func<IDbProvider> persistanceManagerCreator, Action<IDbProvider> action, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted )
         {
             using ( var persistanceManager = persistanceManagerCreator() )
             {
                 try
                 {
-                    persistanceManager.BeginTransaction( IsolationLevel.ReadCommitted );
-                    //persistanceManager.BeginTransaction( IsolationLevel.Snapshot );
+                    persistanceManager.BeginTransaction( isolationLevel );
                     action( persistanceManager );
                     persistanceManager.CommitTransaction();
                 }
@@ -57,18 +55,17 @@ namespace EventStoreKit.Sql.PersistanceManager
             }
         }
         /// <summary>
-        /// Performs action/method with separate instance of PersistanceManager within Sql Transaction.
+        /// Performs action/method with separate instance of DbProvider within Sql Transaction.
         ///   If the result is query result / list, then use ToList(). 
         ///   The reason is, than deffered materialization will be failed because of disposed connection ( and commited transaction )
         /// </summary>
-        public static TResult Run<TResult>( this Func<IPersistanceManager> persistanceManagerCreator, Func<IPersistanceManager, TResult> action )
+        public static TResult Run<TResult>( this Func<IDbProvider> persistanceManagerCreator, Func<IDbProvider, TResult> action, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted )
         {
             using ( var persistanceManager = persistanceManagerCreator() )
             {
                 try
                 {
-                    persistanceManager.BeginTransaction( IsolationLevel.ReadCommitted );
-                    //persistanceManager.BeginTransaction( IsolationLevel.Snapshot );
+                    persistanceManager.BeginTransaction( isolationLevel );
                     var result = action( persistanceManager );
                     persistanceManager.CommitTransaction();
                     return result;
@@ -82,7 +79,7 @@ namespace EventStoreKit.Sql.PersistanceManager
         }
 
         public static IQueryable<TEntity> PerformQueryLazy<TEntity>(
-            this IPersistanceManager db, 
+            this IDbProvider db, 
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
@@ -91,22 +88,18 @@ namespace EventStoreKit.Sql.PersistanceManager
         {
             var query = db.Query<TEntity>();
 
+            // Organization related entity
+            var currentUser = securityManager.With( sm => sm.CurrentUser );
+            if ( typeof( IOrganizationReadModel ).IsAssignableFrom( typeof( TEntity ) ) && currentUser != null )
+            {
+                options.EnsureFilterAtStart<IOrganizationReadModel>( 
+                    e => e.OrganizationId,
+                    () => new SearchFilterInfo.SearchFilterData{ Value = currentUser.OrganizationId } );
+            }
+
             // apply filters
             if ( options != null && options.Filters != null )
             {
-                // Organization related entity
-                var currentUser = securityManager.With( sm => sm.CurrentUser );
-                if ( typeof( IOrganizationReadModel ).IsAssignableFrom( typeof( TEntity ) ) && currentUser != null )
-                {
-                    
-                    options.Filters.Add( 
-                        new SearchFilterInfo
-                        {
-                            Field = BaseEntityUtility.GetPropertyName<IOrganizationReadModel,Guid>( e => e.OrganizationId ),
-                            Data = new SearchFilterInfo.SearchFilterData { Value = currentUser.OrganizationId }
-                        } );
-                }
-
                 if ( filterMapping != null )
                 {
                     foreach ( var filter in options.Filters )
@@ -171,7 +164,7 @@ namespace EventStoreKit.Sql.PersistanceManager
         }
 
         public static QueryResult<TEntity> PerformQuery<TEntity>(
-            this IPersistanceManager db, 
+            this IDbProvider db, 
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,

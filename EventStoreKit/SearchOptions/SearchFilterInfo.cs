@@ -27,7 +27,7 @@ namespace EventStoreKit.SearchOptions
                 set
                 {
                     ValueInternal = value;
-                    StringValue = value as string;
+                    StringValue = ( value as string ) ?? value.ToString();
                     if ( value is JArray )
                     {
                         var jValue = (JArray) value;
@@ -39,7 +39,9 @@ namespace EventStoreKit.SearchOptions
                     if ( value is IEnumerable<Guid> )
                         Guids = (IList<Guid>)value;
                     int intVal;
-                    if( int.TryParse( StringValue, out intVal ) )
+                    if( value is int )
+                        IntValue = (int)value;
+                    else if( int.TryParse( StringValue, out intVal ) )
                         IntValue = intVal;
 
                     DateTime date;

@@ -6,13 +6,13 @@ using System.Linq.Expressions;
 
 namespace EventStoreKit.Sql.PersistanceManager
 {
-    public class PersistanceManagerProxy : IPersistanceManager
+    public class DbProviderProxy : IDbProvider
     {
         #region Private members
 
-        private readonly Func<IPersistanceManager> PersistanceManagerBuilder;
-        private IPersistanceManager InternalInstance;
-        private IPersistanceManager Instance 
+        private readonly Func<IDbProvider> PersistanceManagerBuilder;
+        private IDbProvider InternalInstance;
+        private IDbProvider Instance 
         { 
             get
             {
@@ -31,7 +31,7 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         #endregion
 
-        public PersistanceManagerProxy( Func<IPersistanceManager> persistanceManagerBuilder ) 
+        public DbProviderProxy( Func<IDbProvider> persistanceManagerBuilder ) 
         {
             PersistanceManagerBuilder = persistanceManagerBuilder;
         }
@@ -67,22 +67,13 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         #endregion
 
-        #region Implementation of IPersistanceManager
-
-        public void CreateDataBase( string connectionStringName, string dataBaseName )
-        {
-            Instance.CreateDataBase( connectionStringName, dataBaseName );
-        }
+        #region Implementation of IDbProvider
 
         public void CreateTable<T>( bool overwrite = false ) where T : class { Instance.CreateTable<T>( overwrite ); }
 
         public void DropTable<T>() where T : class { Instance.DropTable<T>(); }
 
-        public void DropTable( string tableName ) { Instance.DropTable( tableName ); }
-
         public void TruncateTable<T>() where T : class { Instance.TruncateTable<T>(); }
-
-        public void TruncateTable( string table, string database = null, string owner = null ) { Instance.TruncateTable( table, database, owner); }
 
         public string GetTableName<T>() { return Instance.GetTableName<T>(); }
 
@@ -99,8 +90,6 @@ namespace EventStoreKit.Sql.PersistanceManager
         public void Delete<T>( Expression<Func<T, bool>> predicat ) where T : class { Instance.Delete( predicat ); }
 
         public void Insert<T>( T entity ) where T : class { Instance.Insert( entity ); }
-
-        public void InsertBatch<T>( IEnumerable<T> entities ) where T : class { Instance.InsertBatch( entities ); }
 
         public void InsertOrReplace<T>( T entity ) where T : class { Instance.InsertOrReplace( entity ); }
 

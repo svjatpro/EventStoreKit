@@ -2,7 +2,7 @@
 
 namespace EventStoreKit.Services.IdGenerators
 {
-    class DefaultIdGenerator : IIdGenerator
+    public class SimpleIdGenerator : IIdGenerator
     {
         #region Implementation of IIdGenerator
 

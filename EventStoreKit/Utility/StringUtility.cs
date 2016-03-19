@@ -20,6 +20,15 @@ namespace EventStoreKit.Utility
 
         #endregion
 
+        public static string Left( this string source, int length )
+        {
+            var actualLength = source.Length;
+            return 
+                actualLength <= length ?
+                source :
+                source.Substring( 0, length );
+        }
+
         public static string FormatHtmlException( this string exception )
         {
             var strings = exception
@@ -58,26 +67,32 @@ namespace EventStoreKit.Utility
         {
             if( @event == null || @event == "(null)" )
                 return string.Empty;
-
-            var strings = JsonConvert.SerializeObject( JsonConvert.DeserializeObject( @event ), Formatting.Indented )
-                .Split( new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries )
-                .Select(
-                    s =>
-                    {
-                        if ( new[] { "{", "}" }.Contains( s.Trim().Substring( 0, 1 ) ) )
+            try
+            {
+                var strings = JsonConvert.SerializeObject( JsonConvert.DeserializeObject( @event ), Formatting.Indented )
+                    .Split( new[] {Environment.NewLine}, StringSplitOptions.RemoveEmptyEntries )
+                    .Select(
+                        s =>
                         {
-                            s = string.Format( FormatJsonBrace, s );
-                        }
-                        else
-                        {
-                            var prop = s.Split( new[] { ':' } );
-                            if (prop.Length > 1)
-                                s = string.Format( FormatJsonName, prop[0] ) + " : " + string.Format( FormatJsonValue, prop[1] );
-                        }
-                        return s;
-                    } )
-                .ToList();
-            return string.Join( "", strings );
+                            if ( new[] {"{", "}"}.Contains( s.Trim().Substring( 0, 1 ) ) )
+                            {
+                                s = string.Format( FormatJsonBrace, s );
+                            }
+                            else
+                            {
+                                var prop = s.Split( new[] {':'} );
+                                if ( prop.Length > 1 )
+                                    s = string.Format( FormatJsonName, prop[0] ) + " : " + string.Format( FormatJsonValue, prop[1] );
+                            }
+                            return s;
+                        } )
+                    .ToList();
+                return string.Join( "", strings );
+            }
+            catch ( JsonException ex )
+            {
+                return @event;
+            }
         }
     
         public static string GetInitialCatalog( this string connectionString )

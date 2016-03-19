@@ -15,7 +15,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         #region Private members
 
         protected readonly Action<Type, Action<Message>, bool> EventRegister;
-        protected readonly Func<IPersistanceManagerProjection> PersistanceManagerFactory;
+        protected readonly Func<IDbProvider> PersistanceManagerFactory;
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
 
         #endregion
@@ -42,7 +42,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #endregion
 
-        protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IPersistanceManagerProjection> persistanceManagerFactory )
+        protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IDbProvider> persistanceManagerFactory )
         {
             EventRegister = eventRegister;
             PersistanceManagerFactory = persistanceManagerFactory;
@@ -79,7 +79,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         private readonly bool ReadModelCaching;
         private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
-        private Func<IPersistanceManager, Guid, object> GetByIdDelegate;
+        private Func<IDbProvider, Guid, object> GetByIdDelegate;
 
         #endregion
 
@@ -102,7 +102,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public ProjectionTemplate( 
             Action<Type, Action<Message>, bool> eventRegister,
-            Func<IPersistanceManagerProjection> persistanceManagerFactory,
+            Func<IDbProvider> persistanceManagerFactory,
             bool readModelCaching = false ): 
             base( eventRegister, persistanceManagerFactory )
         {
@@ -124,19 +124,19 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             GetByIdDelegate = GenerateGetByIdDelegate<TReadModel>( idProperty );
         }
 
-        protected Func<IPersistanceManager, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty )
+        protected Func<IDbProvider, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty )
             where TEntity : class
         {
             return ( db, id ) => db.Query<TEntity>().SingleOrDefault( ExpressionsUtility.GetEqualPredicat<TEntity>( idProperty, id ) );
         }
-        //protected Func<IPersistanceManager, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2 )
+        //protected Func<IDbProvider, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2 )
         //    where TEntity : class
         //{
         //    return ( db, id1, id2 ) => db.Query<TEntity>().SingleOrDefault( ExpressionsUtility.GetEqualPredicat<TEntity>(
         //        new[] { idProperty1, idProperty2 }, new object[] { id1, id2 } ) );
         //}
 
-        //protected Func<IPersistanceManager, Guid, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2, PropertyInfo idProperty3 )
+        //protected Func<IDbProvider, Guid, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2, PropertyInfo idProperty3 )
         //    where TEntity : class
         //{
         //    return ( db, id1, id2, id3 ) => db.Query<TEntity>().SingleOrDefault(
@@ -153,7 +153,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 entity :
                 GetByIdDelegate.With( d => PersistanceManagerFactory.Run( db => (TReadModel)d( db, id ) ) );
         }
-        public TReadModel GetById( IPersistanceManager db, Guid id )
+        public TReadModel GetById( IDbProvider db, Guid id )
         {
             if ( id == Guid.Empty )
                 return null;
@@ -168,7 +168,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #region Customization methods
 
-        public ProjectionTemplate<TReadModel> InitNewEntityWith<TEvent>( Action<IPersistanceManager, TEvent, TReadModel> initNewEntityExpression ) where TEvent : Message
+        public ProjectionTemplate<TReadModel> InitNewEntityWith<TEvent>( Action<IDbProvider, TEvent, TReadModel> initNewEntityExpression ) where TEvent : Message
         {
             EventHandlerInitializers
                 .Get( typeof( TEvent ) )
@@ -177,7 +177,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return this;
         }
 
-        public ProjectionTemplate<TReadModel> UpdateWith<TEvent>( Func<IPersistanceManager, TEvent, Expression<Func<TReadModel, TReadModel>>> updateExpression ) where TEvent : Message
+        public ProjectionTemplate<TReadModel> UpdateWith<TEvent>( Func<IDbProvider, TEvent, Expression<Func<TReadModel, TReadModel>>> updateExpression ) where TEvent : Message
         {
             EventHandlerInitializers
                 .Get( typeof (TEvent) )
@@ -186,7 +186,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return this;
         }
 
-        public ProjectionTemplate<TReadModel> ValidateWith<TEvent>( Func<IPersistanceManager, TEvent, bool> validateExpression )  where TEvent : Message
+        public ProjectionTemplate<TReadModel> ValidateWith<TEvent>( Func<IDbProvider, TEvent, bool> validateExpression )  where TEvent : Message
         {
             EventHandlerInitializers
                .Get( typeof( TEvent ) )
@@ -195,7 +195,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return this;
         }
 
-        public ProjectionTemplate<TReadModel> RunAfterHandle<TEvent>( Action<IPersistanceManager, TEvent> afterExpression ) where TEvent : Message
+        public ProjectionTemplate<TReadModel> RunAfterHandle<TEvent>( Action<IDbProvider, TEvent> afterExpression ) where TEvent : Message
         {
             EventHandlerInitializers
                .Get( typeof( TEvent ) )
@@ -204,12 +204,21 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return this;
         }
 
-        public ProjectionTemplate<TReadModel> RunBeforeHandle<TEvent>( Action<IPersistanceManager, TEvent> beforeExpression ) where TEvent : Message
+        public ProjectionTemplate<TReadModel> RunBeforeHandle<TEvent>( Action<IDbProvider, TEvent> beforeExpression ) where TEvent : Message
         {
             EventHandlerInitializers
                .Get( typeof( TEvent ) )
                .OfType<EventHandlerInitializer<TReadModel, TEvent>>()
                .Do( handler => handler.RunBeforeHandle( beforeExpression ) );
+            return this;
+        }
+
+        public ProjectionTemplate<TReadModel> PostProcess<TEvent>( Action<TEvent> postProcessExpression ) where TEvent : Message
+        {
+            EventHandlerInitializers
+               .Get( typeof( TEvent ) )
+               .OfType<EventHandlerInitializer<TReadModel, TEvent>>()
+               .Do( handler => handler.PostProcess( postProcessExpression ) );
             return this;
         }
 

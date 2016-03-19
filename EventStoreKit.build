@@ -7,10 +7,10 @@
     </PropertyGroup>
     
     <Import Project="$(MSBuildExtensionsPath)\MSBuild.Community.Tasks.Targets"/>
-    <Import Project="$(MSBuildExtensionsPath)\OSMD.targets"/>
+    <Import Project="$(MSBuildExtensionsPath)\EventStoreKit.targets"/>
 
     <Target Name="Compile" DependsOnTargets="EnablePackageRestore; GenerateBuildVersion">
-        <MSBuild Projects="OSMD.sln" Properties="Configuration=$(Configuration)" />
+        <MSBuild Projects="EventStoreKit.sln" Properties="Configuration=$(Configuration)" />
     </Target>
 
     <Target Name="Package">
