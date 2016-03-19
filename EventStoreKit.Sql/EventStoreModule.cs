@@ -22,7 +22,6 @@ using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
 using NEventStore.Persistence.Sql;
-using NEventStore.Persistence.Sql.SqlDialects;
 using Module = Autofac.Module;
 
 namespace EventStoreKit.Sql

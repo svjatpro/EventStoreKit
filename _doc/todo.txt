@@ -38,8 +38,6 @@
 
     .   [SK-3] Versioning
 
-    ---
-
     *   [SK-8] Remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
 
         *   SqlIgnoreAttribute
