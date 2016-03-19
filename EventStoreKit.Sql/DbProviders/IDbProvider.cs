@@ -8,13 +8,9 @@ namespace EventStoreKit.Sql.PersistanceManager
 {
     public interface IDbProvider : IDisposable
     {
-        void CreateDataBase( string connectionStringName, string dataBaseName );
-
         void CreateTable<T>( bool overwrite = false ) where T : class;
         void DropTable<T>() where T : class;
-        void DropTable( string tableName );
         void TruncateTable<T>() where T : class;
-        void TruncateTable( string table, string database = null, string owner = null );
         string GetTableName<T>();
         IList<string> GetTableFields<T>();
             
@@ -28,7 +24,6 @@ namespace EventStoreKit.Sql.PersistanceManager
         void Delete<T>( Expression<Func<T, bool>> predicat ) where T : class;
 
         void Insert<T>( T entity ) where T : class;
-        void InsertBatch<T>( IEnumerable<T> entities ) where T : class;
         void InsertOrReplace<T>( T entity ) where T : class;
         void InsertBulk<T>( IEnumerable<T> entities ) where T : class;
         void InsertBulk<T>( IEnumerable<T> entities, string connectionString ) where T : class;
