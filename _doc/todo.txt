@@ -1,42 +1,44 @@
 
  // ***************************************************************************************************************************************
 
-    .   Make SearchOptions abstract - try to distance from ExtJs structure
-
-    .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
-
     .   Research [DataContract] importance for events and commands
  
         check with some transport bus system
 
     .   ITrackableAggregate - try to avoid base class
 
-    .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+    ?   remove DateTimeUtility.GetMonthPreposition
 
-    .   remove log4net dependency
-
-        // use NEventStore.Logging.ILog
-
-    .   remove DateTimeUtility.GetMonthPreposition
-
-    .   remove JSon serialization
+    ?   remove JSon serialization
 
     ?   research the idea of implementation event store functionality instead of using NEventStore
+
+
+
+    .   Make SearchOptions abstract - try to distance from ExtJs structure
 
     .   copyTo: check properties Type and throw exception if types is different
 
     .   remove IOrganization read model stuff
 
+    .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+
+    .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
+
+    .   remove log4net dependency
+
+        // use NEventStore.Logging.ILog
 
     .   [SK-9]
+
+    .   [SK-4] remove ThreadSafeDictionary
+
 
  // ---------------------------------------------------------------------
  // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
  // ---------------------------------------------------------------------
 
-    .   [SK-4] remove ThreadSafeDictionary
-
-    .   [SK-3] Versioning
+    *   [SK-3] Versioning
 
     *   [SK-8] Remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
 
