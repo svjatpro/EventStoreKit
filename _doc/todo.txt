@@ -29,10 +29,15 @@
 
         // use NEventStore.Logging.ILog
 
-    .   [SK-9]
+    .   [SK-10]
 
     .   [SK-4] remove ThreadSafeDictionary
 
+ // ---------------------------------------------------------------------
+ // v.0.2.1.0  
+ // ---------------------------------------------------------------------
+
+    *   [SK-9] Extend IConstructSagas
 
  // ---------------------------------------------------------------------
  // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
