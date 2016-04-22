@@ -29,7 +29,7 @@
 
         // use NEventStore.Logging.ILog
 
-    .   [SK-10]
+    .   [SK-11]
 
     .   [SK-4] remove ThreadSafeDictionary
 
@@ -39,10 +39,12 @@
 
     *   [SK-9] Extend IConstructSagas
 
+    *   [SK-10] Extend ReplayHistory.Clean() method to specify projections to clean
+
  // ---------------------------------------------------------------------
  // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
  // ---------------------------------------------------------------------
-
+        
     *   [SK-3] Versioning
 
     *   [SK-8] Remove bltoolkit dependency ( example in documentation ) - separate dll for Sql support
