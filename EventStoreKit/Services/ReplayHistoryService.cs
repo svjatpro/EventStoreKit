@@ -72,9 +72,20 @@ namespace EventStoreKit.Services
             EventSequence = eventSequence;
         }
 
-        public void CleanHistory()
+        public void CleanHistory( List<IProjection> projections = null )
         {
-            EventPublisher.Publish( new SystemCleanedUpEvent() );
+            lock ( LockRebuild )
+            {
+                if ( projections != null && projections.Any() )
+                {
+                    foreach ( var model in projections )
+                        model.Handle( new SystemCleanedUpEvent() );
+                }
+                else
+                {
+                    EventPublisher.Publish( new SystemCleanedUpEvent() );
+                }
+            }
         }
 
         public void Rebuild( List<IProjection> projections )

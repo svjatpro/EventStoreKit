@@ -29,7 +29,7 @@
 
         // use NEventStore.Logging.ILog
 
-    .   [SK-9]
+    .   [SK-10]
 
     .   [SK-4] remove ThreadSafeDictionary
 
@@ -37,6 +37,8 @@
  // ---------------------------------------------------------------------
  // iteration #3 v.0.2.0.0  // membership starting, payment management improvements, tenants management
  // ---------------------------------------------------------------------
+
+    *   [SK-9] Extend ReplayHistory.Clean() method to specify projections to clean
 
     *   [SK-3] Versioning
 
