@@ -4,7 +4,6 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using EventStoreKit.Constants;
-using EventStoreKit.ReadModels;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
@@ -87,16 +86,7 @@ namespace EventStoreKit.Sql.PersistanceManager
             where TEntity : class
         {
             var query = db.Query<TEntity>();
-
-            // Organization related entity
-            var currentUser = securityManager.With( sm => sm.CurrentUser );
-            if ( typeof( IOrganizationReadModel ).IsAssignableFrom( typeof( TEntity ) ) && currentUser != null )
-            {
-                options.EnsureFilterAtStart<IOrganizationReadModel>( 
-                    e => e.OrganizationId,
-                    () => new SearchFilterInfo.SearchFilterData{ Value = currentUser.OrganizationId } );
-            }
-
+            
             // apply filters
             if ( options != null && options.Filters != null )
             {

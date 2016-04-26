@@ -19,8 +19,6 @@
 
     .   copyTo: check properties Type and throw exception if types is different
 
-    .   remove IOrganization read model stuff
-
     .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
     .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
@@ -29,9 +27,18 @@
 
         // use NEventStore.Logging.ILog
 
-    .   [SK-10]
+    .   [SK-13]
 
     .   [SK-4] remove ThreadSafeDictionary
+
+
+ // ---------------------------------------------------------------------
+ // iteration #4 v.0.2.1.0
+ // ---------------------------------------------------------------------
+
+    *   [SK-11] remove IOrganization read model stuff
+
+    .   [SK-12] remove ISecurityManager, use ICurrentUserProvider
 
 
  // ---------------------------------------------------------------------
