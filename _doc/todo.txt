@@ -38,7 +38,7 @@
 
     *   [SK-11] remove IOrganization read model stuff
 
-    .   [SK-12] remove ISecurityManager, use ICurrentUserProvider
+    *   [SK-12] remove ISecurityManager, use ICurrentUserProvider
 
 
  // ---------------------------------------------------------------------

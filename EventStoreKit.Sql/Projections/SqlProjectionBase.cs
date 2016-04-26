@@ -114,21 +114,21 @@ namespace EventStoreKit.Sql.Projections
 
         public QueryResult<TModel> Search(
             SearchOptions.SearchOptions options,
-            ISecurityManager securityManager = null, // required for IOrganizationModel
+            ICurrentUserProvider currentUserProvider = null, // required for IOrganizationModel
             Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
         {
             return DbProviderFactory.Run( db => db.PerformQuery(
                 options, 
                 FilterMapping,
                 SorterMapping,
-                securityManager,
+                currentUserProvider,
                 summaryAggregate: summaryAggregate ) );
         }
 
         public QueryResult<TResult> Search<TResult>(
             SearchOptions.SearchOptions options,
             Func<IDbProvider,Func<TModel, TResult>> getEvaluator,
-            ISecurityManager securityManager = null, // required for IOrganizationModel
+            ICurrentUserProvider currentUserProvider = null, // required for IOrganizationModel
             Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
         {
             return DbProviderFactory.Run( db =>
@@ -138,7 +138,7 @@ namespace EventStoreKit.Sql.Projections
                     options,
                     FilterMapping,
                     SorterMapping,
-                    securityManager,
+                    currentUserProvider,
                     summaryAggregate: summaryAggregate );
                 return new QueryResult<TResult>( 
                     result.Select( evaluator ).ToList(), 

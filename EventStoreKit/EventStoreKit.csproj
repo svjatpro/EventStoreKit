@@ -110,7 +110,7 @@
     <Compile Include="Services\IEventDispatcher.cs" />
     <Compile Include="Services\IEventPublisher.cs" />
     <Compile Include="Services\IReplaysHistory.cs" />
-    <Compile Include="Services\ISecurityManager.cs" />
+    <Compile Include="Services\ICurrentUserProvider.cs" />
     <Compile Include="Services\MessageDispatcher.cs" />
     <Compile Include="Services\ReplayHistoryService.cs" />
     <Compile Include="Services\ThreadSafeDictionary.cs" />

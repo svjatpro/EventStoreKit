@@ -82,7 +82,7 @@ namespace EventStoreKit.Sql.PersistanceManager
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
-            ISecurityManager securityManager = null )
+            ICurrentUserProvider currentUserProvider = null )
             where TEntity : class
         {
             var query = db.Query<TEntity>();
@@ -158,11 +158,11 @@ namespace EventStoreKit.Sql.PersistanceManager
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
-            ISecurityManager securityManager = null,
+            ICurrentUserProvider currentUserProvider = null,
             Func<TEntity, TEntity, TEntity> summaryAggregate = null )
             where TEntity : class
         {
-            IQueryable<TEntity> query = PerformQueryLazy( db, options, filterMapping, sorterMapping, securityManager );
+            IQueryable<TEntity> query = PerformQueryLazy( db, options, filterMapping, sorterMapping, currentUserProvider );
             // calculate total result count
             var total = query.Count();
 
