@@ -32,7 +32,7 @@ namespace EventStoreKit.Sql
         private class Startup : IStartable
         {
             private readonly ILogger<EventStoreModule<TSqlDialect>> Logger;
-            private readonly ISecurityManager SecurityManager;
+            private readonly ICurrentUserProvider CurrentUserProvider;
             private readonly IComponentContext Container;
             private readonly IEventDispatcher Dispatcher;
             private readonly IEnumerable<ICommandHandler> CommandHandlers;
@@ -53,7 +53,7 @@ namespace EventStoreKit.Sql
 
                     if( cmd.Created == default( DateTime ) )
                         cmd.Created = DateTime.Now;
-                    SecurityManager.CurrentUser.Do( user => cmd.CreatedBy = user.UserId );
+                    CurrentUserProvider.Do( user => cmd.CreatedBy = user.CurrentUserId );
                     var context = new CommandHandlerContext<TEntity>
                     {
                         Entity = repository.GetById<TEntity>( cmd.Id )
@@ -61,7 +61,7 @@ namespace EventStoreKit.Sql
                     if ( cmd.CreatedBy != Guid.Empty )
                         context.Entity.IssuedBy = cmd.CreatedBy;
                     else
-                        SecurityManager.CurrentUser.Do( user => context.Entity.IssuedBy = user.UserId );
+                        CurrentUserProvider.Do( user => context.Entity.IssuedBy = user.CurrentUserId );
 
                     handler.Handle( cmd, context );
                     Logger.InfoFormat( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
@@ -71,14 +71,14 @@ namespace EventStoreKit.Sql
             }
 
             public Startup(
-                ISecurityManager securityManager,
+                ICurrentUserProvider currentUserProvider,
                 IComponentContext container, 
                 IEventDispatcher dispatcher, 
                 IEnumerable<ICommandHandler> commandHandlers,
                 ILogger<EventStoreModule<TSqlDialect>> logger,
                 IEnumerable<IEventSubscriber> subscribers )
             {
-                SecurityManager = securityManager;
+                CurrentUserProvider = currentUserProvider;
                 Container = container;
                 Dispatcher = dispatcher.CheckNull( "dispatcher" );
                 CommandHandlers = commandHandlers;
