@@ -4,6 +4,6 @@ namespace EventStoreKit.Services
 {
     public interface ICurrentUserProvider
     {
-        Guid CurrentUserId { get; }
+        Guid? CurrentUserId { get; }
     }
 }

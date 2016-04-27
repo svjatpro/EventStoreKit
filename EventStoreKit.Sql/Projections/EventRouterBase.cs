@@ -29,7 +29,7 @@ namespace EventStoreKit.Sql.Projections
             var e = (@event as DomainEvent);
             if ( e != null )
             {
-                CurrentUserProvider.Do( user => e.CreatedBy = user.CurrentUserId );
+                CurrentUserProvider.CurrentUserId.Do( userId => e.CreatedBy = userId.GetValueOrDefault() );
             }
             if ( !IsRebuild )
             {
