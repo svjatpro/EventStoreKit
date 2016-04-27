@@ -38,7 +38,9 @@ namespace EventStoreKit.Sql
             private readonly IEnumerable<ICommandHandler> CommandHandlers;
             private readonly IEnumerable<IEventSubscriber> Subscribers;
 
+// ReSharper disable UnusedMember.Local
             private void RegisterCommandHandler<TCommand, TEntity>()
+// ReSharper restore UnusedMember.Local
                 where TCommand : DomainCommand
                 where TEntity : class, ITrackableAggregate
             {
@@ -53,7 +55,7 @@ namespace EventStoreKit.Sql
 
                     if( cmd.Created == default( DateTime ) )
                         cmd.Created = DateTime.Now;
-                    CurrentUserProvider.Do( user => cmd.CreatedBy = user.CurrentUserId );
+                    CurrentUserProvider.CurrentUserId.Do( userId => cmd.CreatedBy = userId.GetValueOrDefault() );
                     var context = new CommandHandlerContext<TEntity>
                     {
                         Entity = repository.GetById<TEntity>( cmd.Id )
@@ -61,7 +63,7 @@ namespace EventStoreKit.Sql
                     if ( cmd.CreatedBy != Guid.Empty )
                         context.Entity.IssuedBy = cmd.CreatedBy;
                     else
-                        CurrentUserProvider.Do( user => context.Entity.IssuedBy = user.CurrentUserId );
+                        CurrentUserProvider.CurrentUserId.Do( userId => context.Entity.IssuedBy = userId.GetValueOrDefault() );
 
                     handler.Handle( cmd, context );
                     Logger.InfoFormat( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
