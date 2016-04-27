@@ -10,7 +10,6 @@ namespace EventStoreKit.Services
             if ( typeof( TDerived ) == typeof( TBase ) )
             {
                 return (Action<TBase>)( (Delegate)source.Compile() );
-
             }
             var sourceParameter = Expression.Parameter( typeof( TBase ), "source" );
             var result = Expression.Lambda<Action<TBase>>(
