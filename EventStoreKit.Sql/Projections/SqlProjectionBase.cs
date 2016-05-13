@@ -94,8 +94,8 @@ namespace EventStoreKit.Sql.Projections
     {
         #region Private fields
 
-        private readonly Dictionary<string, Expression<Func<TModel, object>>> SorterMapping;
-        private readonly Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>> FilterMapping;
+        protected readonly Dictionary<string, Expression<Func<TModel, object>>> SorterMapping;
+        protected readonly Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>> FilterMapping;
 
         #endregion
 
