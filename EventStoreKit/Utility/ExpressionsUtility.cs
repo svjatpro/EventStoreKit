@@ -48,7 +48,7 @@ namespace EventStoreKit.Utility
 
         static public Dictionary<string, Expression<Func<T, object>>> WithProperty<T>( 
             this Dictionary<string, Expression<Func<T, object>>> dictionary, 
-            Expression<Func<T,string>> propertyGetter, 
+            Expression<Func<T,object>> propertyGetter, 
             Expression<Func<T,object>> sorter ) where T : class
         {
             var entity = (T)Activator.CreateInstance( typeof(T) );
