@@ -27,13 +27,15 @@
 
         // use NEventStore.Logging.ILog
 
-    .   [SK-14]
+    .   [SK-15]
 
     .   [SK-4] remove ThreadSafeDictionary
 
  // ---------------------------------------------------------------------
  // v.0.2.2.0
  // ---------------------------------------------------------------------
+
+    *   [SK-14] Fix WithProperty method to use in sorter infrastructure
 
     *   [SK-13] Refactor SagaProcess utility methods
 
