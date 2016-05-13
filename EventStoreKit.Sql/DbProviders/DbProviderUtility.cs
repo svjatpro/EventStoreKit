@@ -154,15 +154,14 @@ namespace EventStoreKit.Sql.PersistanceManager
         }
 
         public static QueryResult<TEntity> PerformQuery<TEntity>(
-            this IDbProvider db, 
-            SearchOptions.SearchOptions options, 
+            this IQueryable<TEntity> query,
+            SearchOptions.SearchOptions options,
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
             ICurrentUserProvider currentUserProvider = null,
             Func<TEntity, TEntity, TEntity> summaryAggregate = null )
             where TEntity : class
         {
-            IQueryable<TEntity> query = PerformQueryLazy( db, options, filterMapping, sorterMapping, currentUserProvider );
             // calculate total result count
             var total = query.Count();
 
@@ -176,8 +175,21 @@ namespace EventStoreKit.Sql.PersistanceManager
 
             // return result as QueryResult<> with Total and source SearchOptions
             var result = query.ToList();
-            
+
             return new QueryResult<TEntity>( result, options, total: total, summary: summary );
+        }
+
+        public static QueryResult<TEntity> PerformQuery<TEntity>(
+            this IDbProvider db, 
+            SearchOptions.SearchOptions options, 
+            Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
+            Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
+            ICurrentUserProvider currentUserProvider = null,
+            Func<TEntity, TEntity, TEntity> summaryAggregate = null )
+            where TEntity : class
+        {
+            IQueryable<TEntity> query = PerformQueryLazy( db, options, filterMapping, sorterMapping, currentUserProvider );
+            return PerformQuery( query, options, filterMapping, sorterMapping, currentUserProvider, summaryAggregate );
         }
 
         /// <summary>
