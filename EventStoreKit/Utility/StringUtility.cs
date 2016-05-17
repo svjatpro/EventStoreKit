@@ -9,14 +9,19 @@ namespace EventStoreKit.Utility
         #region Private fields
 
         private const string Br = "<br />";
+        private const string Space = "&nbsp;";
+        
+        private const string FontBlack = "<font color=black>";
+        private const string FontBlue = "<font color=blue>";
+        private const string FontGreen = "<font color=green>";
+        private const string FontRed = "<font color=red>";
+        private const string FontEnd = "</font>";
+
+
         private const string FormatAt = "<br /><font color=blue> {0}</font>";
         private const string FormatIn = "<br /><font color=green> {0}</font>";
         private const string FormatTitle = "<br /><font color=red> {0}</font>";
         private const string FormatInner = "<br /><font color=red> {0}</font>";
-
-        private const string FormatJsonBrace = "<font color=black>&nbsp;{0}</font>";
-        private const string FormatJsonName = "<br /><font color=blue>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{0}</font>";
-        private const string FormatJsonValue = "<font color=green>&nbsp;{0}</font>";
 
         #endregion
 
@@ -72,19 +77,20 @@ namespace EventStoreKit.Utility
                 var strings = JsonConvert.SerializeObject( JsonConvert.DeserializeObject( @event ), Formatting.Indented )
                     .Split( new[] {Environment.NewLine}, StringSplitOptions.RemoveEmptyEntries )
                     .Select(
-                        s =>
+                        ( s, i ) =>
                         {
-                            if ( new[] {"{", "}"}.Contains( s.Trim().Substring( 0, 1 ) ) )
+                            var line = s.TrimEnd().Replace( " ", Space );
+
+                            var prop = line.Split( new[] { ':' } );
+                            if ( prop.Length > 1 )
                             {
-                                s = string.Format( FormatJsonBrace, s );
+                                line = string.Format( "{0}{1}{2}{3}:{4}{5}{6}", Br, FontBlue, prop[0], FontEnd, FontGreen, prop[1], FontEnd );
                             }
                             else
                             {
-                                var prop = s.Split( new[] {':'} );
-                                if ( prop.Length > 1 )
-                                    s = string.Format( FormatJsonName, prop[0] ) + " : " + string.Format( FormatJsonValue, prop[1] );
+                                line = string.Format( "{0}{1}{2}{3}", ( i == 0 ? "" : Br ), FontBlack, line, FontEnd );
                             }
-                            return s;
+                            return line;
                         } )
                     .ToList();
                 return string.Join( "", strings );
