@@ -1,7 +1,7 @@
 ﻿
 namespace EventStoreKit.Messages
 {
-    public class SystemOnIdleEvent : Message
+    public class StreamOnIdleEvent : Message
     {
     }
 }
