@@ -186,7 +186,6 @@ namespace EventStoreKit.Sql
             wireup.LogTo( type => new Log4NetLogger( type ) );
             var persistanceWireup = wireup
                 .UsingSqlPersistence( ctx.ResolveNamed<string>( EventStoreConstants.CommitsConfigNameTag ) )
-                //.WithDialect( new MsSqlDialect() )
                 .WithDialect( new TSqlDialect() )
                 .PageEvery( 1024 );
 

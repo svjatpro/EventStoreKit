@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reflection;
+using System.Threading;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
@@ -22,6 +24,13 @@ namespace EventStoreKit.Projections
         private readonly BlockingCollection<EventInfo> MessageQueue;
         private readonly IDictionary<Type, Action<Message>> Actions;
         protected bool IsRebuild;
+
+// ReSharper disable FieldCanBeMadeReadOnly.Local
+        private int OnIddleInterval = 500;
+// ReSharper restore FieldCanBeMadeReadOnly.Local
+        private volatile bool MessageProcessed = false;
+        private System.Threading.Timer OnIddleTimer;
+        private readonly object IddleLockObj = new object();
         
         #endregion
 
@@ -71,8 +80,44 @@ namespace EventStoreKit.Projections
             {
                 IsRebuild = false;
             }
+
+            if( !(i.Event is StreamOnIdleEvent) )
+            {
+                MessageProcessed = true;
+                InitOnIddleTimer();
+            }
         }
 
+        private void InitOnIddleTimer()
+        {
+            if ( OnIddleTimer == null )
+            {
+                lock ( IddleLockObj )
+                {
+                    OnIddleTimer = new Timer( OnIddleTimerHandler, null, OnIddleInterval, OnIddleInterval );
+                }
+            }
+        }
+        private void OnIddleTimerHandler( object state )
+        {
+            if ( !MessageProcessed )
+            {
+                lock ( IddleLockObj )
+                {
+                    if ( OnIddleTimer != null )
+                    {
+                        OnIddleTimer.Change( Timeout.Infinite, Timeout.Infinite );
+                        OnIddleTimer = null;
+                    }
+                }
+                Handle( new StreamOnIdleEvent() );
+            }
+            else
+            {
+                MessageProcessed = false;
+            }
+        }
+        
         #endregion
 
         #region Protected methods
@@ -111,6 +156,24 @@ namespace EventStoreKit.Projections
 
         #endregion
 
+        #region Private event handlers
+
+        private void Apply( SequenceMarkerEvent msg )
+        {
+            OnSequenceFinished( msg );
+            SequenceFinished.Execute( this, new SequenceEventArgs( msg.Identity ) );
+        }
+
+        protected virtual void Apply( StreamOnIdleEvent msg )
+        {
+        }
+
+        #endregion
+
+        public event EventHandler<SequenceEventArgs> SequenceFinished;
+
+        protected virtual void OnSequenceFinished( SequenceMarkerEvent message ) { }
+        
         protected EventQueueSubscriber( ILog logger, IScheduler scheduler )
         {
             Log = logger.CheckNull( "logger" );
@@ -133,8 +196,15 @@ namespace EventStoreKit.Projections
                     var messageType = interfaceType.GetGenericArguments()[0];
                     createHandlerMehod.MakeGenericMethod( messageType ).Invoke( this, new object[] { } );
                 } );
-        }
 
+            int.TryParse( ConfigurationManager.AppSettings["OnIddleInterval"], out OnIddleInterval );
+
+            Register<SequenceMarkerEvent>( Apply );
+            Register<StreamOnIdleEvent>( Apply );
+
+            InitOnIddleTimer();
+        }
+        
         public void Handle( Message e ) { Handle( e, false ); }
         protected void Handle( Message e, bool isRebuild )
         {

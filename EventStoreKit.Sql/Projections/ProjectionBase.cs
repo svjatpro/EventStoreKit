@@ -5,7 +5,6 @@ using System.Runtime.Remoting.Messaging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Sql.ProjectionTemplates;
-using EventStoreKit.Utility;
 using log4net;
 
 namespace EventStoreKit.Sql.Projections
@@ -28,24 +27,11 @@ namespace EventStoreKit.Sql.Projections
         }
         
         #endregion
-
-        #region Private event handlers
-
-        private void Apply( SequenceMarkerEvent msg )
-        {
-            OnSequenceFinished( msg );
-            SequenceFinished.Execute( this, new SequenceEventArgs( msg.Identity ) );
-        }
-
-        #endregion
-
-        public event EventHandler<SequenceEventArgs> SequenceFinished;
         
         protected ProjectionBase( ILog logger, IScheduler scheduler )
             : base( logger, scheduler )
         {
             Register<SystemCleanedUpEvent>( DoCleanUp );
-            Register<SequenceMarkerEvent>( Apply );
         }
         
         protected void RegisterTemplate<TTemplate>( TTemplate template ) where TTemplate : IProjectionTemplate
@@ -53,9 +39,9 @@ namespace EventStoreKit.Sql.Projections
             ProjectionTemplates.Add( template );
         }
 
-        protected abstract void OnCleanup( SystemCleanedUpEvent message );
-        protected virtual void OnSequenceFinished( SequenceMarkerEvent message ){}
-
+        protected virtual void OnCleanup( SystemCleanedUpEvent message ){ }
+        protected virtual void OnIddle() { }
+        
         public abstract string Name { get; }
 
         protected override void PreprocessMessage( Message message )

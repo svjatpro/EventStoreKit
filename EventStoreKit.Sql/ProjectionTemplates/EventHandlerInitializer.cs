@@ -208,6 +208,14 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 ReadModelGetters.Add( property, getter );
             return this;
         }
+        public EventHandlerInitializer<TReadModel, TEvent> WithId( Func<TEvent, object> getter, Expression<Func<TReadModel, object>> getProperty )
+        {
+            var property = typeof( TReadModel ).ResolveProperty( getProperty.GetPropertyName() );
+            if ( getter != null && property != null )
+                ReadModelGetters.Add( property, getter );
+            return this;
+        }
+
         public EventHandlerInitializer<TReadModel, TEvent> WithInsertBufferCount( int count ) { InsertBufferCount = count; return this; }
 
         /// <summary>
