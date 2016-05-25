@@ -34,9 +34,10 @@ namespace EventStoreKit.Sql.Projections
             Register<SystemCleanedUpEvent>( DoCleanUp );
         }
         
-        protected void RegisterTemplate<TTemplate>( TTemplate template ) where TTemplate : IProjectionTemplate
+        protected TTemplate RegisterTemplate<TTemplate>( TTemplate template ) where TTemplate : IProjectionTemplate
         {
             ProjectionTemplates.Add( template );
+            return template;
         }
 
         protected virtual void OnCleanup( SystemCleanedUpEvent message ){ }
