@@ -55,7 +55,8 @@ namespace EventStoreKit.Sql
 
                     if( cmd.Created == default( DateTime ) )
                         cmd.Created = DateTime.Now;
-                    CurrentUserProvider.CurrentUserId.Do( userId => cmd.CreatedBy = userId.GetValueOrDefault() );
+                    if ( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
+                        cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
                     var context = new CommandHandlerContext<TEntity>
                     {
                         Entity = repository.GetById<TEntity>( cmd.Id )
