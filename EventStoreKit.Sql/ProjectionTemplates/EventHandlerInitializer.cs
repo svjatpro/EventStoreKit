@@ -7,6 +7,8 @@ using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
+using log4net;
+using log4net.Core;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
@@ -36,15 +38,14 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         private int InsertBufferCount = 100;
         private bool FlushInsertBufferBeforeAnyOtherEvents;
         private bool BufferedInsertEnabled = true;
-        //private bool FlushInsertBufferOnIdle;
-        //private int FlushOnIdleInterval;
         private readonly HashSet<Type> IgroredEvents = new HashSet<Type>();
-        //private Timer IdleTimer;
 
         private readonly Dictionary<TReadModel, TEvent> EntitiesInsertBuffer = new Dictionary<TReadModel, TEvent>();
         private readonly Action<Type, Action<Message>> EventRegister;
         private readonly Action<Type, Action<Message>> EventRegisterMultiple;
         private readonly Func<IDbProvider> DbFactory;
+        private readonly IDbStrategy<TReadModel> DbStrategy;
+
         private readonly Dictionary<PropertyInfo, EventFieldInfo> PropertiesMap = new Dictionary<PropertyInfo, EventFieldInfo>();
         private Func<TEvent, Expression<Func<TReadModel, bool>>> ReadModelPredicat;
         private readonly Dictionary<PropertyInfo, Func<TEvent, object>> ReadModelGetters = new Dictionary<PropertyInfo, Func<TEvent, object>>();
@@ -89,12 +90,13 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         }
         private void InsertEntities( IDbProvider db, bool flush )
         {
+            DbStrategy.Flush(); // todo: tmp
+
             var bufferAny = EntitiesInsertBuffer.Any();
             if ( !BufferedInsertEnabled )
                 flush = true;
             if ( EntitiesInsertBuffer.Count() >= InsertBufferCount || ( flush && bufferAny ) )
             {
-                //db.InsertBatch( EntitiesInsertBuffer.Select( b => b.Key ).ToList() );  // performance sucks! do not use it!
                 db.InsertBulk( EntitiesInsertBuffer.Select( b => b.Key ).ToList() );
                 var action = BufferedInsertAction.With( a => a() );
                 if ( action != null )
@@ -149,6 +151,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         public EventHandlerInitializer(
             Action<Type, Action<Message>, bool> eventRegister, 
             Func<IDbProvider> dbFactory,
+            IDbStrategy<TReadModel> dbStrategy,
             ThreadSafeDictionary<Guid, TReadModel> cache = null )
         {
             EventRegisterMultiple = ( type, action ) => eventRegister( type, action, true );
@@ -156,6 +159,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             EventRegister = ( type, action ) => eventRegister( type, action, isMultipleHandlers() );
             
             DbFactory = dbFactory;
+            DbStrategy = dbStrategy;
             Cache = cache;
         }
 
@@ -256,7 +260,8 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             // run custom initialization for new entity
                             InitNewEntityExpression.Do( a => a( db, (TEvent) @event, entity ) );
 
-                            db.Insert( entity );
+                            DbStrategy.Insert( GetReadModelId( (TEvent)@event ), entity );
+                            //db.Insert( entity );
                             //db.InsertOrReplace( entity );
 
                             // add to cache
@@ -313,6 +318,8 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                .ToList();
             var readModelType = typeof( TReadModel );
 
+            // 
+
             EventRegister(
                 typeof( TEvent ),
                 @event =>
@@ -354,7 +361,10 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             new[] { flushEvent }
                 .Concat( flushEvents )
-                .ToList().ForEach( eventType => EventRegisterMultiple( eventType, e => DbFactory.Run( db => InsertEntities( db, true ) ) ) );
+                .ToList()
+                .ForEach( eventType => EventRegisterMultiple( 
+                    eventType, 
+                    e => DbFactory.Run( db => InsertEntities( db, true ) ) ) );
             return this;
         }
         

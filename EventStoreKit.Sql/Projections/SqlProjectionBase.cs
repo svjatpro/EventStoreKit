@@ -23,7 +23,7 @@ namespace EventStoreKit.Sql.Projections
 
         #region Private methods
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, bool caching )
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, ILog log, ProjectionTemplateOptions options )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
@@ -32,11 +32,12 @@ namespace EventStoreKit.Sql.Projections
                 {
                     typeof (Action<Type, Action<Message>, bool>),
                     typeof (Func<IDbProvider>),
-                    typeof (bool)
+                    typeof (ILog),
+                    typeof (ProjectionTemplateOptions)
                 } );
             if( ctor == null )
                 throw new InvalidOperationException( ttype.Name + " doesn't have constructor ( Action<Type,Action<Message>,bool>, Func<IPerdistanceManagerProjection> )" );
-            return (TTemplate)( ctor.Invoke( new object[] { register, dbFactory, caching } ) );
+            return (TTemplate)( ctor.Invoke( new object[] { register, dbFactory, log, options } ) );
         }
 
         #endregion
@@ -50,9 +51,9 @@ namespace EventStoreKit.Sql.Projections
             DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
         }
 
-        protected TTemplate RegisterTemplate<TTemplate>( bool readModelCaching = false ) where TTemplate : IProjectionTemplate
+        protected TTemplate RegisterTemplate<TTemplate>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TTemplate : IProjectionTemplate
         {
-            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, readModelCaching );
+            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, Log, options );
             ProjectionTemplates.Add( template );
             return template;
         }
