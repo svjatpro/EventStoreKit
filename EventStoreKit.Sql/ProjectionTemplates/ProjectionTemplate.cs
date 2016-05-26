@@ -3,29 +3,110 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
+using log4net;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
-    public abstract class ProjectionTemplate : IProjectionTemplate
+    //public abstract class ProjectionTemplate : IProjectionTemplate
+    //{
+    //    #region Private members
+
+    //    protected readonly Action<Type, Action<Message>, bool> EventRegister;
+    //    protected readonly Func<IDbProvider> PersistanceManagerFactory;
+    //    protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
+    //    protected readonly ILog Logger;
+
+    //    #endregion
+
+    //    #region Implementation of IProjectionTemplate
+
+    //    public virtual void CleanUp( SystemCleanedUpEvent msg )
+    //    {
+    //        foreach ( var initializer in EventHandlerInitializers.Values )
+    //            initializer.CleanUp();
+    //    }
+
+    //    public void PreprocessEvent( Message @event )
+    //    {
+    //        foreach ( var initializer in EventHandlerInitializers.Values )
+    //            initializer.PreprocessEvent( @event );
+    //    }
+
+    //    public void Flush()
+    //    {
+    //        foreach ( var initializer in EventHandlerInitializers.Values )
+    //            initializer.Flush();
+    //    }
+
+    //    #endregion
+
+    //    protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IDbProvider> persistanceManagerFactory, ILog logger )
+    //    {
+    //        EventRegister = eventRegister;
+    //        PersistanceManagerFactory = persistanceManagerFactory;
+    //        Logger = logger;
+    //    }
+
+    //    #region Protected methods
+
+    //    protected void Register<TEvent>( Action<TEvent> action ) where TEvent : Message
+    //    {
+    //        EventRegister( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( x => action( x ) ), false );
+    //    }
+
+    //    protected static PropertyInfo GetProperty<T>( params string[] properties )
+    //    {
+    //        return typeof( T ).ResolveProperty( properties );
+    //    }
+
+    //    protected EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TReadModel, TEvent>()
+    //        where TReadModel : class
+    //        where TEvent : Message
+    //    {
+    //        var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory, logger: Logger );
+    //        EventHandlerInitializers.Add( typeof( TEvent ), initializer );
+    //        return initializer;
+    //    }
+
+    //    #endregion
+    //}
+
+    public class ProjectionTemplate<TReadModel> : IProjectionTemplate
+        where TReadModel : class
     {
-        #region Private members
+        #region Private fields
 
         protected readonly Action<Type, Action<Message>, bool> EventRegister;
         protected readonly Func<IDbProvider> PersistanceManagerFactory;
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
+        protected readonly ILog Logger;
 
+        private readonly ProjectionTemplateOptions Options;
+        private readonly bool ReadModelCaching;
+        private readonly IDbStrategy<TReadModel> DbStrategy;
+        private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
+        private Func<IDbProvider, Guid, object> GetByIdDelegate;
+
+        private readonly Dictionary<Guid, TReadModel> InsertBuffer = new Dictionary<Guid, TReadModel>();
+        
         #endregion
 
         #region Implementation of IProjectionTemplate
 
-        public virtual void CleanUp( SystemCleanedUpEvent msg )
+        public void CleanUp( SystemCleanedUpEvent msg )
         {
+            if ( Cache != null )
+                Cache.Clear();
+
             foreach ( var initializer in EventHandlerInitializers.Values )
                 initializer.CleanUp();
+
+            CreateTables( msg );
         }
 
         public void PreprocessEvent( Message @event )
@@ -42,13 +123,12 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #endregion
 
-        protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IDbProvider> persistanceManagerFactory )
-        {
-            EventRegister = eventRegister;
-            PersistanceManagerFactory = persistanceManagerFactory;
-        }
-
         #region Protected methods
+
+        protected virtual void CreateTables( SystemCleanedUpEvent msg )
+        {
+            PersistanceManagerFactory.Run( db => db.CreateTable<TReadModel>( overwrite: true ) );
+        }
 
         protected void Register<TEvent>( Action<TEvent> action ) where TEvent : Message
         {
@@ -60,61 +140,36 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return typeof( T ).ResolveProperty( properties );
         }
 
-        protected EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TReadModel, TEvent>()
-            where TReadModel : class
-            where TEvent : Message
-        {
-            var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory );
-            EventHandlerInitializers.Add( typeof( TEvent ), initializer );
-            return initializer;
-        }
-
-        #endregion
-    }
-
-    public class ProjectionTemplate<TReadModel> : ProjectionTemplate
-        where TReadModel : class
-    {
-        #region Private fields
-
-        private readonly bool ReadModelCaching;
-        private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
-        private Func<IDbProvider, Guid, object> GetByIdDelegate;
-
-        #endregion
-
-        public override void CleanUp( SystemCleanedUpEvent msg )
-        {
-            if ( Cache != null )
-                Cache.Clear();
-            base.CleanUp( msg );
-            CreateTables( msg );
-        }
-
-        #region Protected methods
-
-        protected virtual void CreateTables( SystemCleanedUpEvent msg )
-        {
-            PersistanceManagerFactory.Run( db => db.CreateTable<TReadModel>( overwrite: true ) );
-        }
-
         #endregion
 
         public ProjectionTemplate( 
             Action<Type, Action<Message>, bool> eventRegister,
-            Func<IDbProvider> persistanceManagerFactory,
-            bool readModelCaching = false ): 
-            base( eventRegister, persistanceManagerFactory )
+            Func<IDbProvider> dbProviderFactory,
+            ILog logger = null,
+            ProjectionTemplateOptions options = (ProjectionTemplateOptions) 0 )
         {
-            ReadModelCaching = readModelCaching;
-            if ( readModelCaching )
+            EventRegister = eventRegister;
+            PersistanceManagerFactory = dbProviderFactory;
+            Logger = logger;
+
+            Options = options;
+            ReadModelCaching = Options.HasFlag( ProjectionTemplateOptions.ReadCachingSingle );
+            if ( ReadModelCaching )
                 Cache = new ThreadSafeDictionary<Guid, TReadModel>();
+            
+            if( Options.HasFlag( ProjectionTemplateOptions.InsertCaching ) )
+                DbStrategy = new DbStrategyBuffered<TReadModel>( dbProviderFactory, null, logger, 5000 ); // todo:
+            else
+                DbStrategy = new DbStrategyDirect<TReadModel>( dbProviderFactory );
         }
 
+        
         public EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TEvent>()
             where TEvent : Message
         {
-            return InitEventHandler<TReadModel, TEvent>();
+            var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory, DbStrategy );
+            EventHandlerInitializers.Add( typeof( TEvent ), initializer );
+            return initializer;
         }
 
         #region GetById section

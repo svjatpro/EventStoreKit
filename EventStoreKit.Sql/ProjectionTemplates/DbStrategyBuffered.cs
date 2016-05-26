@@ -1,0 +1,82 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using EventStoreKit.Sql.PersistanceManager;
+using EventStoreKit.Utility;
+using log4net;
+
+namespace EventStoreKit.Sql.ProjectionTemplates
+{
+    public interface IDbStrategy<TReadModel> where TReadModel : class
+    {
+        void Flush();
+        void Insert( Guid id, TReadModel readModel );
+        void Update( Guid id, TReadModel readModel );
+    }
+
+    internal class DbStrategyDirect<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
+    {
+        private readonly Func<IDbProvider> DbProviderFactory;
+
+        public DbStrategyDirect( Func<IDbProvider> dbProviderFactory )
+        {
+            DbProviderFactory = dbProviderFactory;
+        }
+
+        public void Flush(){}
+
+        public void Insert( Guid id, TReadModel readModel )
+        {
+            DbProviderFactory.Run( db => db.Insert( readModel ) );
+        }
+
+        public void Update( Guid id, TReadModel readModel )
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    internal class DbStrategyBuffered<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
+    {
+        private readonly Func<IDbProvider> DbProviderFactory;
+        private readonly Func<TReadModel, Guid> GetIdExpression;
+        private readonly ILog Logger;
+        private readonly int BufferCount;
+
+        private readonly Dictionary<Guid, TReadModel> Buffer = new Dictionary<Guid, TReadModel>();
+
+        public DbStrategyBuffered( Func<IDbProvider> dbProviderFactory, Func<TReadModel, Guid> getIdExpression, ILog logger, int bufferCount )
+        {
+            DbProviderFactory = dbProviderFactory;
+            GetIdExpression = getIdExpression;
+            Logger = logger;
+            BufferCount = bufferCount;
+        }
+
+        public void Flush()
+        {
+            if ( Buffer.Any() )
+            {
+                var count = Buffer.Count();
+                DbProviderFactory.Run( db => db.InsertBulk( Buffer.Values ) );
+                Buffer.Clear();
+                Logger.Do( log => log.InfoFormat( "Bulk record inserted, count = {0}", count ) );
+            }
+        }
+
+        public void Insert( Guid id, TReadModel readModel )
+        {
+            Buffer.Add( GetIdExpression( readModel ), readModel );
+            //Buffer.Add( id, readModel );
+            if ( Buffer.Count() >= BufferCount )
+            {
+                Flush();
+            }
+        }
+
+        public void Update( Guid id, TReadModel readModel )
+        {
+            // todo
+        }
+    }
+}

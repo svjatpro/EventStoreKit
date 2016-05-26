@@ -83,8 +83,10 @@
     <Compile Include="Projections\SagaEventHandlerBase.cs" />
     <Compile Include="Projections\SqlProjectionBase.cs" />
     <Compile Include="ProjectionTemplates\EventHandlerInitializer.cs" />
+    <Compile Include="ProjectionTemplates\DbStrategyBuffered.cs" />
     <Compile Include="ProjectionTemplates\IProjectionTemplate.cs" />
     <Compile Include="ProjectionTemplates\ProjectionTemplate.cs" />
+    <Compile Include="ProjectionTemplates\ProjectionTemplateOptions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -23,6 +23,11 @@
 
     .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
 
+
+    ?   Move Expressions utilities to separate repository
+
+    ?   Move ProjectionTemplate to separate repository
+
     .   remove log4net dependency
 
         // use NEventStore.Logging.ILog
