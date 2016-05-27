@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -39,6 +40,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         private bool FlushInsertBufferBeforeAnyOtherEvents;
         private bool BufferedInsertEnabled = true;
         private readonly HashSet<Type> IgroredEvents = new HashSet<Type>();
+        private readonly HashSet<Type> EventsToFlush = new HashSet<Type>();
 
         private readonly Dictionary<TReadModel, TEvent> EntitiesInsertBuffer = new Dictionary<TReadModel, TEvent>();
         private readonly Action<Type, Action<Message>> EventRegister;
@@ -227,6 +229,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         /// </summary>
         public EventHandlerInitializer<TReadModel, TEvent> AsInsertAction()
         {
+            var eventType = typeof (TEvent);
             var properties = PropertiesMap
                 .ToDictionary(
                     prop => prop.Key,
@@ -241,7 +244,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             var readModelType = typeof( TReadModel );
 
             EventRegister(
-                typeof( TEvent ),
+                eventType,
                 @event =>
                 {
                     DbFactory.Run(
@@ -250,6 +253,9 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             // run validation expression
                             if ( !ValidateExpression.Return( v => v( db, (TEvent) @event ), true ) )
                                 return;
+
+                            if( EventsToFlush.Contains( eventType ) )
+                                DbStrategy.Flush();
 
                             // run custom action before insert
                             BeforeExpression.Do( a => a( db, (TEvent) @event ) );
@@ -272,6 +278,14 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                         } );
                     PostProcessExpression.Do( a => a( (TEvent) @event ) );
                 } );
+            return this;
+        }
+
+        public EventHandlerInitializer<TReadModel, TEvent> FlushBeforeHandle()
+        {
+            var type = typeof (TEvent);
+            if ( !EventsToFlush.Contains( type ) )
+                EventsToFlush.Add( type );
             return this;
         }
 
@@ -432,11 +446,13 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         /// </summary>
         public void AsUpdateAction()
         {
+            var eventType = typeof( TEvent );
             var readmodelType = typeof( TReadModel );
             var ctor = Expression.New( readmodelType );
+            var update = Expression.New( readmodelType );
 
             EventRegister(
-                typeof( TEvent ),
+                eventType,
                 @event =>
                 {
                     DbFactory.Run(
@@ -445,6 +461,9 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             // run validation expression
                             if ( !ValidateExpression.Return( v => v( db, (TEvent) @event ), true ) )
                                 return;
+
+                            if ( EventsToFlush.Contains( eventType ) )
+                                DbStrategy.Flush();
 
                             // todo: make this Expression in advance with @event as parameter instead of constant
                             Expression<Func<TReadModel, TReadModel>> evaluator = null;
@@ -472,14 +491,41 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                                 var memberInit = Expression.MemberInit( ctor, binders );
                                 evaluator = Expression.Lambda<Func<TReadModel, TReadModel>>( memberInit, parameter );
                             }
+                            
+                            //var sourceType = typeof( TSource );
+                            //var destType = typeof( TDestination );
+                            //var sourceProperties = sourceType.GetProperties( BindingFlags.Public | BindingFlags.Instance ).ToList();
+                            //var destProperties = destType.GetProperties( BindingFlags.Public | BindingFlags.Instance ).ToList();
+                            //var customBindings = customAssigns
+                            //    .Body.OfType<MemberInitExpression>()
+                            //    .With( m => m.Bindings )
+                            //    .Return( b => b.ToList(), new List<MemberBinding>() );
+                            //var parameter = customAssigns.Parameters[0];
+                            //var bindings = destProperties
+                            //    .Select( destProp =>
+                            //    {
+                            //        var customBinding = customBindings.SingleOrDefault( b => b.Member.Name == destProp.Name );
+                            //        return
+                            //            customBinding ??
+                            //            sourceProperties
+                            //                .SingleOrDefault( p => p.Name == destProp.Name )
+                            //                .With( srcProp => Expression.Bind( destProp, Expression.MakeMemberAccess( parameter, srcProp ) ) );
+                            //    } )
+                            //    .Where( bind => bind != null )
+                            //    .ToList();
+                            //var ctor = Expression.New( destType );
+                            //var memberInit = Expression.MemberInit( ctor, bindings );
+                            //var lambda = Expression.Lambda<Func<TSource, TDestination>>( memberInit, parameter );
+                            //return lambda.Compile()( source );
+
 
                             // run custom action before update
                             BeforeExpression.Do( a => a( db, (TEvent) @event ) );
 
                             var predicat = GetReadModelPredicat( (TEvent) @event );
-                            if ( predicat != null && evaluator != null )
-                                DbStrategy.Update( GetReadModelId( (TEvent) @event ),  );
-                                //db.Update( predicat, evaluator );
+                            DbStrategy.Update( GetReadModelId( (TEvent) @event ), predicat, evaluator );
+                            // if ( predicat != null && evaluator != null )
+                                // db.Update( predicat, evaluator );
 
                             // run custom action after update
                             AfterExpression.Do( a => a( db, (TEvent) @event ) );
@@ -517,6 +563,8 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             var validate = validateEvent.With( a => a() );
                             if ( validate != null && !validate( (TEvent) @event ) )
                                 return;
+
+                            DbStrategy.Flush(); // todo: is it make sence to delete from buffer without adding to DB?
 
                             var predicat = GetReadModelPredicat( (TEvent) @event );
                             if ( predicat != null )

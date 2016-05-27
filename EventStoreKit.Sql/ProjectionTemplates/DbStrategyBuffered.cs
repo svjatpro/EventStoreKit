@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
 using log4net;
@@ -11,7 +12,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
     {
         void Flush();
         void Insert( Guid id, TReadModel readModel );
-        void Update( Guid id, TReadModel readModel );
+        void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, Expression<Func<TReadModel,TReadModel>> evaluator );
     }
 
     internal class DbStrategyDirect<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
@@ -30,9 +31,9 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             DbProviderFactory.Run( db => db.Insert( readModel ) );
         }
 
-        public void Update( Guid id, TReadModel readModel )
+        public void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, Expression<Func<TReadModel, TReadModel>> evaluator )
         {
-            throw new NotImplementedException();
+            DbProviderFactory.Run( db => db.Update( predicat, evaluator ) );
         }
     }
 
@@ -59,6 +60,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 DbProviderFactory.Run( db => db.InsertBulk( Buffer.Values ) );
                 Buffer.Clear();
                 Logger.Do( log => log.ErrorFormat( "Bulk record inserted, count = {0}", count ) );
+                //Logger.Do( log => log.InfoFormat( "Bulk record inserted, count = {0}", count ) );
             }
         }
 
@@ -71,9 +73,16 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             }
         }
 
-        public void Update( Guid id, TReadModel readModel )
+        public void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, Expression<Func<TReadModel, TReadModel>> evaluator )
         {
-            // todo
+            if ( Buffer.ContainsKey( id ) )
+            {
+                Buffer[id] = evaluator.Compile()( Buffer[id] );
+            }
+            else
+            {
+                DbProviderFactory.Run( db => db.Update( predicat, evaluator ) );
+            }
         }
     }
 }
