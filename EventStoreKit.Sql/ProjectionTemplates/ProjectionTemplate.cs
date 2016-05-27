@@ -157,12 +157,15 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             if ( ReadModelCaching )
                 Cache = new ThreadSafeDictionary<Guid, TReadModel>();
             
+            // Init DbStrategy
             if( Options.HasFlag( ProjectionTemplateOptions.InsertCaching ) )
-                DbStrategy = new DbStrategyBuffered<TReadModel>( dbProviderFactory, null, logger, 5000 ); // todo:
+                DbStrategy = new DbStrategyBuffered<TReadModel>( dbProviderFactory, logger, 5000 );
             else
                 DbStrategy = new DbStrategyDirect<TReadModel>( dbProviderFactory );
-        }
 
+            Register<StreamOnIdleEvent>( msg => DbStrategy.Flush() );
+            Register<SequenceMarkerEvent>( msg => DbStrategy.Flush() );
+        }
         
         public EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TEvent>()
             where TEvent : Message

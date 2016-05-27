@@ -69,6 +69,7 @@ namespace EventStoreKit.Projections
                 {
                     PreprocessMessage( e );
                     action( e );
+                    Log.ErrorFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
                     Log.InfoFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
                 }
             }
