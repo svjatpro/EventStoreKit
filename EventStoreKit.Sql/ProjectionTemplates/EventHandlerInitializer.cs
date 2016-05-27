@@ -478,7 +478,8 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
                             var predicat = GetReadModelPredicat( (TEvent) @event );
                             if ( predicat != null && evaluator != null )
-                                db.Update( predicat, evaluator );
+                                DbStrategy.Update( GetReadModelId( (TEvent) @event ),  );
+                                //db.Update( predicat, evaluator );
 
                             // run custom action after update
                             AfterExpression.Do( a => a( db, (TEvent) @event ) );

@@ -39,16 +39,14 @@ namespace EventStoreKit.Sql.ProjectionTemplates
     internal class DbStrategyBuffered<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
     {
         private readonly Func<IDbProvider> DbProviderFactory;
-        private readonly Func<TReadModel, Guid> GetIdExpression;
         private readonly ILog Logger;
         private readonly int BufferCount;
 
         private readonly Dictionary<Guid, TReadModel> Buffer = new Dictionary<Guid, TReadModel>();
 
-        public DbStrategyBuffered( Func<IDbProvider> dbProviderFactory, Func<TReadModel, Guid> getIdExpression, ILog logger, int bufferCount )
+        public DbStrategyBuffered( Func<IDbProvider> dbProviderFactory, ILog logger, int bufferCount )
         {
             DbProviderFactory = dbProviderFactory;
-            GetIdExpression = getIdExpression;
             Logger = logger;
             BufferCount = bufferCount;
         }
@@ -60,14 +58,13 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 var count = Buffer.Count();
                 DbProviderFactory.Run( db => db.InsertBulk( Buffer.Values ) );
                 Buffer.Clear();
-                Logger.Do( log => log.InfoFormat( "Bulk record inserted, count = {0}", count ) );
+                Logger.Do( log => log.ErrorFormat( "Bulk record inserted, count = {0}", count ) );
             }
         }
 
         public void Insert( Guid id, TReadModel readModel )
         {
-            Buffer.Add( GetIdExpression( readModel ), readModel );
-            //Buffer.Add( id, readModel );
+            Buffer.Add( id, readModel );
             if ( Buffer.Count() >= BufferCount )
             {
                 Flush();
