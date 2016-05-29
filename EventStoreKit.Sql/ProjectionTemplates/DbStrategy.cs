@@ -12,7 +12,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
     {
         void Flush();
         void Insert( Guid id, TReadModel readModel );
-        void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, Expression<Func<TReadModel,TReadModel>> evaluator );
+        void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, ObjectExpressionBuilder<TReadModel> expressionBuilder );
     }
 
     internal class DbStrategyDirect<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
@@ -31,9 +31,9 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             DbProviderFactory.Run( db => db.Insert( readModel ) );
         }
 
-        public void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, Expression<Func<TReadModel, TReadModel>> evaluator )
+        public void Update( Guid id, Expression<Func<TReadModel, bool>> predicat, ObjectExpressionBuilder<TReadModel> expressionBuilder )
         {
-            DbProviderFactory.Run( db => db.Update( predicat, evaluator ) );
+            DbProviderFactory.Run( db => db.Update( predicat, expressionBuilder.GenerateUpdatExpression( false ) ) );
         }
     }
 
@@ -73,14 +73,16 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             }
         }
 
-        public void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, Expression<Func<TReadModel, TReadModel>> evaluator )
+        public void Update( Guid id, Expression<Func<TReadModel, bool>> predicat, ObjectExpressionBuilder<TReadModel> expressionBuilder )
         {
             if ( Buffer.ContainsKey( id ) )
             {
+                var evaluator = expressionBuilder.GenerateUpdatExpression( true );
                 Buffer[id] = evaluator.Compile()( Buffer[id] );
             }
             else
             {
+                var evaluator = expressionBuilder.GenerateUpdatExpression( false );
                 DbProviderFactory.Run( db => db.Update( predicat, evaluator ) );
             }
         }
