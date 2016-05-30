@@ -16,7 +16,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         TReadModel GetEntity( Guid id, Expression<Func<TReadModel, bool>> predicat );
     }
 
-    internal class DbStrategyDirect<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
+    public class DbStrategyDirect<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
     {
         private readonly Func<IDbProvider> DbProviderFactory;
 
@@ -44,7 +44,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         }
     }
 
-    internal class DbStrategyBuffered<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
+    public class DbStrategyBuffered<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
     {
         private readonly Func<IDbProvider> DbProviderFactory;
         private readonly ILog Logger;
