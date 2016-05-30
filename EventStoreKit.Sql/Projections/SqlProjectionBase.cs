@@ -16,9 +16,9 @@ namespace EventStoreKit.Sql.Projections
     public abstract class SqlProjectionBase : ProjectionBase
     {
         #region Protected fields
-        
+
         protected readonly Func<IDbProvider> DbProviderFactory;
-        
+
         #endregion
 
         #region Private methods

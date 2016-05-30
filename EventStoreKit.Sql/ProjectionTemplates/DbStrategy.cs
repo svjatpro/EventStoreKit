@@ -12,7 +12,8 @@ namespace EventStoreKit.Sql.ProjectionTemplates
     {
         void Flush();
         void Insert( Guid id, TReadModel readModel );
-        void Update( Guid id, Expression<Func<TReadModel,bool>> predicat, ObjectExpressionBuilder<TReadModel> expressionBuilder );
+        void Update( Guid id, Expression<Func<TReadModel, bool>> predicat, ObjectExpressionBuilder<TReadModel> expressionBuilder );
+        TReadModel GetEntity( Guid id, Expression<Func<TReadModel, bool>> predicat );
     }
 
     internal class DbStrategyDirect<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
@@ -33,7 +34,13 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public void Update( Guid id, Expression<Func<TReadModel, bool>> predicat, ObjectExpressionBuilder<TReadModel> expressionBuilder )
         {
-            DbProviderFactory.Run( db => db.Update( predicat, expressionBuilder.GenerateUpdatExpression( false ) ) );
+            var evaluator = expressionBuilder.GenerateUpdatExpression( false );
+            evaluator.Do( e => DbProviderFactory.Run( db => db.Update( predicat, e ) ) );
+        }
+
+        public TReadModel GetEntity( Guid id, Expression<Func<TReadModel, bool>> predicat )
+        {
+            return DbProviderFactory.Run( db => db.Single( predicat ) );
         }
     }
 
@@ -59,8 +66,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 var count = Buffer.Count();
                 DbProviderFactory.Run( db => db.InsertBulk( Buffer.Values ) );
                 Buffer.Clear();
-                Logger.Do( log => log.ErrorFormat( "Bulk record inserted, count = {0}", count ) );
-                //Logger.Do( log => log.InfoFormat( "Bulk record inserted, count = {0}", count ) );
+                Logger.Do( log => log.InfoFormat( "Bulk record inserted, count = {0}", count ) );
             }
         }
 
@@ -78,12 +84,24 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             if ( Buffer.ContainsKey( id ) )
             {
                 var evaluator = expressionBuilder.GenerateUpdatExpression( true );
-                Buffer[id] = evaluator.Compile()( Buffer[id] );
+                evaluator.Do( e => Buffer[id] = e.Compile()( Buffer[id] ) );
             }
             else
             {
                 var evaluator = expressionBuilder.GenerateUpdatExpression( false );
-                DbProviderFactory.Run( db => db.Update( predicat, evaluator ) );
+                evaluator.Do( e => DbProviderFactory.Run( db => db.Update( predicat, e ) ) );
+            }
+        }
+
+        public TReadModel GetEntity(Guid id, Expression<Func<TReadModel, bool>> predicat)
+        {
+            if ( Buffer.ContainsKey( id ) )
+            {
+                return Buffer[id];
+            }
+            else
+            {
+                return DbProviderFactory.Run( db => db.Single( predicat ) );
             }
         }
     }

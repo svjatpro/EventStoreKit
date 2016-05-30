@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
@@ -12,70 +12,7 @@ using log4net;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
-    //public abstract class ProjectionTemplate : IProjectionTemplate
-    //{
-    //    #region Private members
-
-    //    protected readonly Action<Type, Action<Message>, bool> EventRegister;
-    //    protected readonly Func<IDbProvider> PersistanceManagerFactory;
-    //    protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
-    //    protected readonly ILog Logger;
-
-    //    #endregion
-
-    //    #region Implementation of IProjectionTemplate
-
-    //    public virtual void CleanUp( SystemCleanedUpEvent msg )
-    //    {
-    //        foreach ( var initializer in EventHandlerInitializers.Values )
-    //            initializer.CleanUp();
-    //    }
-
-    //    public void PreprocessEvent( Message @event )
-    //    {
-    //        foreach ( var initializer in EventHandlerInitializers.Values )
-    //            initializer.PreprocessEvent( @event );
-    //    }
-
-    //    public void Flush()
-    //    {
-    //        foreach ( var initializer in EventHandlerInitializers.Values )
-    //            initializer.Flush();
-    //    }
-
-    //    #endregion
-
-    //    protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IDbProvider> persistanceManagerFactory, ILog logger )
-    //    {
-    //        EventRegister = eventRegister;
-    //        PersistanceManagerFactory = persistanceManagerFactory;
-    //        Logger = logger;
-    //    }
-
-    //    #region Protected methods
-
-    //    protected void Register<TEvent>( Action<TEvent> action ) where TEvent : Message
-    //    {
-    //        EventRegister( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( x => action( x ) ), false );
-    //    }
-
-    //    protected static PropertyInfo GetProperty<T>( params string[] properties )
-    //    {
-    //        return typeof( T ).ResolveProperty( properties );
-    //    }
-
-    //    protected EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TReadModel, TEvent>()
-    //        where TReadModel : class
-    //        where TEvent : Message
-    //    {
-    //        var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory, logger: Logger );
-    //        EventHandlerInitializers.Add( typeof( TEvent ), initializer );
-    //        return initializer;
-    //    }
-
-    //    #endregion
-    //}
-
+    
     public class ProjectionTemplate<TReadModel> : IProjectionTemplate
         where TReadModel : class
     {
@@ -86,14 +23,16 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
         protected readonly ILog Logger;
 
+// ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
         private readonly ProjectionTemplateOptions Options;
+        private readonly int InsertBufferSize = 5000;
+// ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
         private readonly bool ReadModelCaching;
         private readonly IDbStrategy<TReadModel> DbStrategy;
         private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
         private Func<IDbProvider, Guid, object> GetByIdDelegate;
 
-        private readonly Dictionary<Guid, TReadModel> InsertBuffer = new Dictionary<Guid, TReadModel>();
-        
+    
         #endregion
 
         #region Implementation of IProjectionTemplate
@@ -146,7 +85,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             Action<Type, Action<Message>, bool> eventRegister,
             Func<IDbProvider> dbProviderFactory,
             ILog logger = null,
-            ProjectionTemplateOptions options = (ProjectionTemplateOptions) 0 )
+            ProjectionTemplateOptions options = ProjectionTemplateOptions.None )
         {
             EventRegister = eventRegister;
             PersistanceManagerFactory = dbProviderFactory;
@@ -158,13 +97,15 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 Cache = new ThreadSafeDictionary<Guid, TReadModel>();
             
             // Init DbStrategy
-            if( Options.HasFlag( ProjectionTemplateOptions.InsertCaching ) )
-                DbStrategy = new DbStrategyBuffered<TReadModel>( dbProviderFactory, logger, 5000 );
+            if ( Options.HasFlag( ProjectionTemplateOptions.InsertCaching ) )
+            {
+                int.TryParse(ConfigurationManager.AppSettings["InsertBufferSize"], out InsertBufferSize);
+                DbStrategy = new DbStrategyBuffered<TReadModel>(dbProviderFactory, logger, InsertBufferSize);
+            }
             else
+            {
                 DbStrategy = new DbStrategyDirect<TReadModel>( dbProviderFactory );
-
-            Register<StreamOnIdleEvent>( msg => DbStrategy.Flush() );
-            Register<SequenceMarkerEvent>( msg => DbStrategy.Flush() );
+            }
         }
         
         public EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TEvent>()

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -8,8 +7,6 @@ using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
-using log4net;
-using log4net.Core;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
@@ -33,25 +30,15 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         }
 
         private readonly ThreadSafeDictionary<Guid, TReadModel> Cache; // todo: replace with ConcurrentDictionary
-
-        private bool UseMultipleHandlers = true;
-        
-        private int InsertBufferCount = 100;
-        private bool FlushInsertBufferBeforeAnyOtherEvents;
-        private bool BufferedInsertEnabled = true;
-        private readonly HashSet<Type> IgroredEvents = new HashSet<Type>();
         private readonly HashSet<Type> EventsToFlush = new HashSet<Type>();
 
-        private readonly Dictionary<TReadModel, TEvent> EntitiesInsertBuffer = new Dictionary<TReadModel, TEvent>();
         private readonly Action<Type, Action<Message>> EventRegister;
-        private readonly Action<Type, Action<Message>> EventRegisterMultiple;
         private readonly Func<IDbProvider> DbFactory;
         private readonly IDbStrategy<TReadModel> DbStrategy;
 
         private readonly Dictionary<PropertyInfo, EventFieldInfo> PropertiesMap = new Dictionary<PropertyInfo, EventFieldInfo>();
-        private Func<TEvent, Expression<Func<TReadModel, bool>>> ReadModelPredicat;
+ 
         private readonly Dictionary<PropertyInfo, Func<TEvent, object>> ReadModelGetters = new Dictionary<PropertyInfo, Func<TEvent, object>>();
-        private Func<Action<IDbProvider, IEnumerable<TEvent>>> BufferedInsertAction;
 
         private Action<IDbProvider, TEvent, TReadModel> InitNewEntityExpression;
         private Func<IDbProvider, TEvent, Expression<Func<TReadModel, TReadModel>>> UpdateExpression;
@@ -66,12 +53,15 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         private Guid GetReadModelId( TEvent @event )
         {
-            return (Guid)ReadModelGetters.Values.First()( @event );
+            return ReadModelGetters
+                .Where( g => g.Key.PropertyType == typeof(Guid) )
+                .Select( g => g.Value )
+                .FirstOrDefault()
+                .Return( get => (Guid)get( @event ), Guid.NewGuid() );
         }
         private Expression<Func<TReadModel, bool>> GetReadModelPredicat( TEvent @event )
         {
-            var predicat = ReadModelPredicat.With( p => p( @event ) );
-            if ( predicat == null && ReadModelGetters.Any() )
+            if ( ReadModelGetters.Any() )
             {
                 var parameter = Expression.Parameter( typeof( TReadModel ), "entity" );
                 var equalMethods = ReadModelGetters
@@ -88,23 +78,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                     .ForEach( expr => binaryExpression = Expression.AndAlso( binaryExpression, expr ) );
                 return Expression.Lambda<Func<TReadModel, bool>>( binaryExpression, parameter );
             }
-            return predicat;
-        }
-        private void InsertEntities( IDbProvider db, bool flush )
-        {
-            DbStrategy.Flush(); // todo: tmp
-
-            var bufferAny = EntitiesInsertBuffer.Any();
-            if ( !BufferedInsertEnabled )
-                flush = true;
-            if ( EntitiesInsertBuffer.Count() >= InsertBufferCount || ( flush && bufferAny ) )
-            {
-                db.InsertBulk( EntitiesInsertBuffer.Select( b => b.Key ).ToList() );
-                var action = BufferedInsertAction.With( a => a() );
-                if ( action != null )
-                    action( db, EntitiesInsertBuffer.Select( b => b.Value ).ToList() );
-                EntitiesInsertBuffer.Clear();
-            }
+            return null;
         }
 
         private void AddToCache( TEvent @event, TReadModel model )
@@ -129,23 +103,15 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public void PreprocessEvent( Message @event )
         {
-            var eventType = @event.GetType();
-            if( FlushInsertBufferBeforeAnyOtherEvents && 
-                eventType != typeof( TEvent ) &&
-                !IgroredEvents.Contains( eventType ) )
-            {
-                Flush();
-            }
         }
 
         public void Flush()
         {
-            DbFactory.Run( db => InsertEntities( db, true ) );
+            DbStrategy.Flush();
         }
 
         public void CleanUp()
         {
-            BufferedInsertEnabled = true;
         }
         
         #endregion
@@ -156,9 +122,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             IDbStrategy<TReadModel> dbStrategy,
             ThreadSafeDictionary<Guid, TReadModel> cache = null )
         {
-            EventRegisterMultiple = ( type, action ) => eventRegister( type, action, true );
-            Func<bool> isMultipleHandlers = () => UseMultipleHandlers;
-            EventRegister = ( type, action ) => eventRegister( type, action, isMultipleHandlers() );
+            EventRegister = ( type, action ) => eventRegister( type, action, true );
             
             DbFactory = dbFactory;
             DbStrategy = dbStrategy;
@@ -206,8 +170,6 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #endregion
 
-        public EventHandlerInitializer<TReadModel, TEvent> WithMultipleHandlers( bool isMultipleHandlers ) { UseMultipleHandlers = isMultipleHandlers; return this; }
-        
         public EventHandlerInitializer<TReadModel, TEvent> WithId( Func<TEvent, object> getter, PropertyInfo property )
         {
             if ( getter != null && property != null )
@@ -221,8 +183,6 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 ReadModelGetters.Add( property, getter );
             return this;
         }
-
-        public EventHandlerInitializer<TReadModel, TEvent> WithInsertBufferCount( int count ) { InsertBufferCount = count; return this; }
 
         /// <summary>
         /// Initialize handler to insert new entity;
@@ -267,9 +227,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             InitNewEntityExpression.Do( a => a( db, (TEvent) @event, entity ) );
 
                             DbStrategy.Insert( GetReadModelId( (TEvent)@event ), entity );
-                            //db.Insert( entity );
-                            //db.InsertOrReplace( entity );
-
+ 
                             // add to cache
                             AddToCache( (TEvent) @event, entity );
 
@@ -290,166 +248,11 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         }
 
         /// <summary>
-        /// Initialize handler to insert buffer on HFM import finished;
-        ///  Please note, argument insertAction will be called for each insert Event, but before the record inserted into DB
-        /// </summary>
-        public EventHandlerInitializer<TReadModel, TEvent> AsInsertBufferedAction()
-        {
-            //var readModelType = typeof( TReadModel );
-            //var ctor = Expression.New( readModelType );
-            //var parameterDb = Expression.Parameter( typeof( IDbProvider ), "db" );
-            //var parameterEvent = Expression.Parameter( typeof( TEvent ), "e" );
-            //Func<IDbProvider, TEvent, TReadModel> entityCreator = ( db, e ) => (TReadModel)Activator.CreateInstance( readModelType );
-            //if ( PropertiesMap.Any() )
-            //{
-            //    var binders = PropertiesMap
-            //        // we can ignore Validation for insert evaluator, because there is not 'previous value',
-            //        // so one can use ( e => e.Field1.HasValue() ? e.Field1 : false ) like expression to initalize property
-            //        //.Where( p => p.Value.Validator( (TEvent)@event ) ) 
-            //        .Select( p =>
-            //                 {
-            //                     Expression<Func<IDbProvider, TEvent, object>> expr = ( db, e ) => p.Value.Getter( db, e );
-            //                     return Expression.Bind( p.Key, Expression.Convert( Expression.Invoke( expr, parameterDb, parameterEvent ), p.Key.PropertyType ) );
-            //                 } )
-            //        .ToList();
-            //    var memberInit = Expression.MemberInit( ctor, binders );
-            //    var evaluator = Expression.Lambda<Func<IDbProvider, TEvent, TReadModel>>( memberInit, parameterDb, parameterEvent );
-            //    entityCreator = evaluator.Compile();
-            //}
-            //
-            //var entity = entityCreator( db, (TEvent)@event );
-
-            var properties = PropertiesMap
-               .ToDictionary(
-                   prop => prop.Key,
-                   prop =>
-                       new Action<IDbProvider, TEvent, PropertyInfo, TReadModel>(
-                           ( db, e, p, u ) =>
-                           {
-                               if ( prop.Value.Validator( e ) )
-                                   prop.Key.SetValue( u, prop.Value.Getter( db, e ), new object[] { } );
-                           } ) )
-               .ToList();
-            var readModelType = typeof( TReadModel );
-
-            // 
-
-            EventRegister(
-                typeof( TEvent ),
-                @event =>
-                {
-                    DbFactory.RunLazy(
-                        db =>
-                        {
-                            // run validation expression
-                            if ( !ValidateExpression.Return( v => v( db, (TEvent) @event ), true ) )
-                                return;
-
-                            // run custom action before insert
-                            BeforeExpression.Do( a => a( db, (TEvent) @event ) );
-
-                            var entity = (TReadModel) Activator.CreateInstance( readModelType );
-                            properties.ForEach( p => p.Value( db, (TEvent) @event, p.Key, entity ) );
-
-                            // run custom initialization for new entity
-                            InitNewEntityExpression.Do( a => a( db, (TEvent) @event, entity ) );
-
-                            // add to cache
-                            AddToCache( (TEvent) @event, entity );
-                            // add to buffer and call lazy insert
-                            EntitiesInsertBuffer.Add( entity, (TEvent) @event );
-                            InsertEntities( db, false );
-
-                            // run custom action after insert
-                            AfterExpression.Do( a => a( db, (TEvent) @event ) );
-                        } );
-                    PostProcessExpression.Do( a => a( (TEvent)@event ) );
-                } );
-            return this;
-        }
-
-        /// <summary>
-        /// Initialize handler to flush insert buffer on specified events occurse;
-        /// </summary>
-        public EventHandlerInitializer<TReadModel, TEvent> FlushOn( Type flushEvent, params Type[] flushEvents )
-        {
-            new[] { flushEvent }
-                .Concat( flushEvents )
-                .ToList()
-                .ForEach( eventType => EventRegisterMultiple( 
-                    eventType, 
-                    e => DbFactory.Run( db => InsertEntities( db, true ) ) ) );
-            return this;
-        }
-        
-        /// <summary>
-        /// Initialize flush when idle time occurse
-        /// </summary>
-        //public EventHandlerInitializer<TReadModel, TEvent> FlushOnIdle( int milliseconds )
-        //{
-        //    FlushInsertBufferOnIdle = true;
-        //    FlushOnIdleInterval = milliseconds;
-        //    return this;
-        //}
-
-        /// <summary>
-        /// Initialize handler to flush insert buffer when target event sequence will be breaken and there is any other event will be handled;
-        /// </summary>
-        public EventHandlerInitializer<TReadModel, TEvent> FlushOnAnyOtherEvent()
-        {
-            FlushInsertBufferBeforeAnyOtherEvents = true;
-            return this;
-        }
-        public EventHandlerInitializer<TReadModel, TEvent> FlushOnAnyOtherEventBeside( Type ignoredEvent, params Type[] ignoredEvents )
-        {
-            FlushInsertBufferBeforeAnyOtherEvents = true;
-            new[] { ignoredEvent }
-                .Concat( ignoredEvents )
-                .ToList().ForEach(
-                e =>
-                {
-                    if ( !IgroredEvents.Contains( e ) )
-                        IgroredEvents.Add( e );
-                } );
-            return this;
-        }
-        
-        /// <summary>
-        /// Initialize additional custom action when imsert buffer flush
-        /// </summary>
-        public EventHandlerInitializer<TReadModel, TEvent> OnFlushInsertBuffer( Func<Action<IDbProvider, IEnumerable<TEvent>>> insertAction = null )
-        {
-            BufferedInsertAction = insertAction;
-            return this;
-        }
-
-        public EventHandlerInitializer<TReadModel, TEvent> EnableBufferedInsertOn( Type eventType/*, params Type[] events*/ )
-        {
-            EventRegisterMultiple( eventType, @event => BufferedInsertEnabled = true );
-            return this;
-        }
-
-        public EventHandlerInitializer<TReadModel, TEvent> DisableBufferedInsertOn( Type eventType/*, params Type[] events*/ )
-        {
-            EventRegisterMultiple( eventType, @event => BufferedInsertEnabled = false );
-            return this;
-        }
-
-        public EventHandlerInitializer<TReadModel, TEvent> BufferInsertByDefault( bool defaultValue )
-        {
-            BufferedInsertEnabled = defaultValue;
-            return this;
-        }
-
-        /// <summary>
         /// Initialize handler to Update entity;
         /// </summary>
         public void AsUpdateAction()
         {
             var eventType = typeof( TEvent );
-            var readmodelType = typeof( TReadModel );
-            var ctor = Expression.New( readmodelType );
-            var update = Expression.New( readmodelType );
 
             EventRegister(
                 eventType,
@@ -465,36 +268,10 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             if ( EventsToFlush.Contains( eventType ) )
                                 DbStrategy.Flush();
 
-                            //// todo: make this Expression in advance with @event as parameter instead of constant
-                            //Expression<Func<TReadModel, TReadModel>> evaluator = null;
-                            
-                            //var parameter = udpateExpr.Return(
-                            //    expr => expr.Parameters[0],
-                            //    Expression.Parameter( readmodelType, "entity" ) );
-                            //var customBindings = udpateExpr
-                            //    .With( e => e.Body.OfType<MemberInitExpression>() )
-                            //    .With( m => m.Bindings )
-                            //    .Return( b => b.ToList(), new List<MemberBinding>() );
-
-                            //if ( PropertiesMap.Any() )
-                            //{
-                            //    var binders = customBindings.Union( PropertiesMap
-                            //        .Where( p => p.Value.Validator( (TEvent) @event ) && !customBindings.Any( b => b.Member.Name == p.Key.Name ) )
-                            //        .Select(
-                            //            p =>
-                            //            {
-                            //                var customBinding = customBindings.SingleOrDefault( b => b.Member.Name == p.Key.Name );
-                            //                var valueConst = Expression.Constant( p.Value.Getter( db, (TEvent) @event ), p.Key.PropertyType );
-                            //                return customBinding ?? Expression.Bind( p.Key, valueConst );
-                            //            } ) )
-                            //        .ToList();
-                            //    var memberInit = Expression.MemberInit( ctor, binders );
-                            //    evaluator = Expression.Lambda<Func<TReadModel, TReadModel>>( memberInit, parameter );
-                            //}
-                            
                             // run custom action before update
                             BeforeExpression.Do( a => a( db, (TEvent) @event ) );
 
+                            var id = GetReadModelId((TEvent)@event);
                             var predicat = GetReadModelPredicat( (TEvent) @event );
                             var udpateExpr = UpdateExpression.With( getter => getter( db, (TEvent) @event ) );
                             var eventValues = PropertiesMap
@@ -502,10 +279,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                                 .ToDictionary( p => p.Key, p => p.Value.Getter( db, (TEvent) @event ) );
                             var expresionBuilder = new ObjectExpressionBuilder<TReadModel>( udpateExpr, eventValues );
 
-                            DbStrategy.Update( GetReadModelId( (TEvent) @event ), predicat, expresionBuilder );
-                            //DbStrategy.Update( GetReadModelId( (TEvent) @event ), predicat, evaluator );
-                            // if ( predicat != null && evaluator != null )
-                                // db.Update( predicat, evaluator );
+                            DbStrategy.Update( id, predicat, expresionBuilder );
 
                             // run custom action after update
                             AfterExpression.Do( a => a( db, (TEvent) @event ) );
@@ -514,10 +288,10 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             if ( predicat != null && Cache != null )
                             {
                                 // todo: compile expression and use it to update existing entity without additional DB query
-                                var entity = db.Query<TReadModel>().Where( predicat ).FirstOrDefault();
+                                var entity = DbStrategy.GetEntity( id, predicat );
+                                //var entity = db.Query<TReadModel>().Where( predicat ).FirstOrDefault();
                                 if ( entity != null )
                                 {
-                                    var id = GetReadModelId( (TEvent) @event );
                                     Cache.AddOrUpdate( id, entity );
                                 }
                             }
