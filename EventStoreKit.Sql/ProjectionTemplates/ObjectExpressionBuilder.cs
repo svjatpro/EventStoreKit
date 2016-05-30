@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
@@ -21,10 +20,10 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         public Expression<Func<TReadModel, TReadModel>> GenerateUpdatExpression( bool updateAllFields )
         {
-            var readmodelType = typeof( TReadModel );
-            var sourceProperties = readmodelType.GetProperties( BindingFlags.Public | BindingFlags.Instance ).ToList();
-
-            Expression<Func<TReadModel, TReadModel>> evaluator = null;
+            var readmodelType = typeof (TReadModel);
+            var sourceProperties = readmodelType
+                .GetProperties( BindingFlags.Public | BindingFlags.Instance )
+                .ToList();
 
             var parameter = CustomUpdate.Return(
                 expr => expr.Parameters[0],
@@ -34,55 +33,37 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                 .With( m => m.Bindings )
                 .Return( b => b.ToList(), new List<MemberBinding>() );
 
-
-
-            if ( PropertiesMap.Any() )
+            var binders = new List<MemberBinding>();
+            sourceProperties.ForEach( property =>
             {
-                var binders = customBindings.Union( PropertiesMap
-                    .Where( p => p.Value.Validator( (TEvent) @event ) && !customBindings.Any( b => b.Member.Name == p.Key.Name ) )
-                    .Select(
-                        p =>
-                        {
-                            var customBinding = customBindings.SingleOrDefault( b => b.Member.Name == p.Key.Name );
-                            var valueConst = Expression.Constant( p.Value.Getter( db, (TEvent) @event ), p.Key.PropertyType );
-                            return customBinding ?? Expression.Bind( p.Key, valueConst );
-                        } ) )
-                    .ToList();
+                var customBinding = customBindings.SingleOrDefault( b => b.Member.Name == property.Name );
+                if ( customBinding != null )
+                {
+                    binders.Add( customBinding );
+                }
+                else if ( NewValues.ContainsKey( property ) )
+                {
+                    binders.Add( Expression.Bind( property,
+                        Expression.Constant( NewValues[property], property.PropertyType ) ) );
+                }
+                else if ( updateAllFields )
+                {
+                    binders.Add( Expression.Bind( property, Expression.MakeMemberAccess( parameter, property ) ) );
+                }
+            } );
+
+            if ( binders.Any() )
+            {
+                var ctor = Expression.New( readmodelType );
                 var memberInit = Expression.MemberInit( ctor, binders );
-                evaluator = Expression.Lambda<Func<TReadModel, TReadModel>>( memberInit, parameter );
+                var evaluator = Expression.Lambda<Func<TReadModel, TReadModel>>( memberInit, parameter );
+
+                return evaluator;
             }
-
-            return evaluator;
+            else
+            {
+                return null;
+            }
         }
-
-        // 1 - custom binding
-        // 2 - constants, taken from event via configured getters
-        // 3 (?) - default, binding expression, get from e => new{ property = e.property }
-
-        //var sourceType = typeof( TSource );
-        //var destType = typeof( TDestination );
-        //var sourceProperties = sourceType.GetProperties( BindingFlags.Public | BindingFlags.Instance ).ToList();
-        //var destProperties = destType.GetProperties( BindingFlags.Public | BindingFlags.Instance ).ToList();
-        //var customBindings = customAssigns
-        //    .Body.OfType<MemberInitExpression>()
-        //    .With( m => m.Bindings )
-        //    .Return( b => b.ToList(), new List<MemberBinding>() );
-        //var parameter = customAssigns.Parameters[0];
-        //var bindings = destProperties
-        //    .Select( destProp =>
-        //    {
-        //        var customBinding = customBindings.SingleOrDefault( b => b.Member.Name == destProp.Name );
-        //        return
-        //            customBinding ??
-        //            sourceProperties
-        //                .SingleOrDefault( p => p.Name == destProp.Name )
-        //                .With( srcProp => Expression.Bind( destProp, Expression.MakeMemberAccess( parameter, srcProp ) ) );
-        //    } )
-        //    .Where( bind => bind != null )
-        //    .ToList();
-        //var ctor = Expression.New( destType );
-        //var memberInit = Expression.MemberInit( ctor, bindings );
-        //var lambda = Expression.Lambda<Func<TSource, TDestination>>( memberInit, parameter );
-        //return lambda.Compile()( source );
     }
 }

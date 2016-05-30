@@ -28,7 +28,7 @@ namespace EventStoreKit.Projections
 // ReSharper disable FieldCanBeMadeReadOnly.Local
         private int OnIddleInterval = 500;
 // ReSharper restore FieldCanBeMadeReadOnly.Local
-        private volatile bool MessageProcessed = false;
+        private volatile bool MessageProcessed;
         private System.Threading.Timer OnIddleTimer;
         private readonly object IddleLockObj = new object();
         
@@ -69,8 +69,7 @@ namespace EventStoreKit.Projections
                 {
                     PreprocessMessage( e );
                     action( e );
-                    Log.ErrorFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
-                    //Log.InfoFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
+                    Log.InfoFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
                 }
             }
             catch ( Exception ex )
@@ -154,7 +153,7 @@ namespace EventStoreKit.Projections
         }
 
         protected virtual void PreprocessMessage( Message message ){}
-
+        
         #endregion
 
         #region Private event handlers
@@ -165,8 +164,9 @@ namespace EventStoreKit.Projections
             SequenceFinished.Execute( this, new SequenceEventArgs( msg.Identity ) );
         }
 
-        protected virtual void Apply( StreamOnIdleEvent msg )
+        private void Apply( StreamOnIdleEvent msg )
         {
+            OnStreamOnIdle( msg );
         }
 
         #endregion
@@ -174,6 +174,7 @@ namespace EventStoreKit.Projections
         public event EventHandler<SequenceEventArgs> SequenceFinished;
 
         protected virtual void OnSequenceFinished( SequenceMarkerEvent message ) { }
+        protected virtual void OnStreamOnIdle( StreamOnIdleEvent message ) { }
         
         protected EventQueueSubscriber( ILog logger, IScheduler scheduler )
         {
@@ -199,9 +200,9 @@ namespace EventStoreKit.Projections
                 } );
 
             int.TryParse( ConfigurationManager.AppSettings["OnIddleInterval"], out OnIddleInterval );
-
-            Register<SequenceMarkerEvent>( Apply );
-            Register<StreamOnIdleEvent>( Apply );
+            
+            Register<SequenceMarkerEvent>( Apply, true );
+            Register<StreamOnIdleEvent>( Apply, true );
 
             InitOnIddleTimer();
         }

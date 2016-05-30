@@ -25,13 +25,15 @@ namespace EventStoreKit.Sql.Projections
                 projectionTemplate.CleanUp( message );
             OnCleanup( message );
         }
-        
+
         #endregion
         
         protected ProjectionBase( ILog logger, IScheduler scheduler )
             : base( logger, scheduler )
         {
             Register<SystemCleanedUpEvent>( DoCleanUp );
+            Register<SequenceMarkerEvent>( m => Flush(), true );
+            Register<StreamOnIdleEvent>( m => Flush(), true );
         }
         
         protected TTemplate RegisterTemplate<TTemplate>( TTemplate template ) where TTemplate : IProjectionTemplate
@@ -48,6 +50,11 @@ namespace EventStoreKit.Sql.Projections
         protected override void PreprocessMessage( Message message )
         {
             ProjectionTemplates.ForEach( t => t.PreprocessEvent( message ) );
+        }
+
+        protected void Flush()
+        {
+            ProjectionTemplates.ForEach( t => t.Flush() );
         }
 
         /// <summary>
