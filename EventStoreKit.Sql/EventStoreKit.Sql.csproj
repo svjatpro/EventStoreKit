@@ -74,6 +74,7 @@
     <Compile Include="..\_build\AssemblyInfo.cs">
       <Link>AssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="DbProviders\FieldIndexAttribute.cs" />
     <Compile Include="EventStoreModule.cs" />
     <Compile Include="DbProviders\IDbProvider.cs" />
     <Compile Include="DbProviders\Examples\DbProvider.cs" />
