@@ -114,7 +114,7 @@ namespace EventStoreKit.Utility
         /// <param name="commandBus">command bus</param>
         /// <param name="saga">Instance of saga ( If already resolved )</param>
         /// <returns>Saga instance</returns>
-        public static TSaga ProcessSagaCustom<TSaga>( this Message message, string sagaId, ISagaRepository repository, ICommandBus commandBus, TSaga saga = null )
+        public static TSaga ProcessAndSaveSaga<TSaga>( this Message message, string sagaId, ISagaRepository repository, ICommandBus commandBus, TSaga saga = null )
             where TSaga : class, ISaga
         {
             saga = saga ?? repository.GetById<TSaga>( sagaId );
