@@ -122,7 +122,6 @@ namespace EventStoreKit.Sql.Projections
                 options, 
                 FilterMapping,
                 SorterMapping,
-                currentUserProvider,
                 summaryAggregate: summaryAggregate ) );
         }
 
@@ -139,7 +138,6 @@ namespace EventStoreKit.Sql.Projections
                     options,
                     FilterMapping,
                     SorterMapping,
-                    currentUserProvider,
                     summaryAggregate: summaryAggregate );
                 return new QueryResult<TResult>( 
                     result.Select( evaluator ).ToList(), 
