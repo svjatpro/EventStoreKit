@@ -15,7 +15,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         void Update( Guid id, Expression<Func<TReadModel, bool>> predicat, ObjectExpressionBuilder<TReadModel> expressionBuilder );
         TReadModel GetEntity( Guid id, Expression<Func<TReadModel, bool>> predicat );
     }
-
+    
     public class DbStrategyDirect<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
     {
         private readonly Func<IDbProvider> DbProviderFactory;
