@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -29,7 +30,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             public Func<IDbProvider, TEvent, object> Getter;
         }
 
-        private readonly ThreadSafeDictionary<Guid, TReadModel> Cache; // todo: replace with ConcurrentDictionary
+        private readonly ConcurrentDictionary<Guid, TReadModel> Cache;
         private readonly HashSet<Type> EventsToFlush = new HashSet<Type>();
 
         private readonly Action<Type, Action<Message>> EventRegister;
@@ -86,7 +87,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             if( Cache != null )
             {
                 var id = GetReadModelId( @event );
-                Cache.ThreadSafeAdd( id, model );
+                Cache.TryAdd( id, model );
             }
         }
 
@@ -120,7 +121,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             Action<Type, Action<Message>, bool> eventRegister, 
             Func<IDbProvider> dbFactory,
             IDbStrategy<TReadModel> dbStrategy,
-            ThreadSafeDictionary<Guid, TReadModel> cache = null )
+            ConcurrentDictionary<Guid, TReadModel> cache = null )
         {
             EventRegister = ( type, action ) => eventRegister( type, action, true );
             
@@ -292,7 +293,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                                 //var entity = db.Query<TReadModel>().Where( predicat ).FirstOrDefault();
                                 if ( entity != null )
                                 {
-                                    Cache.AddOrUpdate( id, entity );
+                                    Cache.AddOrUpdate( id, id1 => entity, ( id1, prev ) => entity );
                                 }
                             }
                         } );
@@ -328,7 +329,8 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                             if ( predicat != null && Cache != null )
                             {
                                 var id = GetReadModelId( (TEvent) @event );
-                                Cache.RemoveIfExist( id );
+                                TReadModel m;
+                                Cache.TryRemove( id, out m );
                             }
 
                             // run custom action

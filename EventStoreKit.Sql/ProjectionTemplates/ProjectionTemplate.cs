@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Configuration;
 using System.Linq;
@@ -29,7 +30,8 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
         private readonly bool ReadModelCaching;
         private readonly IDbStrategy<TReadModel> DbStrategy;
-        private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
+        //private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
+        private readonly ConcurrentDictionary<Guid,TReadModel> Cache;
         private Func<IDbProvider, Guid, object> GetByIdDelegate;
 
     
@@ -58,6 +60,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             foreach ( var initializer in EventHandlerInitializers.Values )
                 initializer.Flush();
+            Cache.Do( c => c.Clear() );
         }
 
         #endregion
@@ -94,7 +97,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             Options = options;
             ReadModelCaching = Options.HasFlag( ProjectionTemplateOptions.ReadCachingSingle );
             if ( ReadModelCaching )
-                Cache = new ThreadSafeDictionary<Guid, TReadModel>();
+                Cache = new ConcurrentDictionary<Guid, TReadModel>();
             
             // Init DbStrategy
             if ( Options.HasFlag( ProjectionTemplateOptions.InsertCaching ) )
@@ -111,7 +114,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         public EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TEvent>()
             where TEvent : Message
         {
-            var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory, DbStrategy );
+            var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory, DbStrategy, Cache );
             EventHandlerInitializers.Add( typeof( TEvent ), initializer );
             return initializer;
         }
@@ -128,39 +131,26 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             return ( db, id ) => db.Query<TEntity>().SingleOrDefault( ExpressionsUtility.GetEqualPredicat<TEntity>( idProperty, id ) );
         }
-        //protected Func<IDbProvider, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2 )
-        //    where TEntity : class
-        //{
-        //    return ( db, id1, id2 ) => db.Query<TEntity>().SingleOrDefault( ExpressionsUtility.GetEqualPredicat<TEntity>(
-        //        new[] { idProperty1, idProperty2 }, new object[] { id1, id2 } ) );
-        //}
-
-        //protected Func<IDbProvider, Guid, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2, PropertyInfo idProperty3 )
-        //    where TEntity : class
-        //{
-        //    return ( db, id1, id2, id3 ) => db.Query<TEntity>().SingleOrDefault(
-        //        ExpressionsUtility.GetEqualPredicat<TEntity>( new[] { idProperty1, idProperty2, idProperty3 }, new object[] { id1, id2, id3 } ) );
-        //}
 
         public TReadModel GetById( Guid id )
         {
-            if ( id == Guid.Empty )
+            if ( id == Guid.Empty || GetByIdDelegate == null )
                 return null;
-            TReadModel entity;
-            return
-                ( ReadModelCaching && Cache.TryGetValue( id, out entity ) ) ? 
-                entity :
-                GetByIdDelegate.With( d => PersistanceManagerFactory.Run( db => (TReadModel)d( db, id ) ) );
+            var result =
+                ReadModelCaching ? 
+                Cache.GetOrAdd( id, id1 => PersistanceManagerFactory.Run( db => (TReadModel)GetByIdDelegate( db, id1 ) ) ) :
+                PersistanceManagerFactory.Run( db => (TReadModel)GetByIdDelegate( db, id ) );
+            return result;
         }
         public TReadModel GetById( IDbProvider db, Guid id )
         {
-            if ( id == Guid.Empty )
+            if ( id == Guid.Empty || GetByIdDelegate == null )
                 return null;
-            TReadModel entity;
-            return
-                ( ReadModelCaching && Cache.TryGetValue( id, out entity ) ) ?
-                entity : 
-                GetByIdDelegate.With( d => (TReadModel)d( db, id ) );
+            var result =
+                ReadModelCaching ?
+                Cache.GetOrAdd( id, id1 => (TReadModel) GetByIdDelegate( db, id1 ) ) :
+                (TReadModel) GetByIdDelegate( db, id );
+            return result;
         }
 
         #endregion
