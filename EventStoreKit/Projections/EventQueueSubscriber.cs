@@ -8,11 +8,12 @@ using System.Reactive.Linq;
 using System.Reflection;
 using System.Threading;
 using EventStoreKit.Handler;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
-using log4net;
 using Newtonsoft.Json;
+using NEventStore.Logging;
 
 namespace EventStoreKit.Projections
 {
@@ -20,7 +21,7 @@ namespace EventStoreKit.Projections
     {
         #region Private fields
 
-        protected readonly ILog Log;
+        protected readonly ILogger Log;
         private readonly BlockingCollection<EventInfo> MessageQueue;
         private readonly IDictionary<Type, Action<Message>> Actions;
         protected bool IsRebuild;
@@ -63,7 +64,8 @@ namespace EventStoreKit.Projections
             IsRebuild = i.IsRebuild;
             try
             {
-                LogicalThreadContext.Properties["Event"] = JsonConvert.SerializeObject( i.Event );
+                //Log.SetAttribute( "Event", JsonConvert.SerializeObject( i.Event ) );
+                //LogicalThreadContext.Properties["Event"] = JsonConvert.SerializeObject( i.Event );
                 var action = Actions.Where( a => a.Key == e.GetType() ).Select( a => a.Value ).SingleOrDefault();
                 if ( action != null )
                 {
@@ -74,7 +76,9 @@ namespace EventStoreKit.Projections
             }
             catch ( Exception ex )
             {
-                Log.Error( string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", e.GetType().Name, GetType().Name, ex.Message ), ex );
+                Log.Error( 
+                    string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", e.GetType().Name, GetType().Name, ex.Message ), 
+                    ex, new Dictionary<string, string> { { "Event", JsonConvert.SerializeObject( i.Event ) } });
             }
             finally
             {
@@ -176,7 +180,7 @@ namespace EventStoreKit.Projections
         protected virtual void OnSequenceFinished( SequenceMarkerEvent message ) { }
         protected virtual void OnStreamOnIdle( StreamOnIdleEvent message ) { }
         
-        protected EventQueueSubscriber( ILog logger, IScheduler scheduler )
+        protected EventQueueSubscriber( ILogger logger, IScheduler scheduler )
         {
             Log = logger.CheckNull( "logger" );
 

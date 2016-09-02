@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using EventStoreKit.Logging;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
-using log4net;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
@@ -47,12 +47,12 @@ namespace EventStoreKit.Sql.ProjectionTemplates
     public class DbStrategyBuffered<TReadModel> : IDbStrategy<TReadModel> where TReadModel : class
     {
         private readonly Func<IDbProvider> DbProviderFactory;
-        private readonly ILog Logger;
+        private readonly ILogger Logger;
         private readonly int BufferCount;
 
         private readonly Dictionary<Guid, TReadModel> Buffer = new Dictionary<Guid, TReadModel>();
 
-        public DbStrategyBuffered( Func<IDbProvider> dbProviderFactory, ILog logger, int bufferCount )
+        public DbStrategyBuffered( Func<IDbProvider> dbProviderFactory, ILogger logger, int bufferCount )
         {
             DbProviderFactory = dbProviderFactory;
             Logger = logger;

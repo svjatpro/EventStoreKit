@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using System.Runtime.Remoting.Messaging;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Sql.ProjectionTemplates;
-using log4net;
 
 namespace EventStoreKit.Sql.Projections
 {
@@ -28,7 +28,7 @@ namespace EventStoreKit.Sql.Projections
 
         #endregion
         
-        protected ProjectionBase( ILog logger, IScheduler scheduler )
+        protected ProjectionBase( ILogger logger, IScheduler scheduler )
             : base( logger, scheduler )
         {
             Register<SystemCleanedUpEvent>( DoCleanUp );

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Reactive.Concurrency;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
-using log4net;
 using NEventStore;
 
 namespace EventStoreKit.Sql.Projections
@@ -16,7 +16,7 @@ namespace EventStoreKit.Sql.Projections
         private readonly IIdGenerator IdGenerator;
         private readonly ICurrentUserProvider CurrentUserProvider;
 
-        protected EventRouterBase( ILog clientLinkLogger, IScheduler scheduler, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
+        protected EventRouterBase( ILogger clientLinkLogger, IScheduler scheduler, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
             : base( clientLinkLogger, scheduler )
         {
             StoreEvents = storeEvents;
