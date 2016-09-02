@@ -5,11 +5,11 @@ using System.Configuration;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
-using log4net;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
@@ -22,7 +22,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         protected readonly Action<Type, Action<Message>, bool> EventRegister;
         protected readonly Func<IDbProvider> PersistanceManagerFactory;
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
-        protected readonly ILog Logger;
+        protected readonly ILogger Logger;
 
 // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
         private readonly ProjectionTemplateOptions Options;
@@ -87,7 +87,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         public ProjectionTemplate( 
             Action<Type, Action<Message>, bool> eventRegister,
             Func<IDbProvider> dbProviderFactory,
-            ILog logger = null,
+            ILogger logger = null,
             ProjectionTemplateOptions options = ProjectionTemplateOptions.None )
         {
             EventRegister = eventRegister;

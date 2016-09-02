@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Concurrency;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Sql.ProjectionTemplates;
 using EventStoreKit.Utility;
-using log4net;
 
 namespace EventStoreKit.Sql.Projections
 {
@@ -23,7 +23,7 @@ namespace EventStoreKit.Sql.Projections
 
         #region Private methods
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, ILog log, ProjectionTemplateOptions options )
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, ILogger log, ProjectionTemplateOptions options )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
@@ -32,7 +32,7 @@ namespace EventStoreKit.Sql.Projections
                 {
                     typeof (Action<Type, Action<Message>, bool>),
                     typeof (Func<IDbProvider>),
-                    typeof (ILog),
+                    typeof (ILogger),
                     typeof (ProjectionTemplateOptions)
                 } );
             if( ctor == null )
@@ -43,7 +43,7 @@ namespace EventStoreKit.Sql.Projections
         #endregion
 
         protected SqlProjectionBase(
-            ILog logger, 
+            ILogger logger, 
             IScheduler scheduler,
             Func<IDbProvider> dbProviderFactory )
             : base( logger, scheduler )
@@ -101,7 +101,7 @@ namespace EventStoreKit.Sql.Projections
         #endregion
 
         protected SqlProjectionBase(
-            ILog logger, 
+            ILogger logger, 
             IScheduler scheduler,
             Func<IDbProvider> dbProviderFactory ) : 
             base( logger, scheduler, dbProviderFactory )
