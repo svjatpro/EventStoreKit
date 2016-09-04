@@ -78,7 +78,7 @@
     <Compile Include="Handler\ICommandHandler.cs" />
     <Compile Include="Handler\IEventHandler.cs" />
     <Compile Include="Logging\ILogger.cs" />
-    <Compile Include="Logging\StoreLoggerAdapret.cs" />
+    <Compile Include="Logging\StoreLoggerAdater.cs" />
     <Compile Include="Messages\CommandDispatchFailedEvent.cs" />
     <Compile Include="Messages\DomainCommand.cs" />
     <Compile Include="Messages\DomainEvent.cs" />

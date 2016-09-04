@@ -3,12 +3,17 @@ using NEventStore.Logging;
 
 namespace EventStoreKit.Logging
 {
-    public class StoreLoggerAdapret<T> : ILog
+    public class StoreLoggerAdater<T> : ILog
     {
         //private readonly log4net.ILog Log;
         private readonly ILogger<T> Log;
 
-        public StoreLoggerAdapret( ILogger<T> log )
+        public static StoreLoggerAdater<T> CreateAdapter<T>()
+        {
+            return new StoreLoggerAdater<T>(  );
+        }
+
+        public StoreLoggerAdater( ILogger<T> log )
         {
             Log = log;
             //Log = typeof( ILogger<> ).MakeGenericType( new[] { typeToLog } ).GetConstructor();

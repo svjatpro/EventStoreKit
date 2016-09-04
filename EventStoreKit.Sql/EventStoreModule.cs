@@ -149,7 +149,7 @@ namespace EventStoreKit.Sql
             builder.RegisterType<EventStoreRepository>().As<IRepository>().ExternallyOwned();
             builder.RegisterType<SagaEventStoreRepository>().As<ISagaRepository>().ExternallyOwned();
 
-            builder.RegisterGeneric( typeof( StoreLoggerAdapret<> ) ).AsSelf();
+            builder.RegisterGeneric( typeof( StoreLoggerAdater<> ) ).AsSelf();
             //builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
 
             builder.RegisterType<SequentialIdgenerator>().As<IIdGenerator>();
@@ -186,8 +186,14 @@ namespace EventStoreKit.Sql
         private Wireup CreateWireup( IComponentContext ctx )
         {
             var wireup = Wireup.Init();
+            
+            // 1. constant type
+            var logFactory = ctx.Resolve( typeof( Func<> ).MakeGenericType( typeof( StoreLoggerAdater<> ).MakeGenericType( type )   ) )
+            
             //wireup.LogTo( type => new Log4NetLogger( type ) );
-            wireup.LogTo( type => (ILog) ctx.Resolve( typeof( StoreLoggerAdapret<> ).MakeGenericType( type ) ) );
+            //wireup.LogTo( type => (ILog) ctx.Resolve( typeof( StoreLoggerAdater<> ).MakeGenericType( type ) ) );
+            wireup.LogTo( type => (ILog) ctx.Resolve( typeof( StoreLoggerAdater<> ).MakeGenericType( type ) ) );
+            
             var persistanceWireup = wireup
                 .UsingSqlPersistence( ctx.ResolveNamed<string>( EventStoreConstants.CommitsConfigNameTag ) )
                 .WithDialect( new TSqlDialect() )
