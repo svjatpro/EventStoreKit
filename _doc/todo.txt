@@ -28,17 +28,17 @@
 
     ?   Move ProjectionTemplate to separate repository
 
-    .   remove log4net dependency
-
-        // use NEventStore.Logging.ILog
-
-    .   [SK-16]
+    .   [SK-17]
 
     .   [SK-4] remove ThreadSafeDictionary
 
  // ---------------------------------------------------------------------
  // v.0.2.2.0
  // ---------------------------------------------------------------------
+
+    *   [SK-16] Remove log4net dependency
+
+        // use NEventStore.Logging.ILog
 
     *   [SK-15] Extend PerformQuery methods
 
