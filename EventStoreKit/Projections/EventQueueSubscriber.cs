@@ -13,7 +13,6 @@ using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
 using Newtonsoft.Json;
-using NEventStore.Logging;
 
 namespace EventStoreKit.Projections
 {
