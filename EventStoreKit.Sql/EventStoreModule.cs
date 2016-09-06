@@ -187,11 +187,9 @@ namespace EventStoreKit.Sql
         {
             var wireup = Wireup.Init();
 
-            var logFactory = ctx.Resolve( typeof (Func<>).MakeGenericType( typeof (ILogger<>).MakeGenericType( typeof( EventStoreAdapter ) ) ) );
-            
+            var logFactory = ctx.Resolve<Func<ILogger<EventStoreAdapter>>>();
             //wireup.LogTo( type => new Log4NetLogger( type ) );
-            //wireup.LogTo( type => (ILog) ctx.Resolve( typeof( StoreLoggerAdater<> ).MakeGenericType( type ) ) );
-            wireup.LogTo( type => (ILog) new StoreLoggerAdater<EventStoreAdapter>(  ) );
+            wireup.LogTo( type => new StoreLoggerAdater<EventStoreAdapter>( logFactory() ) );
             
             var persistanceWireup = wireup
                 .UsingSqlPersistence( ctx.ResolveNamed<string>( EventStoreConstants.CommitsConfigNameTag ) )

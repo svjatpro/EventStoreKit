@@ -1,5 +1,4 @@
-﻿
-using EventStoreKit.Messages;
+﻿using EventStoreKit.Messages;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
