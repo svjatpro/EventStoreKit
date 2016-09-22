@@ -28,11 +28,13 @@
 
     ?   Move ProjectionTemplate to separate repository
 
-    .   [SK-18]
+    .   [SK-19]
 
  // ---------------------------------------------------------------------
  // v.0.2.3.0
  // ---------------------------------------------------------------------
+
+    *   [SK-18] Change signature of ProjectionTemplate to extend template initialization facilities in projections
 
     *   [SK-17] Add cached query summary feature
 

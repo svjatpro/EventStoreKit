@@ -33,8 +33,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         //private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
         private readonly ConcurrentDictionary<Guid,TReadModel> Cache;
         private Func<IDbProvider, Guid, object> GetByIdDelegate;
-
-    
+        
         #endregion
 
         #region Implementation of IProjectionTemplate
@@ -117,6 +116,14 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory, DbStrategy, Cache );
             EventHandlerInitializers.Add( typeof( TEvent ), initializer );
             return initializer;
+        }
+
+        public ProjectionTemplate<TReadModel> InitEventHandler<TEvent>( Action<EventHandlerInitializer<TReadModel, TEvent>> extendedInitializer )
+            where TEvent : Message
+        {
+            var initializer = InitEventHandler<TEvent>();
+            extendedInitializer( initializer );
+            return this;
         }
 
         #region GetById section
