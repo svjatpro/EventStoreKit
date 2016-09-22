@@ -36,7 +36,7 @@
 
     *   [SK-17] Add cached query summary feature
 
-    .   [SK-4] remove ThreadSafeDictionary
+    *   [SK-4] remove ThreadSafeDictionary
     
  // ---------------------------------------------------------------------
  // v.0.2.2.0
