@@ -11,6 +11,11 @@ namespace EventStoreKit.SearchOptions
 {
     public static class SearchOptionUtility
     {
+        public static string FilterKey( this SearchOptions options )
+        {
+            return options.Filters
+                .With( filters => string.Join( "#", filters.Select( f => f.Field + "_" + f.Data.Comparison.Return( c => c + "_", "" ) + f.Data.StringValue ) ) );
+        }
         public static Expression<Func<T, bool>> GetGuidPredicat<T>( this SearchFilterInfo option, Expression<Func<T, Guid>> getProperty )
         {
             Guid value;
