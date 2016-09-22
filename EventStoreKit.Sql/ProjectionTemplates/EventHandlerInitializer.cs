@@ -5,7 +5,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using EventStoreKit.Messages;
-using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
 
@@ -251,7 +250,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         /// <summary>
         /// Initialize handler to Update entity;
         /// </summary>
-        public void AsUpdateAction()
+        public EventHandlerInitializer<TReadModel, TEvent> AsUpdateAction()
         {
             var eventType = typeof( TEvent );
 
@@ -299,12 +298,13 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                         } );
                     PostProcessExpression.Do( a => a( (TEvent)@event ) );
                 } );
+            return this;
         }
 
         /// <summary>
         /// Initialize handler to Delete entity;
         /// </summary>
-        public void AsDeleteAction(
+        public EventHandlerInitializer<TReadModel, TEvent> AsDeleteAction(
             Func<Action<IDbProvider, TEvent>> deleteAction = null,
             Func<Func<TEvent, bool>> validateEvent = null )
         {
@@ -340,6 +340,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
                         } );
                     PostProcessExpression.Do( a => a( (TEvent)@event ) );
                 } );
+            return this;
         }
 
         #region Customization methods
