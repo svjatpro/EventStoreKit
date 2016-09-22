@@ -7,6 +7,7 @@ using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
+using EventStoreKit.Sql.DbProviders;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Sql.ProjectionTemplates;
 using EventStoreKit.Utility;
@@ -116,20 +117,23 @@ namespace EventStoreKit.Sql.Projections
         public QueryResult<TModel> Search(
             SearchOptions.SearchOptions options,
             ICurrentUserProvider currentUserProvider = null, // required for IOrganizationModel
-            Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
+            Func<TModel, TModel, TModel> summaryAggregate = null,  // required for summary
+            SummaryCache<TModel> summaryCache = null )  // required for summary caching
         {
             return DbProviderFactory.Run( db => db.PerformQuery(
                 options, 
                 FilterMapping,
                 SorterMapping,
-                summaryAggregate: summaryAggregate ) );
+                summaryAggregate: summaryAggregate,
+                summaryCache: summaryCache ) );
         }
 
         public QueryResult<TResult> Search<TResult>(
             SearchOptions.SearchOptions options,
             Func<IDbProvider,Func<TModel, TResult>> getEvaluator,
             ICurrentUserProvider currentUserProvider = null, // required for IOrganizationModel
-            Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
+            Func<TModel, TModel, TModel> summaryAggregate = null, // required for summary
+            SummaryCache<TModel> summaryCache = null )  // required for summary caching
         {
             return DbProviderFactory.Run( db =>
             {
@@ -138,10 +142,11 @@ namespace EventStoreKit.Sql.Projections
                     options,
                     FilterMapping,
                     SorterMapping,
-                    summaryAggregate: summaryAggregate );
+                    summaryAggregate: summaryAggregate,
+                    summaryCache: summaryCache );
                 return new QueryResult<TResult>( 
                     result.Select( evaluator ).ToList(), 
-                    options, 
+                    options,
                     result.Total,
                     result.Summary.With( evaluator ) );
             } );
@@ -149,7 +154,8 @@ namespace EventStoreKit.Sql.Projections
 
         public QueryResult<TModel> GetList( 
             Expression<Func<TModel,bool>> predicat = null,
-            Func<TModel, TModel, TModel> summaryAggregate = null )
+            Func<TModel, TModel, TModel> summaryAggregate = null,
+            SummaryCache<TModel> summaryCache = null )
         {
             var result = DbProviderFactory.Run( db =>
             {
@@ -158,7 +164,7 @@ namespace EventStoreKit.Sql.Projections
                     query = query.Where( predicat );
                 return query.ToList();
             } );
-            
+
             TModel summary = null;
             if ( summaryAggregate != null )
                 summary = ( result.Any() ) ? result.Aggregate( summaryAggregate ) : Activator.CreateInstance<TModel>();

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using EventStoreKit.Constants;
 using EventStoreKit.SearchOptions;
+using EventStoreKit.Sql.DbProviders;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Sql.PersistanceManager
@@ -151,29 +152,66 @@ namespace EventStoreKit.Sql.PersistanceManager
             return source;
         }
 
+        public static SummaryCache<TEntity> ResolveSummary<TEntity>( 
+            this IQueryable<TEntity> source, 
+            SearchOptions.SearchOptions options,
+            Func<TEntity, TEntity, TEntity> summaryAggregate = null,
+            SummaryCache<TEntity> summaryCache = null ) 
+            where TEntity : class
+        {
+            var summaryKey = options.FilterKey();
+            var summaryReady = summaryCache != null && summaryCache.Ready && summaryCache.Key == summaryKey;
+            
+            // calculate total result count
+            var total = summaryReady ? summaryCache.Total : source.Count();
+
+            // calculate summary
+            TEntity model = null;
+            if ( summaryReady )
+            {
+                model = summaryCache.SummaryModel;
+            }
+            else if ( summaryAggregate != null )
+            {
+                model = ( total > 0 ) ? source/*.ToList()*/.Aggregate( summaryAggregate ) : Activator.CreateInstance<TEntity>();
+            }
+
+            // update summary cache
+            if ( summaryCache != null && !summaryReady )
+            {
+                summaryCache.Total = total;
+                summaryCache.SummaryModel = model;
+                summaryCache.Key = summaryKey;
+                summaryCache.Ready = true;
+            }
+
+            return 
+                summaryCache ??
+                new SummaryCache<TEntity>
+                {
+                    Total = total,
+                    SummaryModel = model
+                };
+        }
+
         public static QueryResult<TEntity> PerformQuery<TEntity>(
             this IQueryable<TEntity> query,
             SearchOptions.SearchOptions options,
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
-            Func<TEntity, TEntity, TEntity> summaryAggregate = null )
+            Func<TEntity, TEntity, TEntity> summaryAggregate = null,
+            SummaryCache<TEntity> summaryCache = null )
             where TEntity : class
         {
-            // calculate total result count
-            var total = query.Count();
-
-            // calculate summary
-            TEntity summary = null;
-            if ( summaryAggregate != null )
-                summary = ( total > 0 ) ? query.ToList().Aggregate( summaryAggregate ) : Activator.CreateInstance<TEntity>();
+            var summary = query.ResolveSummary( options, summaryAggregate, summaryCache );
 
             // apply paging
-            query = query.ApplyPaging( options, total );
+            query = query.ApplyPaging( options, summary.Total );
 
             // return result as QueryResult<> with Total and source SearchOptions
             var result = query.ToList();
 
-            return new QueryResult<TEntity>( result, options, total: total, summary: summary );
+            return new QueryResult<TEntity>( result, options, total: summary.Total, summary: summary.SummaryModel );
         }
 
         public static QueryResult<TEntity> PerformQuery<TEntity>(
@@ -181,11 +219,12 @@ namespace EventStoreKit.Sql.PersistanceManager
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
-            Func<TEntity, TEntity, TEntity> summaryAggregate = null )
+            Func<TEntity, TEntity, TEntity> summaryAggregate = null,
+            SummaryCache<TEntity> summaryCache = null )
             where TEntity : class
         {
-            IQueryable<TEntity> query = PerformQueryLazy( db, options, filterMapping, sorterMapping );
-            return PerformQuery( query, options, filterMapping, sorterMapping, summaryAggregate );
+            var query = PerformQueryLazy( db, options, filterMapping, sorterMapping );
+            return PerformQuery( query, options, filterMapping, sorterMapping, summaryAggregate, summaryCache );
         }
 
         /// <summary>
