@@ -59,6 +59,13 @@ namespace EventStoreKit.Sql.Projections
             return template;
         }
 
+        protected ProjectionTemplate<TModel> RegisterGenericTemplate<TModel>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TModel : class
+        {
+            var template = CreateTemplate<ProjectionTemplate<TModel>>( Register, DbProviderFactory, Log, options );
+            ProjectionTemplates.Add( template );
+            return template;
+        }
+
         #region Filters & Sorters
 
         protected Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>> InitializeFilters<TModel>() where TModel : class

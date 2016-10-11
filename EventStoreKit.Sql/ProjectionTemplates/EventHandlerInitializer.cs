@@ -345,34 +345,40 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #region Customization methods
 
-        public void InitNewEntityWith( Action<IDbProvider, TEvent, TReadModel> initNewEntityExpression )
+        public EventHandlerInitializer<TReadModel, TEvent> InitNewEntityWith( Action<IDbProvider, TEvent, TReadModel> initNewEntityExpression )
         {
             InitNewEntityExpression = initNewEntityExpression;
+            return this;
         }
 
-        public void UpdateWith( Func<IDbProvider, TEvent, Expression<Func<TReadModel, TReadModel>>> updateExpression )
+        public EventHandlerInitializer<TReadModel, TEvent> UpdateWith( Func<IDbProvider, TEvent, Expression<Func<TReadModel, TReadModel>>> updateExpression )
         {
             UpdateExpression = updateExpression;
+            return this;
         }
 
-        public void ValidateWith( Func<IDbProvider, TEvent, bool> validateExpression )
+        public EventHandlerInitializer<TReadModel, TEvent> ValidateWith( Func<IDbProvider, TEvent, bool> validateExpression )
         {
             ValidateExpression = validateExpression;
+            return this;
         }
 
-        public void RunBeforeHandle( Action<IDbProvider, TEvent> beforeExpression )
+        public EventHandlerInitializer<TReadModel, TEvent> RunBeforeHandle( Action<IDbProvider, TEvent> beforeExpression )
         {
             BeforeExpression = beforeExpression;
+            return this;
         }
 
-        public void RunAfterHandle( Action<IDbProvider, TEvent> afterExpression )
+        public EventHandlerInitializer<TReadModel, TEvent> RunAfterHandle( Action<IDbProvider, TEvent> afterExpression )
         {
             AfterExpression = afterExpression;
+            return this;
         }
 
-        public void PostProcess( Action<TEvent> postProcessExpression )
+        public EventHandlerInitializer<TReadModel, TEvent> PostProcess( Action<TEvent> postProcessExpression )
         {
             PostProcessExpression = postProcessExpression;
+            return this;
         }
 
         #endregion
