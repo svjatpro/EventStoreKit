@@ -83,7 +83,7 @@ namespace EventStoreKit.Sql.ProjectionTemplates
 
         #endregion
 
-        public ProjectionTemplate( 
+        public ProjectionTemplate(
             Action<Type, Action<Message>, bool> eventRegister,
             Func<IDbProvider> dbProviderFactory,
             ILogger logger = null,
