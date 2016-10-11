@@ -160,6 +160,14 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return result;
         }
 
+        public void CleanCache( Guid id )
+        {
+            if ( !ReadModelCaching || id == Guid.Empty || GetByIdDelegate == null )
+                return;
+            TReadModel model;
+            Cache.TryRemove( id, out model );
+        }
+
         #endregion
 
         #region Customization methods
