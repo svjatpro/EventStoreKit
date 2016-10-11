@@ -28,13 +28,11 @@
 
     ?   Move ProjectionTemplate to separate repository
 
-    .   [SK-21]
+    .   [SK-20]
 
  // ---------------------------------------------------------------------
  // v.0.2.4.0
  // ---------------------------------------------------------------------
-
-    .   [SK-20] Add low level operation with the entity ( and cache ) in ProjectionTemplate
 
     *   [SK-19] Add ProjectionTemplate.CleanCache method
 
