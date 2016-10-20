@@ -9,15 +9,8 @@
 
     ?   remove DateTimeUtility.GetMonthPreposition
 
-    ?   remove JSon serialization
-
     ?   research the idea of implementation event store functionality instead of using NEventStore
 
-
-
-    .   Make SearchOptions abstract - try to distance from ExtJs structure
-
-    .   copyTo: check properties Type and throw exception if types is different
 
     .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
@@ -29,6 +22,19 @@
     ?   Move ProjectionTemplate to separate repository
 
     .   [SK-20]
+
+    .   move to last nEventStore and synchronize versioning with nEventStore versions
+
+
+ // ---------------------------------------------------------------------
+ // v.0.2.5.0
+ // ---------------------------------------------------------------------
+
+    .   copyTo: check properties Type and throw exception if types is different
+
+    ?   remove JSon serialization
+
+    .   Make SearchOptions abstract - try to distance from ExtJs structure
 
  // ---------------------------------------------------------------------
  // v.0.2.4.0
