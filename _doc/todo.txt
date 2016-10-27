@@ -1,18 +1,7 @@
 
  // ***************************************************************************************************************************************
 
-    .   Research [DataContract] importance for events and commands
- 
-        check with some transport bus system
-
-    .   ITrackableAggregate - try to avoid base class
-
-    ?   remove DateTimeUtility.GetMonthPreposition
-
     ?   research the idea of implementation event store functionality instead of using NEventStore
-
-
-    .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
     .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
 
@@ -21,20 +10,34 @@
 
     ?   Move ProjectionTemplate to separate repository
 
-    .   [SK-20]
-
     .   move to last nEventStore and synchronize versioning with nEventStore versions
 
+    .   [SK-28]
 
  // ---------------------------------------------------------------------
  // v.0.2.5.0
  // ---------------------------------------------------------------------
 
-    .   copyTo: check properties Type and throw exception if types is different
+    .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
-    ?   remove JSon serialization
+    .   [SK-21] Research [DataContract] importance for events and commands
+ 
+        check with some transport bus system
 
-    .   Make SearchOptions abstract - try to distance from ExtJs structure
+    .   [SK-22] ITrackableAggregate - try to avoid base class
+
+    ?   [SK-23] remove DateTimeUtility.GetMonthPreposition
+
+
+    .   [SK-24] copyTo: check properties Type and throw exception if types is different
+
+    ?   [SK-25] remove JSon serialization
+
+    .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
+
+    .   [SK-27] Try to remove Logger dependency - remove logger completely, use exceptions instead
+
+        or use .Init( <log lyambdas> ) for async using
 
  // ---------------------------------------------------------------------
  // v.0.2.4.0
