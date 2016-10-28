@@ -159,7 +159,7 @@ namespace EventStoreKit.Sql.PersistanceManager
             SummaryCache<TEntity> summaryCache = null ) 
             where TEntity : class
         {
-            var summaryKey = options.FilterKey();
+            var summaryKey = options.With( o => o.FilterKey() );
             var summaryReady = summaryCache != null && summaryCache.Ready && summaryCache.Key == summaryKey;
             
             // calculate total result count
@@ -270,6 +270,8 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         public static SearchOptions.SearchOptions EnsureDefaultSorter<TEntity>( this SearchOptions.SearchOptions options, Expression<Func<TEntity,object>> getPropertyName, string direction  )
         {
+            if ( options == null )
+                options = new SearchOptions.SearchOptions( filters: new List<SearchFilterInfo>(), sorters: new List<SorterInfo>() );
             if ( !options.Sorters.Any() )
             {
                 options.Sorters.Add
@@ -285,6 +287,8 @@ namespace EventStoreKit.Sql.PersistanceManager
         public static SearchOptions.SearchOptions AddSorter<TEntity>
             ( this SearchOptions.SearchOptions options, Expression<Func<TEntity, object>> getPropertyName, string direction )
         {
+            if ( options == null )
+                options = new SearchOptions.SearchOptions( filters: new List<SearchFilterInfo>(), sorters: new List<SorterInfo>() );
             options.Sorters.Add( 
                 new SorterInfo
                 {
