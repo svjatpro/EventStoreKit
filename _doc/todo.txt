@@ -5,18 +5,24 @@
 
     .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
 
+    .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
 
-    ?   Move Expressions utilities to separate repository
+    .   [SK-27] Try to remove Logger dependency
 
-    ?   Move ProjectionTemplate to separate repository
+        try to remove adapter class and additional interface - use native NEventStore interface instead
 
-    .   move to last nEventStore and synchronize versioning with nEventStore versions
 
-    .   [SK-28]
+    .   [SK-29]
 
  // ---------------------------------------------------------------------
  // v.0.2.5.0
  // ---------------------------------------------------------------------
+
+    .   [SK-28] Move to last nEventStore and synchronize versioning with nEventStore versions
+
+    .   [SK-25] Make clone in github
+
+    .   [SK-24] Make nuget package
 
     .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
@@ -27,17 +33,6 @@
     .   [SK-22] ITrackableAggregate - try to avoid base class
 
     ?   [SK-23] remove DateTimeUtility.GetMonthPreposition
-
-
-    .   [SK-24] copyTo: check properties Type and throw exception if types is different
-
-    ?   [SK-25] remove JSon serialization
-
-    .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
-
-    .   [SK-27] Try to remove Logger dependency - remove logger completely, use exceptions instead
-
-        or use .Init( <log lyambdas> ) for async using
 
  // ---------------------------------------------------------------------
  // v.0.2.4.0
