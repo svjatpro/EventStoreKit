@@ -11,7 +11,6 @@ using EventStoreKit.Sql.DbProviders;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Sql.ProjectionTemplates;
 using EventStoreKit.Utility;
-using NEventStore.Logging;
 
 namespace EventStoreKit.Sql.Projections
 {
@@ -34,7 +33,7 @@ namespace EventStoreKit.Sql.Projections
                 {
                     typeof (Action<Type, Action<Message>, bool>),
                     typeof (Func<IDbProvider>),
-                    typeof (ILog),
+                    typeof (ILogger),
                     typeof (ProjectionTemplateOptions)
                 } );
             if( ctor == null )
@@ -45,7 +44,7 @@ namespace EventStoreKit.Sql.Projections
         #endregion
 
         protected SqlProjectionBase(
-            ILog logger, 
+            ILogger logger, 
             IScheduler scheduler,
             Func<IDbProvider> dbProviderFactory )
             : base( logger, scheduler )
@@ -110,7 +109,7 @@ namespace EventStoreKit.Sql.Projections
         #endregion
 
         protected SqlProjectionBase(
-            ILog logger, 
+            ILogger logger, 
             IScheduler scheduler,
             Func<IDbProvider> dbProviderFactory ) : 
             base( logger, scheduler, dbProviderFactory )
