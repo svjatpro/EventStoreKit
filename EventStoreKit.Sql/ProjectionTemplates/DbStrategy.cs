@@ -63,10 +63,10 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             if ( Buffer.Any() )
             {
-                var count = Buffer.Count();
+                var count = Buffer.Count;
                 DbProviderFactory.Run( db => db.InsertBulk( Buffer.Values ) );
                 Buffer.Clear();
-                Logger.Do( log => log.InfoFormat( "Bulk record inserted, count = {0}", count ) );
+                Logger.Do( log => log.Info( "Bulk record inserted, count = {0}", count ) );
             }
         }
 

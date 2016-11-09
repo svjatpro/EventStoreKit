@@ -138,7 +138,7 @@ namespace EventStoreKit.Services
                         }
                         catch ( Exception ex )
                         {
-                            Logger.ErrorFormat( "Error dispatching command: {0}", ex.Message );
+                            Logger.Error( "Error dispatching command: {0}", ex.Message );
                             EventPublisher.Publish( new CommandDispatchFailedEvent( cmd.Id ) ); // todo: define what exactly should be sent whithin the event
                         }
                     }
@@ -160,7 +160,7 @@ namespace EventStoreKit.Services
                     }
                     catch ( Exception ex )
                     {
-                        Logger.ErrorFormat( "Error dispatching event: {0}", ex.Message );
+                        Logger.Error( "Error dispatching event: {0}", ex.Message );
                     }
                 }
             }

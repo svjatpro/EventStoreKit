@@ -7,11 +7,6 @@
 
     .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
 
-    .   [SK-27] Try to remove Logger dependency
-
-        try to remove adapter class and additional interface - use native NEventStore interface instead
-
-
     .   [SK-29]
 
  // ---------------------------------------------------------------------
@@ -33,6 +28,10 @@
     .   [SK-22] ITrackableAggregate - try to avoid base class
 
     ?   [SK-23] remove DateTimeUtility.GetMonthPreposition
+
+    .   [SK-27] Try to remove Logger dependency
+
+        try to remove adapter class and additional interface - use native NEventStore interface instead
 
  // ---------------------------------------------------------------------
  // v.0.2.4.0
