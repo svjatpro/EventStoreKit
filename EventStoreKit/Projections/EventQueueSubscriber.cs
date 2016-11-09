@@ -70,13 +70,13 @@ namespace EventStoreKit.Projections
                 {
                     PreprocessMessage( e );
                     action( e );
-                    Log.InfoFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
+                    Log.Info( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Error( 
-                    string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", e.GetType().Name, GetType().Name, ex.Message ), 
+                Log.Error( "Error occured during processing '{0}' in '{1}': '{2}'", 
+                    e.GetType().Name, GetType().Name, ex.Message, 
                     ex, new Dictionary<string, string> { { "Event", JsonConvert.SerializeObject( i.Event ) } });
             }
             finally
@@ -218,7 +218,7 @@ namespace EventStoreKit.Projections
             if ( !Actions.TryGetValue( eventType, out action ) )
                 return;
             MessageQueue.Add( new EventInfo { Event = e, IsRebuild = isRebuild } );
-            Log.DebugFormat( "Unprocessed events: {0}", MessageQueue.Count );
+            Log.Debug( "Unprocessed events: {0}", MessageQueue.Count );
         }
 
         public virtual void Replay( Message e )

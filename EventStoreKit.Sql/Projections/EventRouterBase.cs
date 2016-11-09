@@ -16,8 +16,8 @@ namespace EventStoreKit.Sql.Projections
         private readonly IIdGenerator IdGenerator;
         private readonly ICurrentUserProvider CurrentUserProvider;
 
-        protected EventRouterBase( ILogger clientLinkLogger, IScheduler scheduler, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
-            : base( clientLinkLogger, scheduler )
+        protected EventRouterBase( ILogger logger, IScheduler scheduler, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
+            : base( logger, scheduler )
         {
             StoreEvents = storeEvents;
             IdGenerator = idGenerator;

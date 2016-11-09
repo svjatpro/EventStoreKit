@@ -21,7 +21,6 @@ using EventStoreKit.Services;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
-using NEventStore.Logging;
 using NEventStore.Persistence.Sql;
 using Module = Autofac.Module;
 
@@ -68,7 +67,7 @@ namespace EventStoreKit.Sql
                         CurrentUserProvider.CurrentUserId.Do( userId => context.Entity.IssuedBy = userId.GetValueOrDefault() );
 
                     handler.Handle( cmd, context );
-                    Logger.InfoFormat( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
+                    Logger.Info( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
                     repository.Save( context.Entity, Guid.NewGuid() ); // todo: idgenerator
                 } );
                 Dispatcher.RegisterHandler( handleAction );
@@ -149,7 +148,7 @@ namespace EventStoreKit.Sql
             builder.RegisterType<EventStoreRepository>().As<IRepository>().ExternallyOwned();
             builder.RegisterType<SagaEventStoreRepository>().As<ISagaRepository>().ExternallyOwned();
 
-            builder.RegisterGeneric( typeof( StoreLoggerAdater<> ) ).AsSelf();
+            //builder.RegisterGeneric( typeof( StoreLoggerAdater<> ) ).AsSelf();
             //builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
 
             builder.RegisterType<SequentialIdgenerator>().As<IIdGenerator>();
@@ -188,8 +187,7 @@ namespace EventStoreKit.Sql
             var wireup = Wireup.Init();
 
             var logFactory = ctx.Resolve<Func<ILogger<EventStoreAdapter>>>();
-            //wireup.LogTo( type => new Log4NetLogger( type ) );
-            wireup.LogTo( type => new StoreLoggerAdater<EventStoreAdapter>( logFactory() ) );
+            wireup.LogTo( type => logFactory() );
             
             var persistanceWireup = wireup
                 .UsingSqlPersistence( ctx.ResolveNamed<string>( EventStoreConstants.CommitsConfigNameTag ) )
