@@ -9,6 +9,8 @@
 
     .   [SK-29]
 
+    ?   [SK-25]
+
  // ---------------------------------------------------------------------
  // v.0.2.5.0
  // ---------------------------------------------------------------------
@@ -28,9 +30,8 @@
     .   [SK-22] ITrackableAggregate - try to avoid base class
 
     ?   [SK-23] remove DateTimeUtility.GetMonthPreposition
-
-    .   [SK-27] Try to remove Logger dependency
-
+ 
+    +   [SK-27] Try to remove Logger dependency
         try to remove adapter class and additional interface - use native NEventStore interface instead
 
  // ---------------------------------------------------------------------

@@ -75,8 +75,8 @@ namespace EventStoreKit.Projections
             }
             catch ( Exception ex )
             {
-                Log.Error( "Error occured during processing '{0}' in '{1}': '{2}'", 
-                    e.GetType().Name, GetType().Name, ex.Message, 
+                Log.Error( 
+                    string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", e.GetType().Name, GetType().Name, ex.Message ),
                     ex, new Dictionary<string, string> { { "Event", JsonConvert.SerializeObject( i.Event ) } });
             }
             finally

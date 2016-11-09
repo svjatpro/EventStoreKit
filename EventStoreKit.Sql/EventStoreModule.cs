@@ -161,6 +161,7 @@ namespace EventStoreKit.Sql
             builder.RegisterType<EventSequence>().SingleInstance();
 
             builder.Register( ctx => ( new NewThreadScheduler( action => new Thread( action ) { IsBackground = true } ) ) ).As<IScheduler>();
+            //builder.Register( ctx => ThreadPoolScheduler.Instance ).As<IScheduler>();
 
             builder.RegisterType<MessageDispatcher>()
                 .As<IEventPublisher>()
