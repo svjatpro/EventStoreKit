@@ -32,7 +32,7 @@
  // v.5.2.0.0
  // ---------------------------------------------------------------------
 
-    .   [SK-24] Make nuget package
+    *   [SK-24] Make nuget package
 
     *   [SK-25] merge to single project
 
