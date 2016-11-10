@@ -3,27 +3,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Concurrency;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
+using EventStoreKit.Sql.DbProviders;
 using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Sql.ProjectionTemplates;
 using EventStoreKit.Utility;
-using log4net;
 
 namespace EventStoreKit.Sql.Projections
 {
     public abstract class SqlProjectionBase : ProjectionBase
     {
         #region Protected fields
-        
+
         protected readonly Func<IDbProvider> DbProviderFactory;
-        
+
         #endregion
 
         #region Private methods
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, bool caching )
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, ILogger log, ProjectionTemplateOptions options )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
@@ -32,17 +33,18 @@ namespace EventStoreKit.Sql.Projections
                 {
                     typeof (Action<Type, Action<Message>, bool>),
                     typeof (Func<IDbProvider>),
-                    typeof (bool)
+                    typeof (ILogger),
+                    typeof (ProjectionTemplateOptions)
                 } );
             if( ctor == null )
                 throw new InvalidOperationException( ttype.Name + " doesn't have constructor ( Action<Type,Action<Message>,bool>, Func<IPerdistanceManagerProjection> )" );
-            return (TTemplate)( ctor.Invoke( new object[] { register, dbFactory, caching } ) );
+            return (TTemplate)( ctor.Invoke( new object[] { register, dbFactory, log, options } ) );
         }
 
         #endregion
 
         protected SqlProjectionBase(
-            ILog logger, 
+            ILogger logger, 
             IScheduler scheduler,
             Func<IDbProvider> dbProviderFactory )
             : base( logger, scheduler )
@@ -50,9 +52,16 @@ namespace EventStoreKit.Sql.Projections
             DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
         }
 
-        protected TTemplate RegisterTemplate<TTemplate>( bool readModelCaching = false ) where TTemplate : IProjectionTemplate
+        protected TTemplate RegisterTemplate<TTemplate>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TTemplate : IProjectionTemplate
         {
-            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, readModelCaching );
+            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, Log, options );
+            ProjectionTemplates.Add( template );
+            return template;
+        }
+
+        protected ProjectionTemplate<TModel> RegisterGenericTemplate<TModel>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TModel : class
+        {
+            var template = CreateTemplate<ProjectionTemplate<TModel>>( Register, DbProviderFactory, Log, options );
             ProjectionTemplates.Add( template );
             return template;
         }
@@ -94,13 +103,13 @@ namespace EventStoreKit.Sql.Projections
     {
         #region Private fields
 
-        private readonly Dictionary<string, Expression<Func<TModel, object>>> SorterMapping;
-        private readonly Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>> FilterMapping;
+        protected readonly Dictionary<string, Expression<Func<TModel, object>>> SorterMapping;
+        protected readonly Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>> FilterMapping;
 
         #endregion
 
         protected SqlProjectionBase(
-            ILog logger, 
+            ILogger logger, 
             IScheduler scheduler,
             Func<IDbProvider> dbProviderFactory ) : 
             base( logger, scheduler, dbProviderFactory )
@@ -114,22 +123,24 @@ namespace EventStoreKit.Sql.Projections
 
         public QueryResult<TModel> Search(
             SearchOptions.SearchOptions options,
-            ISecurityManager securityManager = null, // required for IOrganizationModel
-            Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
+            ICurrentUserProvider currentUserProvider = null, // required for IOrganizationModel
+            Func<TModel, TModel, TModel> summaryAggregate = null,  // required for summary
+            SummaryCache<TModel> summaryCache = null )  // required for summary caching
         {
             return DbProviderFactory.Run( db => db.PerformQuery(
                 options, 
                 FilterMapping,
                 SorterMapping,
-                securityManager,
-                summaryAggregate: summaryAggregate ) );
+                summaryAggregate: summaryAggregate,
+                summaryCache: summaryCache ) );
         }
 
         public QueryResult<TResult> Search<TResult>(
             SearchOptions.SearchOptions options,
             Func<IDbProvider,Func<TModel, TResult>> getEvaluator,
-            ISecurityManager securityManager = null, // required for IOrganizationModel
-            Func<TModel, TModel, TModel> summaryAggregate = null ) // required for summary
+            ICurrentUserProvider currentUserProvider = null, // required for IOrganizationModel
+            Func<TModel, TModel, TModel> summaryAggregate = null, // required for summary
+            SummaryCache<TModel> summaryCache = null )  // required for summary caching
         {
             return DbProviderFactory.Run( db =>
             {
@@ -138,11 +149,11 @@ namespace EventStoreKit.Sql.Projections
                     options,
                     FilterMapping,
                     SorterMapping,
-                    securityManager,
-                    summaryAggregate: summaryAggregate );
+                    summaryAggregate: summaryAggregate,
+                    summaryCache: summaryCache );
                 return new QueryResult<TResult>( 
                     result.Select( evaluator ).ToList(), 
-                    options, 
+                    options,
                     result.Total,
                     result.Summary.With( evaluator ) );
             } );
@@ -150,7 +161,8 @@ namespace EventStoreKit.Sql.Projections
 
         public QueryResult<TModel> GetList( 
             Expression<Func<TModel,bool>> predicat = null,
-            Func<TModel, TModel, TModel> summaryAggregate = null )
+            Func<TModel, TModel, TModel> summaryAggregate = null,
+            SummaryCache<TModel> summaryCache = null )
         {
             var result = DbProviderFactory.Run( db =>
             {
@@ -159,7 +171,7 @@ namespace EventStoreKit.Sql.Projections
                     query = query.Where( predicat );
                 return query.ToList();
             } );
-            
+
             TModel summary = null;
             if ( summaryAggregate != null )
                 summary = ( result.Any() ) ? result.Aggregate( summaryAggregate ) : Activator.CreateInstance<TModel>();

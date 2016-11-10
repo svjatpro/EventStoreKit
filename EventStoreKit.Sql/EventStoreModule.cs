@@ -32,13 +32,15 @@ namespace EventStoreKit.Sql
         private class Startup : IStartable
         {
             private readonly ILogger<EventStoreModule<TSqlDialect>> Logger;
-            private readonly ISecurityManager SecurityManager;
+            private readonly ICurrentUserProvider CurrentUserProvider;
             private readonly IComponentContext Container;
             private readonly IEventDispatcher Dispatcher;
             private readonly IEnumerable<ICommandHandler> CommandHandlers;
             private readonly IEnumerable<IEventSubscriber> Subscribers;
 
+// ReSharper disable UnusedMember.Local
             private void RegisterCommandHandler<TCommand, TEntity>()
+// ReSharper restore UnusedMember.Local
                 where TCommand : DomainCommand
                 where TEntity : class, ITrackableAggregate
             {
@@ -53,7 +55,8 @@ namespace EventStoreKit.Sql
 
                     if( cmd.Created == default( DateTime ) )
                         cmd.Created = DateTime.Now;
-                    SecurityManager.CurrentUser.Do( user => cmd.CreatedBy = user.UserId );
+                    if ( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
+                        cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
                     var context = new CommandHandlerContext<TEntity>
                     {
                         Entity = repository.GetById<TEntity>( cmd.Id )
@@ -61,24 +64,24 @@ namespace EventStoreKit.Sql
                     if ( cmd.CreatedBy != Guid.Empty )
                         context.Entity.IssuedBy = cmd.CreatedBy;
                     else
-                        SecurityManager.CurrentUser.Do( user => context.Entity.IssuedBy = user.UserId );
+                        CurrentUserProvider.CurrentUserId.Do( userId => context.Entity.IssuedBy = userId.GetValueOrDefault() );
 
                     handler.Handle( cmd, context );
-                    Logger.InfoFormat( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
+                    Logger.Info( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
                     repository.Save( context.Entity, Guid.NewGuid() ); // todo: idgenerator
                 } );
                 Dispatcher.RegisterHandler( handleAction );
             }
 
             public Startup(
-                ISecurityManager securityManager,
+                ICurrentUserProvider currentUserProvider,
                 IComponentContext container, 
-                IEventDispatcher dispatcher, 
+                IEventDispatcher dispatcher,
                 IEnumerable<ICommandHandler> commandHandlers,
                 ILogger<EventStoreModule<TSqlDialect>> logger,
                 IEnumerable<IEventSubscriber> subscribers )
             {
-                SecurityManager = securityManager;
+                CurrentUserProvider = currentUserProvider;
                 Container = container;
                 Dispatcher = dispatcher.CheckNull( "dispatcher" );
                 CommandHandlers = commandHandlers;
@@ -145,7 +148,8 @@ namespace EventStoreKit.Sql
             builder.RegisterType<EventStoreRepository>().As<IRepository>().ExternallyOwned();
             builder.RegisterType<SagaEventStoreRepository>().As<ISagaRepository>().ExternallyOwned();
 
-            builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
+            //builder.RegisterGeneric( typeof( StoreLoggerAdater<> ) ).AsSelf();
+            //builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
 
             builder.RegisterType<SequentialIdgenerator>().As<IIdGenerator>();
             builder.RegisterType<EntityFactory>().As<IConstructAggregates>();
@@ -157,6 +161,7 @@ namespace EventStoreKit.Sql
             builder.RegisterType<EventSequence>().SingleInstance();
 
             builder.Register( ctx => ( new NewThreadScheduler( action => new Thread( action ) { IsBackground = true } ) ) ).As<IScheduler>();
+            //builder.Register( ctx => ThreadPoolScheduler.Instance ).As<IScheduler>();
 
             builder.RegisterType<MessageDispatcher>()
                 .As<IEventPublisher>()
@@ -181,10 +186,12 @@ namespace EventStoreKit.Sql
         private Wireup CreateWireup( IComponentContext ctx )
         {
             var wireup = Wireup.Init();
-            wireup.LogTo( type => new Log4NetLogger( type ) );
+
+            var logFactory = ctx.Resolve<Func<ILogger<EventStoreAdapter>>>();
+            wireup.LogTo( type => logFactory() );
+            
             var persistanceWireup = wireup
                 .UsingSqlPersistence( ctx.ResolveNamed<string>( EventStoreConstants.CommitsConfigNameTag ) )
-                //.WithDialect( new MsSqlDialect() )
                 .WithDialect( new TSqlDialect() )
                 .PageEvery( 1024 );
 

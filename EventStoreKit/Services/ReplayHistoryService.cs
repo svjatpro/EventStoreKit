@@ -51,7 +51,7 @@ namespace EventStoreKit.Services
                 Projections = projections.ToList();
             }
 
-            var commits = Store.Advanced.GetFrom( new DateTime( 2010, 1, 1 ) ).ToList();
+            var commits = Store.Advanced.GetFrom( new DateTime( 2010, 1, 1 ) ).OrderBy( c => c.CommitStamp ).ThenBy( c => c.CheckpointToken ); //.ToList();
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
             foreach ( var commit in commits )

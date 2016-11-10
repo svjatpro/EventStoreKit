@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Reactive.Concurrency;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
-using log4net;
 using NEventStore;
 
 namespace EventStoreKit.Sql.Projections
@@ -14,14 +14,14 @@ namespace EventStoreKit.Sql.Projections
     {
         private readonly IStoreEvents StoreEvents;
         private readonly IIdGenerator IdGenerator;
-        private readonly ISecurityManager SecurityManager;
+        private readonly ICurrentUserProvider CurrentUserProvider;
 
-        protected EventRouterBase( ILog clientLinkLogger, IScheduler scheduler, IStoreEvents storeEvents, IIdGenerator idGenerator, ISecurityManager securityManager )
-            : base( clientLinkLogger, scheduler )
+        protected EventRouterBase( ILogger logger, IScheduler scheduler, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
+            : base( logger, scheduler )
         {
             StoreEvents = storeEvents;
             IdGenerator = idGenerator;
-            SecurityManager = securityManager;
+            CurrentUserProvider = currentUserProvider;
         }
 
         protected void RaiseEvent<TEvent>( TEvent @event ) where TEvent : Message
@@ -29,7 +29,8 @@ namespace EventStoreKit.Sql.Projections
             var e = (@event as DomainEvent);
             if ( e != null )
             {
-                SecurityManager.CurrentUser.Do( user => e.CreatedBy = user.UserId );
+                if ( e.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
+                    e.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
             }
             if ( !IsRebuild )
             {

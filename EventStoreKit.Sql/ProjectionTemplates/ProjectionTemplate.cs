@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Sql.PersistanceManager;
@@ -10,22 +13,40 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Sql.ProjectionTemplates
 {
-    public abstract class ProjectionTemplate : IProjectionTemplate
+    
+    public class ProjectionTemplate<TReadModel> : IProjectionTemplate
+        where TReadModel : class
     {
-        #region Private members
+        #region Private fields
 
         protected readonly Action<Type, Action<Message>, bool> EventRegister;
         protected readonly Func<IDbProvider> PersistanceManagerFactory;
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
+        protected readonly ILogger Logger;
 
+// ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
+        private readonly ProjectionTemplateOptions Options;
+        private readonly int InsertBufferSize = 5000;
+// ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
+        private readonly bool ReadModelCaching;
+        private readonly IDbStrategy<TReadModel> DbStrategy;
+        //private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
+        private readonly ConcurrentDictionary<Guid,TReadModel> Cache;
+        private Func<IDbProvider, Guid, object> GetByIdDelegate;
+        
         #endregion
 
         #region Implementation of IProjectionTemplate
 
-        public virtual void CleanUp( SystemCleanedUpEvent msg )
+        public void CleanUp( SystemCleanedUpEvent msg )
         {
+            if ( Cache != null )
+                Cache.Clear();
+
             foreach ( var initializer in EventHandlerInitializers.Values )
                 initializer.CleanUp();
+
+            CreateTables( msg );
         }
 
         public void PreprocessEvent( Message @event )
@@ -38,17 +59,17 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             foreach ( var initializer in EventHandlerInitializers.Values )
                 initializer.Flush();
+            Cache.Do( c => c.Clear() );
         }
 
         #endregion
 
-        protected ProjectionTemplate( Action<Type, Action<Message>, bool> eventRegister, Func<IDbProvider> persistanceManagerFactory )
-        {
-            EventRegister = eventRegister;
-            PersistanceManagerFactory = persistanceManagerFactory;
-        }
-
         #region Protected methods
+
+        protected virtual void CreateTables( SystemCleanedUpEvent msg )
+        {
+            PersistanceManagerFactory.Run( db => db.CreateTable<TReadModel>( overwrite: true ) );
+        }
 
         protected void Register<TEvent>( Action<TEvent> action ) where TEvent : Message
         {
@@ -60,61 +81,49 @@ namespace EventStoreKit.Sql.ProjectionTemplates
             return typeof( T ).ResolveProperty( properties );
         }
 
-        protected EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TReadModel, TEvent>()
-            where TReadModel : class
+        #endregion
+
+        public ProjectionTemplate(
+            Action<Type, Action<Message>, bool> eventRegister,
+            Func<IDbProvider> dbProviderFactory,
+            ILogger logger = null,
+            ProjectionTemplateOptions options = ProjectionTemplateOptions.None )
+        {
+            EventRegister = eventRegister;
+            PersistanceManagerFactory = dbProviderFactory;
+            Logger = logger;
+
+            Options = options;
+            ReadModelCaching = Options.HasFlag( ProjectionTemplateOptions.ReadCachingSingle );
+            if ( ReadModelCaching )
+                Cache = new ConcurrentDictionary<Guid, TReadModel>();
+            
+            // Init DbStrategy
+            if ( Options.HasFlag( ProjectionTemplateOptions.InsertCaching ) )
+            {
+                int.TryParse(ConfigurationManager.AppSettings["InsertBufferSize"], out InsertBufferSize);
+                DbStrategy = new DbStrategyBuffered<TReadModel>(dbProviderFactory, logger, InsertBufferSize);
+            }
+            else
+            {
+                DbStrategy = new DbStrategyDirect<TReadModel>( dbProviderFactory );
+            }
+        }
+        
+        public EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TEvent>()
             where TEvent : Message
         {
-            var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory );
+            var initializer = new EventHandlerInitializer<TReadModel, TEvent>( EventRegister, PersistanceManagerFactory, DbStrategy, Cache );
             EventHandlerInitializers.Add( typeof( TEvent ), initializer );
             return initializer;
         }
 
-        #endregion
-    }
-
-    public class ProjectionTemplate<TReadModel> : ProjectionTemplate
-        where TReadModel : class
-    {
-        #region Private fields
-
-        private readonly bool ReadModelCaching;
-        private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
-        private Func<IDbProvider, Guid, object> GetByIdDelegate;
-
-        #endregion
-
-        public override void CleanUp( SystemCleanedUpEvent msg )
-        {
-            if ( Cache != null )
-                Cache.Clear();
-            base.CleanUp( msg );
-            CreateTables( msg );
-        }
-
-        #region Protected methods
-
-        protected virtual void CreateTables( SystemCleanedUpEvent msg )
-        {
-            PersistanceManagerFactory.Run( db => db.CreateTable<TReadModel>( overwrite: true ) );
-        }
-
-        #endregion
-
-        public ProjectionTemplate( 
-            Action<Type, Action<Message>, bool> eventRegister,
-            Func<IDbProvider> persistanceManagerFactory,
-            bool readModelCaching = false ): 
-            base( eventRegister, persistanceManagerFactory )
-        {
-            ReadModelCaching = readModelCaching;
-            if ( readModelCaching )
-                Cache = new ThreadSafeDictionary<Guid, TReadModel>();
-        }
-
-        public EventHandlerInitializer<TReadModel, TEvent> InitEventHandler<TEvent>()
+        public ProjectionTemplate<TReadModel> InitEventHandler<TEvent>( Action<EventHandlerInitializer<TReadModel, TEvent>> extendedInitializer )
             where TEvent : Message
         {
-            return InitEventHandler<TReadModel, TEvent>();
+            var initializer = InitEventHandler<TEvent>();
+            extendedInitializer( initializer );
+            return this;
         }
 
         #region GetById section
@@ -129,39 +138,34 @@ namespace EventStoreKit.Sql.ProjectionTemplates
         {
             return ( db, id ) => db.Query<TEntity>().SingleOrDefault( ExpressionsUtility.GetEqualPredicat<TEntity>( idProperty, id ) );
         }
-        //protected Func<IDbProvider, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2 )
-        //    where TEntity : class
-        //{
-        //    return ( db, id1, id2 ) => db.Query<TEntity>().SingleOrDefault( ExpressionsUtility.GetEqualPredicat<TEntity>(
-        //        new[] { idProperty1, idProperty2 }, new object[] { id1, id2 } ) );
-        //}
-
-        //protected Func<IDbProvider, Guid, Guid, Guid, object> GenerateGetByIdDelegate<TEntity>( PropertyInfo idProperty1, PropertyInfo idProperty2, PropertyInfo idProperty3 )
-        //    where TEntity : class
-        //{
-        //    return ( db, id1, id2, id3 ) => db.Query<TEntity>().SingleOrDefault(
-        //        ExpressionsUtility.GetEqualPredicat<TEntity>( new[] { idProperty1, idProperty2, idProperty3 }, new object[] { id1, id2, id3 } ) );
-        //}
 
         public TReadModel GetById( Guid id )
         {
-            if ( id == Guid.Empty )
+            if ( id == Guid.Empty || GetByIdDelegate == null )
                 return null;
-            TReadModel entity;
-            return
-                ( ReadModelCaching && Cache.TryGetValue( id, out entity ) ) ? 
-                entity :
-                GetByIdDelegate.With( d => PersistanceManagerFactory.Run( db => (TReadModel)d( db, id ) ) );
+            var result =
+                ReadModelCaching ? 
+                Cache.GetOrAdd( id, id1 => PersistanceManagerFactory.Run( db => (TReadModel)GetByIdDelegate( db, id1 ) ) ) :
+                PersistanceManagerFactory.Run( db => (TReadModel)GetByIdDelegate( db, id ) );
+            return result;
         }
         public TReadModel GetById( IDbProvider db, Guid id )
         {
-            if ( id == Guid.Empty )
+            if ( id == Guid.Empty || GetByIdDelegate == null )
                 return null;
-            TReadModel entity;
-            return
-                ( ReadModelCaching && Cache.TryGetValue( id, out entity ) ) ?
-                entity : 
-                GetByIdDelegate.With( d => (TReadModel)d( db, id ) );
+            var result =
+                ReadModelCaching ?
+                Cache.GetOrAdd( id, id1 => (TReadModel) GetByIdDelegate( db, id1 ) ) :
+                (TReadModel) GetByIdDelegate( db, id );
+            return result;
+        }
+
+        public void CleanCache( Guid id )
+        {
+            if ( !ReadModelCaching || id == Guid.Empty || GetByIdDelegate == null )
+                return;
+            TReadModel model;
+            Cache.TryRemove( id, out model );
         }
 
         #endregion
