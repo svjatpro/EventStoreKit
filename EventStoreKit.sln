@@ -5,8 +5,6 @@ VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit", "EventStoreKit\EventStoreKit.csproj", "{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Sql", "EventStoreKit.Sql\EventStoreKit.Sql.csproj", "{E45A5FA9-498C-4326-B644-46802038CC6F}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{4919CB59-EC0D-4E17-AB1D-707C8AB444B1}"
 	ProjectSection(SolutionItems) = preProject
 		.nuget\NuGet.Config = .nuget\NuGet.Config
@@ -35,16 +33,6 @@ Global
 		{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}.Release|x86.ActiveCfg = Release|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{E45A5FA9-498C-4326-B644-46802038CC6F}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
