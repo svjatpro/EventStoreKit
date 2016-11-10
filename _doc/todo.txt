@@ -3,39 +3,45 @@
 
     // adapters: DbManager, ILogger<>, ?Module
 
-    ?   research the idea of implementation event store functionality instead of using NEventStore
-
     .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
 
-    .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
+    .   remove RouterBase
 
-    .   [SK-29]
+    .   make configuration interface and remove app.config
 
-    ?   [SK-25]
-
-    .   [SK-21]
+    .   [SK-30]
 
  // ---------------------------------------------------------------------
- // v.0.2.5.0
+ // v.5.2.0.1
  // ---------------------------------------------------------------------
 
     .   [SK-25] Make clone in github
 
-    .   [SK-24] Make nuget package
+    .   [SK-29] Make secondary projects & packages: log4net, linq2db, Autofac
 
-    --
-
-    .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
     .   [SK-22] ITrackableAggregate - try to avoid base class
 
-    --
+    .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
+
+    .   [SK-21] Remove NewtonSoft.Json
+
+    .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+
+ // ---------------------------------------------------------------------
+ // v.5.2.0.0
+ // ---------------------------------------------------------------------
+
+    .   [SK-24] Make nuget package
+
+    *   [SK-25] merge to single project
 
     *   [SK-28] Move to last nEventStore and synchronize versioning with nEventStore versions ( ?rename )
 
     *   [SK-23] remove DateTimeUtility.GetMonthPreposition
  
     *   [SK-27] Try to remove Logger dependency
+
         try to remove adapter class and additional interface - use native NEventStore interface instead
 
  // ---------------------------------------------------------------------

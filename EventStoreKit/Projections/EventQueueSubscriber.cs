@@ -63,8 +63,6 @@ namespace EventStoreKit.Projections
             IsRebuild = i.IsRebuild;
             try
             {
-                //Log.SetAttribute( "Event", JsonConvert.SerializeObject( i.Event ) );
-                //LogicalThreadContext.Properties["Event"] = JsonConvert.SerializeObject( i.Event );
                 var action = Actions.Where( a => a.Key == e.GetType() ).Select( a => a.Value ).SingleOrDefault();
                 if ( action != null )
                 {
