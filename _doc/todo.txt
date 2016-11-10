@@ -29,8 +29,9 @@
 
     .   [SK-22] ITrackableAggregate - try to avoid base class
 
+    --
 
-    .   [SK-28] Move to last nEventStore and synchronize versioning with nEventStore versions ( ?rename )
+    *   [SK-28] Move to last nEventStore and synchronize versioning with nEventStore versions ( ?rename )
 
     *   [SK-23] remove DateTimeUtility.GetMonthPreposition
  
