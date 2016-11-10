@@ -1,11 +1,19 @@
-﻿using log4net;
-using log4net.Core;
+﻿using System;
+using System.Collections.Generic;
+using NEventStore.Logging;
 
 namespace EventStoreKit.Logging
 {
-    public interface ILogger<T> : ILog { }
-    public class Logger<T> : LogImpl, ILogger<T>
+    public interface ILogger : ILog
     {
-        public Logger() : base( LogManager.GetLogger( typeof( T ) ).Logger ){}
+        void Debug( string message, Exception exception = null, Dictionary<string, string> attributes = null );
+        void Info( string message, Exception exception = null, Dictionary<string, string> attributes = null );
+        void Warn( string message, Exception exception = null, Dictionary<string, string> attributes = null );
+        void Error( string message, Exception exception = null, Dictionary<string, string> attributes = null );
+        void Fatal( string message, Exception exception = null, Dictionary<string, string> attributes = null );
+    }
+    public interface ILogger<T> : ILogger
+    {
+        
     }
 }

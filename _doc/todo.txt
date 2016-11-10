@@ -1,41 +1,79 @@
 
  // ***************************************************************************************************************************************
 
-    .   Research [DataContract] importance for events and commands
- 
-        check with some transport bus system
-
-    .   ITrackableAggregate - try to avoid base class
-
-    ?   remove DateTimeUtility.GetMonthPreposition
-
-    ?   remove JSon serialization
+    // adapters: DbManager, ILogger<>, ?Module
 
     ?   research the idea of implementation event store functionality instead of using NEventStore
 
-
-
-    .   Make SearchOptions abstract - try to distance from ExtJs structure
-
-    .   copyTo: check properties Type and throw exception if types is different
-
-    .   remove IOrganization read model stuff
-
-    .   remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
-
     .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
 
-    .   remove log4net dependency
+    .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
+
+    .   [SK-29]
+
+    ?   [SK-25]
+
+    .   [SK-21]
+
+ // ---------------------------------------------------------------------
+ // v.0.2.5.0
+ // ---------------------------------------------------------------------
+
+    .   [SK-25] Make clone in github
+
+    .   [SK-24] Make nuget package
+
+    --
+
+    .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+
+    .   [SK-22] ITrackableAggregate - try to avoid base class
+
+
+    .   [SK-28] Move to last nEventStore and synchronize versioning with nEventStore versions ( ?rename )
+
+    *   [SK-23] remove DateTimeUtility.GetMonthPreposition
+ 
+    *   [SK-27] Try to remove Logger dependency
+        try to remove adapter class and additional interface - use native NEventStore interface instead
+
+ // ---------------------------------------------------------------------
+ // v.0.2.4.0
+ // ---------------------------------------------------------------------
+
+    *   [SK-19] Add ProjectionTemplate.CleanCache method
+
+ // ---------------------------------------------------------------------
+ // v.0.2.3.0
+ // ---------------------------------------------------------------------
+
+    *   [SK-18] Change signature of ProjectionTemplate to extend template initialization facilities in projections
+
+    *   [SK-17] Add cached query summary feature
+
+    *   [SK-4] remove ThreadSafeDictionary
+    
+ // ---------------------------------------------------------------------
+ // v.0.2.2.0
+ // ---------------------------------------------------------------------
+
+    *   [SK-16] Remove log4net dependency
 
         // use NEventStore.Logging.ILog
 
-    .   [SK-11]
+    *   [SK-15] Extend PerformQuery methods
 
-    .   [SK-4] remove ThreadSafeDictionary
+    *   [SK-14] Fix WithProperty method to use in sorter infrastructure
+
+    *   [SK-13] Refactor SagaProcess utility methods
 
  // ---------------------------------------------------------------------
- // v.0.2.1.0  
+ // v.0.2.1.0
  // ---------------------------------------------------------------------
+
+    *   [SK-11] remove IOrganization read model stuff
+
+    *   [SK-12] remove ISecurityManager, use ICurrentUserProvider
 
     *   [SK-9] Extend IConstructSagas
 

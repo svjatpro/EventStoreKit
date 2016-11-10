@@ -4,9 +4,8 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using EventStoreKit.Constants;
-using EventStoreKit.ReadModels;
 using EventStoreKit.SearchOptions;
-using EventStoreKit.Services;
+using EventStoreKit.Sql.DbProviders;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Sql.PersistanceManager
@@ -82,21 +81,11 @@ namespace EventStoreKit.Sql.PersistanceManager
             this IDbProvider db, 
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
-            Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
-            ISecurityManager securityManager = null )
+            Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null )
             where TEntity : class
         {
             var query = db.Query<TEntity>();
-
-            // Organization related entity
-            var currentUser = securityManager.With( sm => sm.CurrentUser );
-            if ( typeof( IOrganizationReadModel ).IsAssignableFrom( typeof( TEntity ) ) && currentUser != null )
-            {
-                options.EnsureFilterAtStart<IOrganizationReadModel>( 
-                    e => e.OrganizationId,
-                    () => new SearchFilterInfo.SearchFilterData{ Value = currentUser.OrganizationId } );
-            }
-
+            
             // apply filters
             if ( options != null && options.Filters != null )
             {
@@ -163,31 +152,79 @@ namespace EventStoreKit.Sql.PersistanceManager
             return source;
         }
 
+        public static SummaryCache<TEntity> ResolveSummary<TEntity>( 
+            this IQueryable<TEntity> source, 
+            SearchOptions.SearchOptions options,
+            Func<TEntity, TEntity, TEntity> summaryAggregate = null,
+            SummaryCache<TEntity> summaryCache = null ) 
+            where TEntity : class
+        {
+            var summaryKey = options.With( o => o.FilterKey() );
+            var summaryReady = summaryCache != null && summaryCache.Ready && summaryCache.Key == summaryKey;
+            
+            // calculate total result count
+            var total = summaryReady ? summaryCache.Total : source.Count();
+
+            // calculate summary
+            TEntity model = null;
+            if ( summaryReady )
+            {
+                model = summaryCache.SummaryModel;
+            }
+            else if ( summaryAggregate != null )
+            {
+                model = ( total > 0 ) ? source/*.ToList()*/.Aggregate( summaryAggregate ) : Activator.CreateInstance<TEntity>();
+            }
+
+            // update summary cache
+            if ( summaryCache != null && !summaryReady )
+            {
+                summaryCache.Total = total;
+                summaryCache.SummaryModel = model;
+                summaryCache.Key = summaryKey;
+                summaryCache.Ready = true;
+            }
+
+            return 
+                summaryCache ??
+                new SummaryCache<TEntity>
+                {
+                    Total = total,
+                    SummaryModel = model
+                };
+        }
+
+        public static QueryResult<TEntity> PerformQuery<TEntity>(
+            this IQueryable<TEntity> query,
+            SearchOptions.SearchOptions options,
+            Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
+            Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
+            Func<TEntity, TEntity, TEntity> summaryAggregate = null,
+            SummaryCache<TEntity> summaryCache = null )
+            where TEntity : class
+        {
+            var summary = query.ResolveSummary( options, summaryAggregate, summaryCache );
+
+            // apply paging
+            query = query.ApplyPaging( options, summary.Total );
+
+            // return result as QueryResult<> with Total and source SearchOptions
+            var result = query.ToList();
+
+            return new QueryResult<TEntity>( result, options, total: summary.Total, summary: summary.SummaryModel );
+        }
+
         public static QueryResult<TEntity> PerformQuery<TEntity>(
             this IDbProvider db, 
             SearchOptions.SearchOptions options, 
             Dictionary<string, Func<SearchFilterInfo, Expression<Func<TEntity, bool>>>> filterMapping = null,
             Dictionary<string, Expression<Func<TEntity, object>>> sorterMapping = null,
-            ISecurityManager securityManager = null,
-            Func<TEntity, TEntity, TEntity> summaryAggregate = null )
+            Func<TEntity, TEntity, TEntity> summaryAggregate = null,
+            SummaryCache<TEntity> summaryCache = null )
             where TEntity : class
         {
-            IQueryable<TEntity> query = PerformQueryLazy( db, options, filterMapping, sorterMapping, securityManager );
-            // calculate total result count
-            var total = query.Count();
-
-            // calculate summary
-            TEntity summary = null;
-            if ( summaryAggregate != null )
-                summary = ( total > 0 ) ? query.ToList().Aggregate( summaryAggregate ) : Activator.CreateInstance<TEntity>();
-
-            // apply paging
-            query = query.ApplyPaging( options, total );
-
-            // return result as QueryResult<> with Total and source SearchOptions
-            var result = query.ToList();
-            
-            return new QueryResult<TEntity>( result, options, total: total, summary: summary );
+            var query = PerformQueryLazy( db, options, filterMapping, sorterMapping );
+            return PerformQuery( query, options, filterMapping, sorterMapping, summaryAggregate, summaryCache );
         }
 
         /// <summary>
@@ -233,6 +270,8 @@ namespace EventStoreKit.Sql.PersistanceManager
 
         public static SearchOptions.SearchOptions EnsureDefaultSorter<TEntity>( this SearchOptions.SearchOptions options, Expression<Func<TEntity,object>> getPropertyName, string direction  )
         {
+            if ( options == null )
+                options = new SearchOptions.SearchOptions( filters: new List<SearchFilterInfo>(), sorters: new List<SorterInfo>() );
             if ( !options.Sorters.Any() )
             {
                 options.Sorters.Add
@@ -248,6 +287,8 @@ namespace EventStoreKit.Sql.PersistanceManager
         public static SearchOptions.SearchOptions AddSorter<TEntity>
             ( this SearchOptions.SearchOptions options, Expression<Func<TEntity, object>> getPropertyName, string direction )
         {
+            if ( options == null )
+                options = new SearchOptions.SearchOptions( filters: new List<SearchFilterInfo>(), sorters: new List<SorterInfo>() );
             options.Sorters.Add( 
                 new SorterInfo
                 {

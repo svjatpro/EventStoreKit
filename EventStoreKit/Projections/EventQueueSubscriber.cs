@@ -1,15 +1,17 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reflection;
+using System.Threading;
 using EventStoreKit.Handler;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
-using log4net;
 using Newtonsoft.Json;
 
 namespace EventStoreKit.Projections
@@ -18,10 +20,17 @@ namespace EventStoreKit.Projections
     {
         #region Private fields
 
-        protected readonly ILog Log;
+        protected readonly ILogger Log;
         private readonly BlockingCollection<EventInfo> MessageQueue;
         private readonly IDictionary<Type, Action<Message>> Actions;
         protected bool IsRebuild;
+
+// ReSharper disable FieldCanBeMadeReadOnly.Local
+        private int OnIddleInterval = 500;
+// ReSharper restore FieldCanBeMadeReadOnly.Local
+        private volatile bool MessageProcessed;
+        private System.Threading.Timer OnIddleTimer;
+        private readonly object IddleLockObj = new object();
         
         #endregion
 
@@ -54,25 +63,64 @@ namespace EventStoreKit.Projections
             IsRebuild = i.IsRebuild;
             try
             {
-                LogicalThreadContext.Properties["Event"] = JsonConvert.SerializeObject( i.Event );
+                //Log.SetAttribute( "Event", JsonConvert.SerializeObject( i.Event ) );
+                //LogicalThreadContext.Properties["Event"] = JsonConvert.SerializeObject( i.Event );
                 var action = Actions.Where( a => a.Key == e.GetType() ).Select( a => a.Value ).SingleOrDefault();
                 if ( action != null )
                 {
                     PreprocessMessage( e );
                     action( e );
-                    Log.InfoFormat( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
+                    Log.Info( "{0} handled ( version = {1} ). Unprocessed events: {2}", e.GetType().Name, e.Version, MessageQueue.Count );
                 }
             }
             catch ( Exception ex )
             {
-                Log.Error( string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", e.GetType().Name, GetType().Name, ex.Message ), ex );
+                Log.Error( 
+                    string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", e.GetType().Name, GetType().Name, ex.Message ),
+                    ex, new Dictionary<string, string> { { "Event", JsonConvert.SerializeObject( i.Event ) } });
             }
             finally
             {
                 IsRebuild = false;
             }
+
+            if( !(i.Event is StreamOnIdleEvent) )
+            {
+                MessageProcessed = true;
+                InitOnIddleTimer();
+            }
         }
 
+        private void InitOnIddleTimer()
+        {
+            if ( OnIddleTimer == null )
+            {
+                lock ( IddleLockObj )
+                {
+                    OnIddleTimer = new Timer( OnIddleTimerHandler, null, OnIddleInterval, OnIddleInterval );
+                }
+            }
+        }
+        private void OnIddleTimerHandler( object state )
+        {
+            if ( !MessageProcessed )
+            {
+                lock ( IddleLockObj )
+                {
+                    if ( OnIddleTimer != null )
+                    {
+                        OnIddleTimer.Change( Timeout.Infinite, Timeout.Infinite );
+                        OnIddleTimer = null;
+                    }
+                }
+                Handle( new StreamOnIdleEvent() );
+            }
+            else
+            {
+                MessageProcessed = false;
+            }
+        }
+        
         #endregion
 
         #region Protected methods
@@ -108,10 +156,30 @@ namespace EventStoreKit.Projections
         }
 
         protected virtual void PreprocessMessage( Message message ){}
+        
+        #endregion
+
+        #region Private event handlers
+
+        private void Apply( SequenceMarkerEvent msg )
+        {
+            OnSequenceFinished( msg );
+            SequenceFinished.Execute( this, new SequenceEventArgs( msg.Identity ) );
+        }
+
+        private void Apply( StreamOnIdleEvent msg )
+        {
+            OnStreamOnIdle( msg );
+        }
 
         #endregion
 
-        protected EventQueueSubscriber( ILog logger, IScheduler scheduler )
+        public event EventHandler<SequenceEventArgs> SequenceFinished;
+
+        protected virtual void OnSequenceFinished( SequenceMarkerEvent message ) { }
+        protected virtual void OnStreamOnIdle( StreamOnIdleEvent message ) { }
+        
+        protected EventQueueSubscriber( ILogger logger, IScheduler scheduler )
         {
             Log = logger.CheckNull( "logger" );
 
@@ -133,8 +201,15 @@ namespace EventStoreKit.Projections
                     var messageType = interfaceType.GetGenericArguments()[0];
                     createHandlerMehod.MakeGenericMethod( messageType ).Invoke( this, new object[] { } );
                 } );
-        }
 
+            int.TryParse( ConfigurationManager.AppSettings["OnIddleInterval"], out OnIddleInterval );
+            
+            Register<SequenceMarkerEvent>( Apply, true );
+            Register<StreamOnIdleEvent>( Apply, true );
+
+            InitOnIddleTimer();
+        }
+        
         public void Handle( Message e ) { Handle( e, false ); }
         protected void Handle( Message e, bool isRebuild )
         {
@@ -143,7 +218,7 @@ namespace EventStoreKit.Projections
             if ( !Actions.TryGetValue( eventType, out action ) )
                 return;
             MessageQueue.Add( new EventInfo { Event = e, IsRebuild = isRebuild } );
-            Log.DebugFormat( "Unprocessed events: {0}", MessageQueue.Count );
+            Log.Debug( "Unprocessed events: {0}", MessageQueue.Count );
         }
 
         public virtual void Replay( Message e )

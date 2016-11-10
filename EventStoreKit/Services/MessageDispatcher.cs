@@ -30,7 +30,7 @@ namespace EventStoreKit.Services
                 Routes.Add( typeof (T), handlers );
             }
             handlers.Add( DelegateAdjuster.CastArgument<Message, T>( x => handler( x ) ) );
-            Logger.DebugFormat( "Handler registered: {0}", typeof (T).Name );
+            Logger.Debug( "Handler registered: {0}", typeof (T).Name );
         }
         
         public void Publish<TEvent>( TEvent @event ) where TEvent : Message
@@ -51,7 +51,7 @@ namespace EventStoreKit.Services
                 var handler1 = handler;
                 handler1( @event );
             }
-            Logger.DebugFormat( "Event published: {0}", @event.GetType().Name );
+            Logger.Debug( "Event published: {0}", @event.GetType().Name );
         }
         
         public void Send<TCommand>( TCommand command ) where TCommand : DomainCommand
