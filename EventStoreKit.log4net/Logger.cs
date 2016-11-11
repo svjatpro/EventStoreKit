@@ -5,7 +5,7 @@ using EventStoreKit.Logging;
 using EventStoreKit.Utility;
 using log4net;
 
-namespace OSMD.Common.Logging
+namespace EventStoreKit.log4net
 {
     public class Logger<T> : ILogger<T>
     {
