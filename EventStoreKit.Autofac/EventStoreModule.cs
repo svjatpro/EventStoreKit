@@ -24,7 +24,7 @@ using NEventStore;
 using NEventStore.Persistence.Sql;
 using Module = Autofac.Module;
 
-namespace EventStoreKit.Sql
+namespace EventStoreKit
 {
     public class EventStoreModule<TSqlDialect> : Module
         where TSqlDialect : ISqlDialect, new()
@@ -147,9 +147,6 @@ namespace EventStoreKit.Sql
             builder.RegisterType<EventStoreRepository>().As<IRepository>().ExternallyOwned();
             builder.RegisterType<SagaEventStoreRepository>().As<ISagaRepository>().ExternallyOwned();
 
-            //builder.RegisterGeneric( typeof( StoreLoggerAdater<> ) ).AsSelf();
-            //builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
-
             builder.RegisterType<SequentialIdgenerator>().As<IIdGenerator>();
             builder.RegisterType<EntityFactory>().As<IConstructAggregates>();
             builder.RegisterType<SagaFactory>()
@@ -176,7 +173,6 @@ namespace EventStoreKit.Sql
                         ctx.Resolve<IEventPublisher>(),
                         ctx.Resolve<ICommandBus>() ) )
                 .As<IStoreEvents>()
-                //.As<IReplaysHistory>()
                 .SingleInstance();
 
             builder.RegisterType<ReplayHistoryService>().As<IReplaysHistory>().SingleInstance();
@@ -195,7 +191,6 @@ namespace EventStoreKit.Sql
                 .PageEvery( 1024 );
 
             return persistanceWireup
-                //.EnlistInAmbientTransaction()
                 .InitializeStorageEngine()
                 .UsingJsonSerialization();
         }

@@ -5,13 +5,13 @@ using System.Configuration;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
-using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
 
-namespace EventStoreKit.Sql.ProjectionTemplates
+namespace EventStoreKit.ProjectionTemplates
 {
     
     public class ProjectionTemplate<TReadModel> : IProjectionTemplate

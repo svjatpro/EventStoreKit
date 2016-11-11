@@ -4,7 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 
-namespace EventStoreKit.Sql.PersistanceManager
+namespace EventStoreKit.DbProviders
 {
     public class DbProviderProxy : IDbProvider
     {

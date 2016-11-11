@@ -24,13 +24,15 @@
 
     .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
 
-    .   [SK-21] Remove NewtonSoft.Json
-
-    .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+    ?   [SK-21] Remove NewtonSoft.Json
 
  // ---------------------------------------------------------------------
  // v.1.0.0.0
  // ---------------------------------------------------------------------
+
+    .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+
+        .   just move to separate project
 
     .   [SK-30] Add DbManager, ILogger<> adapters (:
 

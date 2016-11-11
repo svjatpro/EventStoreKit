@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using EventStoreKit.Utility;
 
-namespace EventStoreKit.Sql.ProjectionTemplates
+namespace EventStoreKit.ProjectionTemplates
 {
     public class ObjectExpressionBuilder<TReadModel>
     {

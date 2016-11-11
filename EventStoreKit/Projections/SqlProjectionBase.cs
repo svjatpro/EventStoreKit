@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Concurrency;
+using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
+using EventStoreKit.ProjectionTemplates;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
-using EventStoreKit.Sql.DbProviders;
-using EventStoreKit.Sql.PersistanceManager;
-using EventStoreKit.Sql.ProjectionTemplates;
 using EventStoreKit.Utility;
 
-namespace EventStoreKit.Sql.Projections
+namespace EventStoreKit.Projections
 {
     public abstract class SqlProjectionBase : ProjectionBase
     {

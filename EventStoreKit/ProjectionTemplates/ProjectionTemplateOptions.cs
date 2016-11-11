@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace EventStoreKit.Sql.ProjectionTemplates
+namespace EventStoreKit.ProjectionTemplates
 {
     [Flags]
     public enum ProjectionTemplateOptions
