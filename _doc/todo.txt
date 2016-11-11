@@ -9,10 +9,10 @@
 
     .   make configuration interface and remove app.config
 
-    .   [SK-30]
+    .   [SK-31]
 
  // ---------------------------------------------------------------------
- // v.5.2.0.1
+ // v.1.1.0.0
  // ---------------------------------------------------------------------
 
     .   [SK-25] Make clone in github
@@ -29,8 +29,10 @@
     .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
  // ---------------------------------------------------------------------
- // v.5.2.0.0
+ // v.1.0.0.0
  // ---------------------------------------------------------------------
+
+    .   [SK-30] Add DbManager, ILogger<> adapters (:
 
     *   [SK-24] Make nuget package
 
