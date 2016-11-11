@@ -33,10 +33,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Autofac, Version=3.5.0.0, Culture=neutral, PublicKeyToken=17863af14b0044da, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Autofac.3.5.2\lib\net40\Autofac.dll</HintPath>
-    </Reference>
     <Reference Include="NEventStore, Version=5.2.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NEventStore.5.2.0\lib\net40\NEventStore.dll</HintPath>
@@ -83,7 +79,6 @@
     <Compile Include="DbProviders\FieldIndexAttribute.cs" />
     <Compile Include="DbProviders\IDbProvider.cs" />
     <Compile Include="DbProviders\SummaryCache.cs" />
-    <Compile Include="EventStoreModule.cs" />
     <Compile Include="Handler\CommandHandlerContext.cs" />
     <Compile Include="Handler\ICommandHandler.cs" />
     <Compile Include="Handler\IEventHandler.cs" />
@@ -140,7 +135,9 @@
     <Compile Include="Utility\StringUtility.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
+    <None Include="app.config">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
-using EventStoreKit.Sql.PersistanceManager;
 using EventStoreKit.Utility;
 
-namespace EventStoreKit.Sql.ProjectionTemplates
+namespace EventStoreKit.ProjectionTemplates
 {
     public interface IDbStrategy<TReadModel> where TReadModel : class
     {

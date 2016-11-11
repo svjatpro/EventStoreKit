@@ -2,13 +2,12 @@
 using System.Reactive.Concurrency;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
-using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
 
-namespace EventStoreKit.Sql.Projections
+namespace EventStoreKit.Projections
 {
     public abstract class EventRouterBase : ProjectionBase, IEventRouter
     {

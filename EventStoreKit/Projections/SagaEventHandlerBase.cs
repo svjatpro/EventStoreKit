@@ -1,9 +1,8 @@
 ﻿using System.Reactive.Concurrency;
 using CommonDomain.Persistence;
 using EventStoreKit.Logging;
-using EventStoreKit.Projections;
 
-namespace EventStoreKit.Sql.Projections
+namespace EventStoreKit.Projections
 {
     public abstract class SagaEventHandlerBase : EventQueueSubscriber
     {

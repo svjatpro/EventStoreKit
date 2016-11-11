@@ -1,6 +1,6 @@
 ﻿using EventStoreKit.Messages;
 
-namespace EventStoreKit.Sql.ProjectionTemplates
+namespace EventStoreKit.ProjectionTemplates
 {
     public interface IProjectionTemplate
     {

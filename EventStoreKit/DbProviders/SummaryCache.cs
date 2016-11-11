@@ -1,5 +1,5 @@
 ﻿
-namespace EventStoreKit.Sql.DbProviders
+namespace EventStoreKit.DbProviders
 {
     public class SummaryCache<TModel>
     {

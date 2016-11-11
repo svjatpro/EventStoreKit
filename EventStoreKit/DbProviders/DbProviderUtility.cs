@@ -5,10 +5,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using EventStoreKit.Constants;
 using EventStoreKit.SearchOptions;
-using EventStoreKit.Sql.DbProviders;
 using EventStoreKit.Utility;
 
-namespace EventStoreKit.Sql.PersistanceManager
+namespace EventStoreKit.DbProviders
 {
     public static class DbProviderUtility
     {

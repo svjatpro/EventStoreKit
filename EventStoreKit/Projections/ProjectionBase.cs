@@ -4,10 +4,9 @@ using System.Reactive.Concurrency;
 using System.Runtime.Remoting.Messaging;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
-using EventStoreKit.Projections;
-using EventStoreKit.Sql.ProjectionTemplates;
+using EventStoreKit.ProjectionTemplates;
 
-namespace EventStoreKit.Sql.Projections
+namespace EventStoreKit.Projections
 {
     public abstract class ProjectionBase : EventQueueSubscriber, IProjection
     {

@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("EventStoreKit")]
+[assembly: AssemblyTitle("EventStoreKit.Autofac")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("EventStoreKit")]
+[assembly: AssemblyProduct("EventStoreKit.Autofac")]
 [assembly: AssemblyCopyright("Copyright ©  2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("46ec2be5-6f0b-4d8d-a3fc-acd1a89ddc33")]
+[assembly: Guid("46ec2be5-6f0b-4d8d-a3fc-acd1a89ddc34")]
 
 // Version information for an assembly consists of the following four values:
 //
