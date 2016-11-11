@@ -1,16 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
-        <id>EventStoreKit.Autofac</id>
-        <version>1.0.1.0</version>
-        <title>EventStoreKit.Autofac</title>
+        <id>EventStoreKit.linq2db</id>
+        <version>1.0.0.0</version>
+        <title>EventStoreKit.linq2db</title>
         <authors>SvjatPro</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>NEventStore tools, Autofac module</description>
+        <description>NEventStore tools, linq2db adapter</description>
         <dependencies>
             <dependency id="EventStoreKit" version="1.0.1" />
             <dependency id="NEventStore" version="5.2.0" />
-            <dependency id="Autofac" version="3.5.2" />
+            <dependency id="linq2db" version="1.0.7.3" />
             <dependency id="Rx-Core" version="2.2.5" />
             <dependency id="Rx-Interfaces" version="2.2.5" />
             <dependency id="Rx-Linq" version="2.2.5" />
@@ -18,6 +18,6 @@
         </dependencies>
     </metadata>
     <files>
-        <file src="..\..\_bin\EventStoreKit.Autofac.dll" target="lib\net40\EventStoreKit.Autofac.dll" />
+        <file src="..\..\_bin\EventStoreKit.linq2db.dll" target="lib\net40\EventStoreKit.linq2db.dll" />
     </files>
 </package>

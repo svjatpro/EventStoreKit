@@ -1,15 +1,7 @@
 
  // ***************************************************************************************************************************************
 
-    // adapters: DbManager, ILogger<>, ?Module
-
-    .   Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
-
-    .   remove RouterBase
-
-    .   make configuration interface and remove app.config
-
-    .   [SK-31]
+    .   [SK-33]
 
  // ---------------------------------------------------------------------
  // v.1.1.0.0
@@ -17,24 +9,26 @@
 
     .   [SK-25] Make clone in github
 
-    .   [SK-29] Make secondary projects & packages: log4net, linq2db, Autofac
-
-
-    .   [SK-22] ITrackableAggregate - try to avoid base class
+     
+    ?   [SK-22] ITrackableAggregate - try to avoid base class
 
     .   [SK-26] Make SearchOptions abstract - try to distance from ExtJs structure
 
     ?   [SK-21] Remove NewtonSoft.Json
 
+    .   [SK-30] Try to remove reactive ( also don't forget about commented lock in EventStoreAdapter )
+
+    .   [SK-31] remove RouterBase
+
+    .   [SK-32] make configuration interface and remove app.config
+
  // ---------------------------------------------------------------------
- // v.1.0.0.0
+ // v.1.0.1.0
  // ---------------------------------------------------------------------
 
-    .   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
+    *   [SK-29] Make secondary projects & packages: log4net, linq2db
 
-        .   just move to separate project
-
-    .   [SK-30] Add DbManager, ILogger<> adapters (:
+    *   [SK-20] remove autofac dependency ( example in documentation ) - service methods for simplification of initialization
 
     *   [SK-24] Make nuget package
 
