@@ -80,7 +80,6 @@
     <Compile Include="Constants\SorterDirectionType.cs" />
     <Compile Include="DbProviders\DbProviderProxy.cs" />
     <Compile Include="DbProviders\DbProviderUtility.cs" />
-    <Compile Include="DbProviders\Examples\DbProvider.cs" />
     <Compile Include="DbProviders\FieldIndexAttribute.cs" />
     <Compile Include="DbProviders\IDbProvider.cs" />
     <Compile Include="DbProviders\SummaryCache.cs" />

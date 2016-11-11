@@ -82,8 +82,7 @@ namespace EventStoreKit.Sql
                 IEnumerable<IEventSubscriber> subscribers )
             {
                 CurrentUserProvider = currentUserProvider;
-                Container = container;
-                Dispatcher = dispatcher.CheckNull( "dispatcher" );
+                Container = container;Dispatcher = dispatcher.CheckNull( "dispatcher" );
                 CommandHandlers = commandHandlers;
                 Logger = logger;
                 Subscribers = subscribers;
