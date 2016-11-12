@@ -6,8 +6,6 @@
         <FormattedVersion>0.0.0.0</FormattedVersion>
         <GeneralVersion>0.0.0</GeneralVersion>
         <RootDir>$(MSBuildProjectDirectory)\</RootDir>
-        <WebDir>$(RootDir)OSMD.Web\</WebDir>
-        <SenchaBuildDir>$(WebDir)build\ClientLink\production</SenchaBuildDir>
         <PackageDirectory Condition="'$(PackageDirectory)' == '' ">$(RootDir)_package</PackageDirectory>
     </PropertyGroup>
 
