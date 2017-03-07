@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.21005.1
+# Visual Studio 14
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit", "EventStoreKit\EventStoreKit.csproj", "{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}"
 EndProject
@@ -18,6 +18,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Autofac", "EventStoreKit.Autofac\EventStoreKit.Autofac.csproj", "{08304086-2CCB-4742-8D1C-B33EA3E5216F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.linq2db", "EventStoreKit.linq2db\EventStoreKit.linq2db.csproj", "{020449A4-746C-45F4-A766-2403BD7E5996}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Example", "EventStoreKit.Example\EventStoreKit.Example.csproj", "{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Tests", "EventStoreKit.Tests\EventStoreKit.Tests.csproj", "{D6B607C3-E439-437A-BADE-CEB11F2C2A12}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -73,6 +77,30 @@ Global
 		{020449A4-746C-45F4-A766-2403BD7E5996}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{020449A4-746C-45F4-A766-2403BD7E5996}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{020449A4-746C-45F4-A766-2403BD7E5996}.Release|x86.ActiveCfg = Release|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|x86.Build.0 = Debug|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|x86.ActiveCfg = Release|Any CPU
+		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|x86.Build.0 = Release|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|x86.Build.0 = Debug|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Release|x86.ActiveCfg = Release|Any CPU
+		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

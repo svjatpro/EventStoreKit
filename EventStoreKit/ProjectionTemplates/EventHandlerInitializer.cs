@@ -6,6 +6,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Messages;
+using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.ProjectionTemplates
@@ -13,8 +14,6 @@ namespace EventStoreKit.ProjectionTemplates
     public interface IEventHandlerInitializer
     {
         void PreprocessEvent( Message @event );
-        void Flush();
-        void CleanUp();
     }
 
     public class EventHandlerInitializer<TReadModel, TEvent> : IEventHandlerInitializer
@@ -45,6 +44,7 @@ namespace EventStoreKit.ProjectionTemplates
         private Func<IDbProvider, TEvent, bool> ValidateExpression;
         private Action<IDbProvider, TEvent> AfterExpression;
         private Action<IDbProvider, TEvent> BeforeExpression;
+        private Action<TEvent, Exception> RunOnErrorExpression;
         private Action<TEvent> PostProcessExpression;
 
         #endregion
@@ -104,25 +104,16 @@ namespace EventStoreKit.ProjectionTemplates
         public void PreprocessEvent( Message @event )
         {
         }
-
-        public void Flush()
-        {
-            DbStrategy.Flush();
-        }
-
-        public void CleanUp()
-        {
-        }
         
         #endregion
 
         public EventHandlerInitializer(
-            Action<Type, Action<Message>, bool> eventRegister, 
+            Action<Type, Action<Message>, ActionMergeMethod> eventRegister, 
             Func<IDbProvider> dbFactory,
             IDbStrategy<TReadModel> dbStrategy,
             ConcurrentDictionary<Guid, TReadModel> cache = null )
         {
-            EventRegister = ( type, action ) => eventRegister( type, action, true );
+            EventRegister = ( type, action ) => eventRegister( type, action, ActionMergeMethod.SingleDontReplace );
             
             DbFactory = dbFactory;
             DbStrategy = dbStrategy;
@@ -233,7 +224,9 @@ namespace EventStoreKit.ProjectionTemplates
 
                             // run custom action after insert
                             AfterExpression.Do( a => a( db, (TEvent) @event ) );
-                        } );
+                        },
+                        processException: RunOnErrorExpression.With( exceptionHandler => new Action<Exception>( exc => exceptionHandler( (TEvent)@event, exc ) ) ) );
+
                     PostProcessExpression.Do( a => a( (TEvent) @event ) );
                 } );
             return this;
@@ -295,7 +288,9 @@ namespace EventStoreKit.ProjectionTemplates
                                     Cache.AddOrUpdate( id, id1 => entity, ( id1, prev ) => entity );
                                 }
                             }
-                        } );
+                        },
+                        processException: RunOnErrorExpression.With( exceptionHandler => new Action<Exception>( exc => exceptionHandler( (TEvent)@event, exc ) ) ) );
+
                     PostProcessExpression.Do( a => a( (TEvent)@event ) );
                 } );
             return this;
@@ -337,7 +332,9 @@ namespace EventStoreKit.ProjectionTemplates
                             var action = deleteAction.With( a => a() );
                             if ( action != null )
                                 action( db, (TEvent) @event );
-                        } );
+                        },
+                        processException: RunOnErrorExpression.With( exceptionHandler => new Action<Exception>( exc => exceptionHandler( (TEvent)@event, exc ) ) ) );
+
                     PostProcessExpression.Do( a => a( (TEvent)@event ) );
                 } );
             return this;
@@ -375,6 +372,12 @@ namespace EventStoreKit.ProjectionTemplates
             return this;
         }
 
+        public EventHandlerInitializer<TReadModel, TEvent> RunOnError( Action<TEvent,Exception> runOnErrorExpression )
+        {
+            RunOnErrorExpression = runOnErrorExpression;
+            return this;
+        }
+        
         public EventHandlerInitializer<TReadModel, TEvent> PostProcess( Action<TEvent> postProcessExpression )
         {
             PostProcessExpression = postProcessExpression;

@@ -1,12 +1,17 @@
 ﻿using System.Linq;
+using LinqToDB;
 using LinqToDB.Data;
+using LinqToDB.DataProvider.SqlServer;
 
 namespace EventStoreKit.linq2db
 {
     public class DbProviderMsSql : DbProvider
     {
-        public DbProviderMsSql(string connectionStringName)
-            : base(new DataConnection( connectionStringName) )
+        public DbProviderMsSql( string configurationString = null, string connectionString = null )
+            : base(
+                  configurationString != null ? 
+                  new DataConnection( configurationString ) :
+                  new DataConnection( new SqlServerDataProvider( ProviderName.SqlServer, SqlServerVersion.v2008 ), connectionString ) )
         {
         }
 
@@ -29,6 +34,5 @@ namespace EventStoreKit.linq2db
                 string.Join(", ", indexInfo.Columns.Select(c => string.Format("[{0}] ASC", c)))
             );
         }
-
     }
 }

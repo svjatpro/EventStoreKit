@@ -1,11 +1,13 @@
-﻿using EventStoreKit.Messages;
+﻿using System;
+using System.Collections.Generic;
+using EventStoreKit.Messages;
 
 namespace EventStoreKit.ProjectionTemplates
 {
     public interface IProjectionTemplate
     {
-        void CleanUp( SystemCleanedUpEvent msg );
         void PreprocessEvent( Message @event );
-        void Flush( );
+        void Flush();
+        IList<Type> GetReadModels(); 
     }
 }

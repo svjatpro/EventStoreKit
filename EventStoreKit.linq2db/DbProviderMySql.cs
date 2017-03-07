@@ -8,8 +8,11 @@ namespace EventStoreKit.linq2db
 {
     public class DbProviderMySql : DbProvider
     {
-        public DbProviderMySql( string connectionStringName ) : 
-            base(new DataConnection( /*new MySqlDataProvider(),*/ connectionStringName) )
+        public DbProviderMySql( string configurationString = null, string connectionString = null ) : 
+            base(
+                configurationString != null ?
+                new DataConnection( configurationString ) :
+                new DataConnection( ProviderName.MySql, connectionString ) )
         {
             // According to http://dev.mysql.com/doc/connector-net/en/connector-net-connection-options.html
             //  "This option was introduced in Connector/Net 6.1.1. 

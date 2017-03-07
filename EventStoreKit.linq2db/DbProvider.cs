@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Linq.Expressions;
 using EventStoreKit.DbProviders;
 using LinqToDB;
 using LinqToDB.Data;
 using LinqToDB.SqlQuery;
+using MySql.Data.MySqlClient;
 
 namespace EventStoreKit.linq2db
 {
@@ -90,7 +92,13 @@ namespace EventStoreKit.linq2db
 
         public void DropTable<T>() where T : class
         {
-            DbManager.DropTable<T>();
+            try
+            {
+                DbManager.DropTable<T>();
+            }
+            catch ( DbException )
+            {
+            }
         }
 
         public void CreateTable<T>( bool overwrite = false ) where T : class
@@ -102,8 +110,14 @@ namespace EventStoreKit.linq2db
 
             if ( !exist || overwrite )
             {
-                DbManager.CreateTable<T>();
-                CreateTableIndexes<T>();
+                try
+                {
+                    DbManager.CreateTable<T>();
+                    CreateTableIndexes<T>();
+                }
+                catch ( DbException )
+                {
+                }
             }
         }
 

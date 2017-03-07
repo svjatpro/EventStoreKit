@@ -64,9 +64,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\_build\AssemblyInfo.cs">
-      <Link>AssemblyInfo.cs</Link>
-    </Compile>
     <Compile Include="Aggregates\ITrackableAggregate.cs" />
     <Compile Include="Aggregates\TrackableAggregateBase.cs" />
     <Compile Include="CommandBus\ICommandBus.cs" />
@@ -95,7 +92,10 @@
     <Compile Include="Projections\IEventRouter.cs" />
     <Compile Include="Projections\IEventSubscriber.cs" />
     <Compile Include="Projections\IProjection.cs" />
-    <Compile Include="Projections\ProjectionBase.cs" />
+    <Compile Include="Projections\MessageHandler\ActionMergeMethod.cs" />
+    <Compile Include="Projections\MessageHandler\DirectMessageHandler.cs" />
+    <Compile Include="Projections\MessageHandler\DynamicMessageHandler.cs" />
+    <Compile Include="Projections\MessageHandler\IMessageHandler.cs" />
     <Compile Include="Projections\SagaEventHandlerBase.cs" />
     <Compile Include="Projections\SqlProjectionBase.cs" />
     <Compile Include="ProjectionTemplates\DbStrategy.cs" />
@@ -124,6 +124,7 @@
     <Compile Include="Services\ICurrentUserProvider.cs" />
     <Compile Include="Services\MessageDispatcher.cs" />
     <Compile Include="Services\ReplayHistoryService.cs" />
+    <Compile Include="Utility\AsyncUtility.cs" />
     <Compile Include="Utility\BaseEntityUtility.cs" />
     <Compile Include="Utility\CollectionUtility.cs" />
     <Compile Include="Utility\DateTimeUtility.cs" />

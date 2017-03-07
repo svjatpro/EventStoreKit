@@ -14,7 +14,11 @@ namespace EventStoreKit.DbProviders
         /// <summary>
         /// Performs action/method with separate instance of DbProvider within Sql Transaction on demand
         /// </summary>
-        public static void RunLazy( this Func<IDbProvider> persistanceManagerCreator, Action<IDbProvider> action, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted )
+        public static void RunLazy( 
+            this Func<IDbProvider> persistanceManagerCreator, 
+            Action<IDbProvider> action, 
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            Action<Exception> processException = null )
         {
             using ( var persistanceManager = new DbProviderProxy( persistanceManagerCreator ) )
             {
@@ -24,9 +28,10 @@ namespace EventStoreKit.DbProviders
                     action( persistanceManager );
                     persistanceManager.CommitTransaction();
                 }
-                catch ( Exception )
+                catch ( Exception exc )
                 {
                     persistanceManager.RollbackTransaction();
+                    processException.Do( a => a( exc ) );
                     throw;
                 }
             }
@@ -35,7 +40,11 @@ namespace EventStoreKit.DbProviders
         /// <summary>
         /// Performs action/method with separate instance of DbProvider within Sql Transaction
         /// </summary>
-        public static void Run( this Func<IDbProvider> persistanceManagerCreator, Action<IDbProvider> action, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted )
+        public static void Run( 
+            this Func<IDbProvider> persistanceManagerCreator, 
+            Action<IDbProvider> action, 
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            Action<Exception> processException = null )
         {
             using ( var persistanceManager = persistanceManagerCreator() )
             {
@@ -45,9 +54,10 @@ namespace EventStoreKit.DbProviders
                     action( persistanceManager );
                     persistanceManager.CommitTransaction();
                 }
-                catch ( Exception )
+                catch ( Exception exc )
                 {
                     persistanceManager.RollbackTransaction();
+                    processException.Do( a => a( exc ) );
                     throw;
                 }
             }
@@ -57,7 +67,11 @@ namespace EventStoreKit.DbProviders
         ///   If the result is query result / list, then use ToList(). 
         ///   The reason is, than deffered materialization will be failed because of disposed connection ( and commited transaction )
         /// </summary>
-        public static TResult Run<TResult>( this Func<IDbProvider> persistanceManagerCreator, Func<IDbProvider, TResult> action, IsolationLevel isolationLevel = IsolationLevel.ReadCommitted )
+        public static TResult Run<TResult>( 
+            this Func<IDbProvider> persistanceManagerCreator, 
+            Func<IDbProvider, TResult> action, 
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            Action<Exception> processException = null )
         {
             using ( var persistanceManager = persistanceManagerCreator() )
             {
@@ -68,9 +82,11 @@ namespace EventStoreKit.DbProviders
                     persistanceManager.CommitTransaction();
                     return result;
                 }
-                catch ( Exception )
+                catch ( Exception exc )
                 {
                     persistanceManager.RollbackTransaction();
+                    processException.Do( a => a( exc ) );
+
                     throw;
                 }
             }

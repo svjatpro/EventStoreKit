@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reactive.Concurrency;
+using System.Reflection;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
+using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.ProjectionTemplates;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
@@ -13,9 +15,12 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Projections
 {
-    public abstract class SqlProjectionBase : ProjectionBase
+    public abstract class SqlProjectionBase : EventQueueSubscriber, IProjection
     {
         #region Protected fields
+
+        private readonly HashSet<Type> ReadModels = new HashSet<Type>();
+        private readonly List<IProjectionTemplate> ProjectionTemplates = new List<IProjectionTemplate>();
 
         protected readonly Func<IDbProvider> DbProviderFactory;
 
@@ -23,14 +28,28 @@ namespace EventStoreKit.Projections
 
         #region Private methods
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, bool> register, Func<IDbProvider> dbFactory, ILogger log, ProjectionTemplateOptions options )
+        private void CleanUpProjection( SystemCleanedUpEvent message )
+        {
+            DbProviderFactory.Run( db =>
+            {
+                var createTableMethod = db.GetType().GetMethod( "CreateTable", BindingFlags.Public | BindingFlags.Instance );
+                GetReadModels().ForEach( modelType =>
+                {
+                    createTableMethod.MakeGenericMethod( modelType ).Invoke( db, new object[] { true } );
+                } );
+            } );
+                
+            OnCleanup( message );
+        }
+
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, ActionMergeMethod> register, Func<IDbProvider> dbFactory, ILogger log, ProjectionTemplateOptions options )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
             var ctor = ttype
                 .GetConstructor( new[]
                 {
-                    typeof (Action<Type, Action<Message>, bool>),
+                    typeof (Action<Type, Action<Message>, ActionMergeMethod>),
                     typeof (Func<IDbProvider>),
                     typeof (ILogger),
                     typeof (ProjectionTemplateOptions)
@@ -40,30 +59,68 @@ namespace EventStoreKit.Projections
             return (TTemplate)( ctor.Invoke( new object[] { register, dbFactory, log, options } ) );
         }
 
-        #endregion
-
-        protected SqlProjectionBase(
-            ILogger logger, 
-            IScheduler scheduler,
-            Func<IDbProvider> dbProviderFactory )
-            : base( logger, scheduler )
+        private void InitReadModel( IDbProvider db, Type modelType )
         {
-            DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
+            var createTableMethod = db.GetType().GetMethod( "CreateTable", BindingFlags.Public | BindingFlags.Instance );
+            createTableMethod.MakeGenericMethod( modelType ).Invoke( db, new object[] { false } );
         }
 
+        #endregion
+
+        #region Protected methods
+
+        protected void Flush()
+        {
+            ProjectionTemplates.ForEach( t => t.Flush() );
+        }
+        
+        #region ReadModels
+
+        protected void RegisterReadModel<TReadModel>()
+        {
+            RegisterReadModel( typeof( TReadModel ) );
+        }
+        protected void RegisterReadModel( Type tModel )
+        {
+            if ( !ReadModels.Contains( tModel ) )
+            {
+                ReadModels.Add( tModel );
+                DbProviderFactory.Run( db => InitReadModel( db, tModel ) );
+            }
+        }
+        protected List<Type> GetReadModels()
+        {
+            return ReadModels.ToList();
+        }
+
+        #endregion
+
+        #region ProjectionTemplates
+
+        protected TTemplate RegisterTemplate<TTemplate>( TTemplate template ) where TTemplate : IProjectionTemplate
+        {
+            template.GetReadModels().ToList().ForEach( RegisterReadModel );
+            ProjectionTemplates.Add( template );
+            return template;
+        }
         protected TTemplate RegisterTemplate<TTemplate>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TTemplate : IProjectionTemplate
         {
             var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, Log, options );
-            ProjectionTemplates.Add( template );
+            RegisterTemplate( template );
             return template;
         }
-
         protected ProjectionTemplate<TModel> RegisterGenericTemplate<TModel>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TModel : class
         {
             var template = CreateTemplate<ProjectionTemplate<TModel>>( Register, DbProviderFactory, Log, options );
-            ProjectionTemplates.Add( template );
+            RegisterTemplate( template );
             return template;
         }
+        protected List<IProjectionTemplate> GetTemplates()
+        {
+            return ProjectionTemplates.ToList();
+        }
+
+        #endregion
 
         #region Filters & Sorters
 
@@ -96,6 +153,29 @@ namespace EventStoreKit.Projections
 
         #endregion
 
+        protected override void PreprocessMessage( Message message )
+        {
+            ProjectionTemplates.ForEach( t => t.PreprocessEvent( message ) );
+        }
+
+        protected virtual void OnCleanup( SystemCleanedUpEvent message ) { }
+        
+        #endregion
+
+        public abstract string Name { get; }
+        
+        protected SqlProjectionBase(
+            ILogger logger, 
+            IScheduler scheduler,
+            Func<IDbProvider> dbProviderFactory )
+            : base( logger, scheduler )
+        {
+            DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
+
+            Register<SystemCleanedUpEvent>( CleanUpProjection );
+            Register<SequenceMarkerEvent>( m => Flush(), ActionMergeMethod.MultipleRunBefore );
+            Register<StreamOnIdleEvent>( m => Flush(), ActionMergeMethod.MultipleRunBefore );
+        }
     }
 
     public abstract class SqlProjectionBase<TModel> : SqlProjectionBase where TModel : class
@@ -113,6 +193,8 @@ namespace EventStoreKit.Projections
             Func<IDbProvider> dbProviderFactory ) : 
             base( logger, scheduler, dbProviderFactory )
         {
+            RegisterReadModel<TModel>();
+
             SorterMapping = InitializeSorters<TModel>();
             FilterMapping = InitializeFilters<TModel>();
         }
@@ -173,9 +255,9 @@ namespace EventStoreKit.Projections
 
             TModel summary = null;
             if ( summaryAggregate != null )
-                summary = ( result.Any() ) ? result.Aggregate( summaryAggregate ) : Activator.CreateInstance<TModel>();
+                summary = result.Any() ? result.Aggregate( summaryAggregate ) : Activator.CreateInstance<TModel>();
 
-            return new QueryResult<TModel>( result, new SearchOptions.SearchOptions(), total: result.Count(), summary: summary );
+            return new QueryResult<TModel>( result, new SearchOptions.SearchOptions(), total: result.Count, summary: summary );
         }
     }
 }

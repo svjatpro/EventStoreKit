@@ -12,7 +12,6 @@ using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Aggregates;
 using EventStoreKit.CommandBus;
-using EventStoreKit.Constants;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
@@ -22,16 +21,29 @@ using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
 using NEventStore.Persistence.Sql;
+using NEventStore.Persistence.Sql.SqlDialects;
 using Module = Autofac.Module;
 
 namespace EventStoreKit
 {
-    public class EventStoreModule<TSqlDialect> : Module
-        where TSqlDialect : ISqlDialect, new()
+    public class EventStoreModule : Module
     {
+        #region Private fields
+
+        private readonly Type SqlDialectType;
+        private readonly string ConfigurationString;
+        private readonly string ConnectionString;
+        private readonly Dictionary<Type,string> ProvidersMap = new Dictionary<Type, string>
+        {
+            { typeof( MsSqlDialect ), "System.Data.SqlClient" },
+            { typeof( MySqlDialect ), "MySql.Data.MySqlClient" }
+        };
+
+        #endregion
+
         private class Startup : IStartable
         {
-            private readonly ILogger<EventStoreModule<TSqlDialect>> Logger;
+            private readonly ILogger<EventStoreModule> Logger;
             private readonly ICurrentUserProvider CurrentUserProvider;
             private readonly IComponentContext Container;
             private readonly IEventDispatcher Dispatcher;
@@ -78,11 +90,12 @@ namespace EventStoreKit
                 IComponentContext container, 
                 IEventDispatcher dispatcher,
                 IEnumerable<ICommandHandler> commandHandlers,
-                ILogger<EventStoreModule<TSqlDialect>> logger,
+                ILogger<EventStoreModule> logger,
                 IEnumerable<IEventSubscriber> subscribers )
             {
                 CurrentUserProvider = currentUserProvider;
-                Container = container;Dispatcher = dispatcher.CheckNull( "dispatcher" );
+                Container = container;
+                Dispatcher = dispatcher.CheckNull( "dispatcher" );
                 CommandHandlers = commandHandlers;
                 Logger = logger;
                 Subscribers = subscribers;
@@ -155,9 +168,7 @@ namespace EventStoreKit
                 .SingleInstance();
             
             builder.RegisterType<EventSequence>().SingleInstance();
-
             builder.Register( ctx => ( new NewThreadScheduler( action => new Thread( action ) { IsBackground = true } ) ) ).As<IScheduler>();
-            //builder.Register( ctx => ThreadPoolScheduler.Instance ).As<IScheduler>();
 
             builder.RegisterType<MessageDispatcher>()
                 .As<IEventPublisher>()
@@ -184,15 +195,27 @@ namespace EventStoreKit
 
             var logFactory = ctx.Resolve<Func<ILogger<EventStoreAdapter>>>();
             wireup.LogTo( type => logFactory() );
-            
-            var persistanceWireup = wireup
-                .UsingSqlPersistence( ctx.ResolveNamed<string>( EventStoreConstants.CommitsConfigNameTag ) )
-                .WithDialect( new TSqlDialect() )
-                .PageEvery( 1024 );
+
+            var persistanceWireup = 
+                ConfigurationString != null ? 
+                wireup.UsingSqlPersistence( ConfigurationString ) : 
+                wireup.UsingSqlPersistence( null, ProvidersMap[SqlDialectType], ConnectionString );
 
             return persistanceWireup
+                .WithDialect( (ISqlDialect)Activator.CreateInstance( SqlDialectType ) )
+                .PageEvery( 1024 )
                 .InitializeStorageEngine()
                 .UsingJsonSerialization();
+        }
+
+        public EventStoreModule( Type sqlDialectType, string configurationString = null, string connectionString = null )
+        {
+            SqlDialectType = sqlDialectType.CheckNull( "sqlDialectType" );
+            if( configurationString == null && connectionString == null )
+                throw new ArgumentNullException( "connectionString" );
+
+            ConfigurationString = configurationString;
+            ConnectionString = connectionString;
         }
     }
 }

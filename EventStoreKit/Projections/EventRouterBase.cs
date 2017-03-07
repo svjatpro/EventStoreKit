@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Reactive.Concurrency;
+using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
@@ -9,14 +10,15 @@ using NEventStore;
 
 namespace EventStoreKit.Projections
 {
-    public abstract class EventRouterBase : ProjectionBase, IEventRouter
+    [Obsolete( "Use sagas instead" )]
+    public abstract class EventRouterBase : SqlProjectionBase, IEventRouter
     {
         private readonly IStoreEvents StoreEvents;
         private readonly IIdGenerator IdGenerator;
         private readonly ICurrentUserProvider CurrentUserProvider;
 
-        protected EventRouterBase( ILogger logger, IScheduler scheduler, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
-            : base( logger, scheduler )
+        protected EventRouterBase( ILogger logger, IScheduler scheduler, Func<IDbProvider> dbProviderFactory, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
+            : base( logger, scheduler, dbProviderFactory )
         {
             StoreEvents = storeEvents;
             IdGenerator = idGenerator;

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 
 namespace EventStoreKit.Utility
 {
@@ -80,8 +81,27 @@ namespace EventStoreKit.Utility
                 source.Invoke( sender, args );
             return source;
         }
+        public static EventHandler<TArgs> ExecuteAsync<TArgs>( this EventHandler<TArgs> source, object sender, TArgs args ) where TArgs : EventArgs
+        {
+            if ( source != null )
+                source.BeginInvoke( 
+                    sender,
+                    args,
+                    a =>
+                    {
+                        try
+                        {
+                            a.OfType<AsyncResult>().AsyncDelegate.OfType<EventHandler>().EndInvoke( a );
+                        }
+// ReSharper disable EmptyGeneralCatchClause
+                        catch ( Exception ) { }
+// ReSharper restore EmptyGeneralCatchClause
+                    },
+                    null );
+            return source;
+        }
 
-        
+
         public static TSource CheckNull<TSource>( this TSource source, string argumentName ) where TSource : class
         {
             if ( source == null )

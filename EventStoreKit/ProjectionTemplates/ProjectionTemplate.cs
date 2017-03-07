@@ -8,18 +8,18 @@ using System.Reflection;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
+using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.ProjectionTemplates
 {
-    
     public class ProjectionTemplate<TReadModel> : IProjectionTemplate
         where TReadModel : class
     {
         #region Private fields
 
-        protected readonly Action<Type, Action<Message>, bool> EventRegister;
+        protected readonly Action<Type, Action<Message>, ActionMergeMethod> EventRegister;
         protected readonly Func<IDbProvider> PersistanceManagerFactory;
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
         protected readonly ILogger Logger;
@@ -38,17 +38,6 @@ namespace EventStoreKit.ProjectionTemplates
 
         #region Implementation of IProjectionTemplate
 
-        public void CleanUp( SystemCleanedUpEvent msg )
-        {
-            if ( Cache != null )
-                Cache.Clear();
-
-            foreach ( var initializer in EventHandlerInitializers.Values )
-                initializer.CleanUp();
-
-            CreateTables( msg );
-        }
-
         public void PreprocessEvent( Message @event )
         {
             foreach ( var initializer in EventHandlerInitializers.Values )
@@ -57,9 +46,13 @@ namespace EventStoreKit.ProjectionTemplates
 
         public void Flush()
         {
-            foreach ( var initializer in EventHandlerInitializers.Values )
-                initializer.Flush();
+            DbStrategy.Flush();
             Cache.Do( c => c.Clear() );
+        }
+
+        public IList<Type> GetReadModels()
+        {
+            return new[] {typeof(TReadModel)};
         }
 
         #endregion
@@ -73,7 +66,7 @@ namespace EventStoreKit.ProjectionTemplates
 
         protected void Register<TEvent>( Action<TEvent> action ) where TEvent : Message
         {
-            EventRegister( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( x => action( x ) ), false );
+            EventRegister( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( x => action( x ) ), ActionMergeMethod.SingleDontReplace );
         }
 
         protected static PropertyInfo GetProperty<T>( params string[] properties )
@@ -84,7 +77,7 @@ namespace EventStoreKit.ProjectionTemplates
         #endregion
 
         public ProjectionTemplate(
-            Action<Type, Action<Message>, bool> eventRegister,
+            Action<Type, Action<Message>, ActionMergeMethod> eventRegister,
             Func<IDbProvider> dbProviderFactory,
             ILogger logger = null,
             ProjectionTemplateOptions options = ProjectionTemplateOptions.None )
@@ -214,6 +207,15 @@ namespace EventStoreKit.ProjectionTemplates
                .Get( typeof( TEvent ) )
                .OfType<EventHandlerInitializer<TReadModel, TEvent>>()
                .Do( handler => handler.RunBeforeHandle( beforeExpression ) );
+            return this;
+        }
+
+        public ProjectionTemplate<TReadModel> RunOnError<TEvent>( Action<TEvent,Exception> runOnErrorExpression ) where TEvent : Message
+        {
+            EventHandlerInitializers
+               .Get( typeof( TEvent ) )
+               .OfType<EventHandlerInitializer<TReadModel, TEvent>>()
+               .Do( handler => handler.RunOnError( runOnErrorExpression ) );
             return this;
         }
 

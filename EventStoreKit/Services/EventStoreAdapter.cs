@@ -11,7 +11,7 @@ using NEventStore.Persistence;
 
 namespace EventStoreKit.Services
 {
-    public class EventStoreAdapter : IStoreEvents //, IReplaysHistory
+    public class EventStoreAdapter : IStoreEvents
     {
         private readonly ILogger<EventStoreAdapter> Logger;
 
@@ -24,27 +24,12 @@ namespace EventStoreKit.Services
         private readonly IEventPublisher EventPublisher;
         private readonly object LockObject = new object();
 
-        //private IStoreEvents Store { get { return InternalStore; } }
         private readonly ICommandBus CommandBus;
-
         
         #endregion
 
         #region Private methods
         
-        //private void ProcessEvent( EventMessage evt, Action<Message> eventProccecingMethod )
-        //{
-        //    if ( evt.Body is IEnumerable<Message> )
-        //    {
-        //        foreach ( var item in evt.Body as IEnumerable<Message> )
-        //            eventProccecingMethod( item );
-        //    }
-        //    else
-        //    {
-        //        eventProccecingMethod( evt.Body as Message );
-        //    }
-        //}
-
         private void SetTimestamp( Message e, ICommit commit )
         {
             var header = commit.Headers
@@ -149,7 +134,6 @@ namespace EventStoreKit.Services
                     {
                         foreach ( var @event in commit.Events )
                         {
-                            //ProcessEvent( @event, e =>
                             @event.ProcessEvent( e =>
                             {
                                 e.Version = commit.StreamRevision;
