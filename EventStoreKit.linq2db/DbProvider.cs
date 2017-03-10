@@ -8,7 +8,6 @@ using EventStoreKit.DbProviders;
 using LinqToDB;
 using LinqToDB.Data;
 using LinqToDB.SqlQuery;
-using MySql.Data.MySqlClient;
 
 namespace EventStoreKit.linq2db
 {
@@ -160,32 +159,32 @@ namespace EventStoreKit.linq2db
             return DbManager.GetTable<T>().SingleOrDefault( predicat );
         }
         
-        public void Delete<T>( Expression<Func<T, bool>> predicat ) where T : class
+        public int Delete<T>( Expression<Func<T, bool>> predicat ) where T : class
         {
-            DbManager.GetTable<T>().Where( predicat ).Delete();
+            return DbManager.GetTable<T>().Where( predicat ).Delete();
         }
 
-        public void Insert<T>( T entity ) where T : class
+        public int Insert<T>( T entity ) where T : class
         {
-            DbManager.Insert( entity );
+            return DbManager.Insert( entity );
         }
-        public void InsertOrReplace<T>( T entity ) where T : class
+        public int InsertOrReplace<T>( T entity ) where T : class
         {
-            DbManager.InsertOrReplace( entity );
-        }
-
-        public void InsertBulk<T>( IEnumerable<T> entities ) where T : class
-        {
-            InsertBulk( entities, DbManager.Connection.ConnectionString );
-        }
-        public void InsertBulk<T>( IEnumerable<T> entities, string connectionString ) where T : class
-        {
-            DbManager.BulkCopy( entities );
+            return DbManager.InsertOrReplace( entity );
         }
 
-        public void Insert<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class
+        public long InsertBulk<T>( IEnumerable<T> entities ) where T : class
         {
-            Insert<T, T>( predicat, evaluator );
+            return InsertBulk( entities, DbManager.Connection.ConnectionString );
+        }
+        public long InsertBulk<T>( IEnumerable<T> entities, string connectionString ) where T : class
+        {
+            return DbManager.BulkCopy( entities ).RowsCopied;
+        }
+
+        public int Insert<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class
+        {
+            return Insert<T, T>( predicat, evaluator );
         }
         public int Insert<TSource, TDestination>( Expression<Func<TSource, bool>> predicat, Expression<Func<TSource, TDestination>> evaluator )
             where TSource : class
@@ -196,7 +195,7 @@ namespace EventStoreKit.linq2db
                 .Where( predicat )
                 .Insert( DbManager.GetTable<TDestination>(), evaluator );
         }
-        public void Insert<TQuery, TSource, TDestination>(
+        public int Insert<TQuery, TSource, TDestination>(
             Func<IQueryable<TQuery>, IQueryable<TSource>> converter,
             Expression<Func<TSource, TDestination>> evaluator )
             where TQuery : class
@@ -209,16 +208,16 @@ namespace EventStoreKit.linq2db
             //source.Insert( DbManager.GetTable<TDestination>(), evaluator );
         }
 
-        public void Update<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class
+        public int Update<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class
         {
-            DbManager.GetTable<T>().Update( predicat, evaluator );
+            return DbManager.GetTable<T>().Update( predicat, evaluator );
         }
 
-        public void Update<TSource, TDestination>( IQueryable<TSource> source, Expression<Func<TSource, TDestination>> evaluator )
+        public int Update<TSource, TDestination>( IQueryable<TSource> source, Expression<Func<TSource, TDestination>> evaluator )
             where TSource : class
             where TDestination : class
         {
-            source.Update( DbManager.GetTable<TDestination>(), evaluator );
+            return source.Update( DbManager.GetTable<TDestination>(), evaluator );
         }
 
         public int ExecuteNonQuery( string query )

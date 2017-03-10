@@ -21,18 +21,18 @@ namespace EventStoreKit.DbProviders
 
         T Single<T>( Expression<Func<T, bool>> predicat ) where T : class;
 
-        void Delete<T>( Expression<Func<T, bool>> predicat ) where T : class;
+        int Delete<T>( Expression<Func<T, bool>> predicat ) where T : class;
 
-        void Insert<T>( T entity ) where T : class;
-        void InsertOrReplace<T>( T entity ) where T : class;
-        void InsertBulk<T>( IEnumerable<T> entities ) where T : class;
-        void InsertBulk<T>( IEnumerable<T> entities, string connectionString ) where T : class;
+        int Insert<T>( T entity ) where T : class;
+        int InsertOrReplace<T>( T entity ) where T : class;
+        long InsertBulk<T>( IEnumerable<T> entities ) where T : class;
+        long InsertBulk<T>( IEnumerable<T> entities, string connectionString ) where T : class;
         
-        void Insert<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class;
+        int Insert<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class;
         int Insert<TSource, TDestination>( Expression<Func<TSource, bool>> predicat, Expression<Func<TSource, TDestination>> evaluator ) 
             where TSource : class
             where TDestination : class;
-        void Insert<TQuery, TSource, TDestination>(
+        int Insert<TQuery, TSource, TDestination>(
             //Expression<Func<TQuery, bool>> predicat,
             Func<IQueryable<TQuery>, IQueryable<TSource>> converter,
             Expression<Func<TSource, TDestination>> evaluator )
@@ -41,8 +41,8 @@ namespace EventStoreKit.DbProviders
             where TDestination : class;
         
 
-        void Update<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class;
-        void Update<TSource, TDestination>( IQueryable<TSource> source, Expression<Func<TSource, TDestination>> evaluator )
+        int Update<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class;
+        int Update<TSource, TDestination>( IQueryable<TSource> source, Expression<Func<TSource, TDestination>> evaluator )
             where TSource : class
             where TDestination : class;
 
