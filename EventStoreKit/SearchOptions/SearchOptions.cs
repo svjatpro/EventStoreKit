@@ -79,21 +79,18 @@ namespace EventStoreKit.SearchOptions
                 new SearchOptions( filters: filters, sorters: sorters, groupers: groupers );
         }
 
-        public SearchOptions( IList<SearchFilterInfo> filters = null, IList<SorterInfo> sorters = null, IList<SorterInfo> groupers = null  )
+        public SearchOptions( IList<SearchFilterInfo> filters = null, IList<SorterInfo> sorters = null, IList<SorterInfo> groupers = null )
+            : this( 0, 0, filters, sorters, groupers )
         {
-            PageIndex = 0;
-            PageSize = 0;
-            Filters = filters;
-            Sorters = sorters;
-            Groupers = groupers;
+            
         }
         public SearchOptions( int pageIndex, int pageSize, IList<SearchFilterInfo> filters = null, IList<SorterInfo> sorters = null, IList<SorterInfo> groupers = null  )
         {
             PageIndex = pageIndex;
             PageSize = pageSize;
-            Filters = filters;
-            Sorters = sorters;
-            Groupers = groupers;
+            Filters = filters ?? new List<SearchFilterInfo>();
+            Sorters = sorters ?? new List<SorterInfo>();
+            Groupers = groupers ?? new List<SorterInfo>();
         }
     }
 }

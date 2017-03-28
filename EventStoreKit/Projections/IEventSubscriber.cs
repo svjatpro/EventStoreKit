@@ -42,7 +42,7 @@ namespace EventStoreKit.Projections
         /// Sync wait until all messages, which are in EventSubscriber queue at the moment of the method call, will be processed
         ///  key point here, that there is guarantee, that each IEventSubscriber instance have its own message queue and process it synchronously
         /// </summary>
-        void WaitMessages( int timeout );
+        void WaitMessages();
 
         /// <summary>
         /// Async wait until all messages, which are in EventSubscriber queue at the moment of the method call, will be processed

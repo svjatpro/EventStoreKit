@@ -352,7 +352,7 @@ namespace EventStoreKit.Projections
                     var key = Guid.NewGuid();
                     var taskWait = CatchMessagesAsync<SequenceMarkerEvent>( msg => msg.Identity == key );
                     Handle( new SequenceMarkerEvent { Identity = key } );
-                    taskWait.Wait( timeout );
+                    taskWait.Wait();
 
                     return t.Result;
                 } );
@@ -368,9 +368,9 @@ namespace EventStoreKit.Projections
         /// Sync wait until all messages, which are in EventSubscriber queue at the moment of the method call, will be processed
         ///  key point here, that there is guarantee, that each IEventSubscriber instance have its own message queue and process it synchronously
         /// </summary>
-        public void WaitMessages( int timeout = DefaultWaitMessageTimeout )
+        public void WaitMessages()
         {
-            WaitMessagesAsync().Wait( timeout );
+            WaitMessagesAsync().Wait();
         }
 
         /// <summary>
