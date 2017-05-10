@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using EventStoreKit.Constants;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -42,24 +43,31 @@ namespace EventStoreKit.Services
 
         private void RebuildInternal( List<IProjection> projections )
         {
-            lock ( LockRebuild )
-            {
-                if ( Status != RebuildStatus.Ready )
-                    throw new InvalidOperationException( "Can't start two rebuild session" );
-
-                Status = RebuildStatus.Started;
-                Projections = projections.ToList();
-            }
-
-            var commits = Store.Advanced.GetFrom( new DateTime( 2010, 1, 1 ) ).OrderBy( c => c.CommitStamp ).ThenBy( c => c.CheckpointToken ); //.ToList();
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
-            foreach ( var commit in commits )
+
+            var dateFrom = new DateTime( 2015, 1, 1 );
+            Status = RebuildStatus.WaitingForProjections;
+            while ( dateFrom <= DateTime.Now )
             {
-                if ( commit.Headers.Keys.Any( s => s == "SagaType" ) )
-                    continue;
-                foreach ( var model in projections )
-                    ReplayCommit( commit, model );
+                //var dateTo = dateFrom.AddMonths( 1 );
+                var dateTo = dateFrom.AddYears( 1 );
+                var query =
+                    dateTo > DateTime.Now ? 
+                    Store.Advanced.GetFrom( dateFrom ) : 
+                    Store.Advanced.GetFromTo( "default", dateFrom, dateTo );
+                var commits = query.OrderBy( c => c.CommitStamp ).ThenBy( c => c.CheckpointToken ).ToList();
+
+                foreach ( var commit in commits )
+                {
+                    if ( commit.Headers.Keys.Any( s => s == "SagaType" ) )
+                        continue;
+                    foreach ( var model in projections )
+                        ReplayCommit( commit, model );
+                }
+                dateFrom = dateTo;
+                if( dateFrom <= DateTime.Now )
+                    EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
             }
         }
 
@@ -88,28 +96,41 @@ namespace EventStoreKit.Services
             }
         }
 
-        public void Rebuild( List<IProjection> projections )
+        public void Rebuild( List<IProjection> projections, Action finishAllAction = null, Action<IProjection> finishProjectionAction = null )
         {
-            RebuildInternal( projections );
-            Status = RebuildStatus.WaitingForProjections;
+            lock ( LockRebuild )
+            {
+                if ( Status != RebuildStatus.Ready )
+                    throw new InvalidOperationException( "Can't start two rebuild session" );
 
-            EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
-            Status = RebuildStatus.Ready;
-        }
-        public void RebuildAsync( List<IProjection> projections, Action finishAllAction = null, Action<IProjection> finishProjectionAction = null )
-        {
-            RebuildInternal( projections );
-            Status = RebuildStatus.WaitingForProjections;
+                Status = RebuildStatus.Started;
+                Projections = projections.ToList();
+            }
 
-            EventSequence.OnFinish(
-                id =>
-                {
-                    finishAllAction.Do( a => a() );
-                    Status = RebuildStatus.Ready;
-                },
-                ( projection, id ) => finishProjectionAction.Do( a => a( projection ) ),
-                projections,
-                EventStoreConstants.RebuildSessionIdentity );
+            var task = new Task( () =>
+            {
+                RebuildInternal( projections );
+                EventSequence.OnFinish(
+                    id =>
+                    {
+                        finishAllAction.Do( a => a() );
+                        Status = RebuildStatus.Ready;
+                    },
+                    ( projection, id ) => finishProjectionAction.Do( a => a( projection ) ),
+                    projections,
+                    EventStoreConstants.RebuildSessionIdentity );
+            });
+            task.Start();
+
+            //EventSequence.OnFinish(
+            //    id =>
+            //    {
+            //        finishAllAction.Do( a => a() );
+            //        Status = RebuildStatus.Ready;
+            //    },
+            //    ( projection, id ) => finishProjectionAction.Do( a => a( projection ) ),
+            //    projections,
+            //    EventStoreConstants.RebuildSessionIdentity );
         }
 
         public bool IsRebuilding()
