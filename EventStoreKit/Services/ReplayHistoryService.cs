@@ -11,10 +11,16 @@ using NEventStore.Persistence;
 
 namespace EventStoreKit.Services
 {
+    public enum ReplayHistoryInterval
+    {
+        Year,
+        Month
+    }
     public class ReplayHistoryService : IReplaysHistory
     {
         #region Private fields
 
+        private const string SagaTypeHeader = "SagaType";
         private readonly IStoreEvents Store;
         private readonly IEventPublisher EventPublisher;
         private readonly EventSequence EventSequence;
@@ -41,26 +47,36 @@ namespace EventStoreKit.Services
             }
         }
 
-        private void RebuildInternal( List<IProjection> projections )
+        private void RebuildInternal( List<IProjection> projections, ReplayHistoryInterval interval )
         {
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
 
             var dateFrom = new DateTime( 2015, 1, 1 );
-            Status = RebuildStatus.WaitingForProjections;
             while ( dateFrom <= DateTime.Now )
             {
-                //var dateTo = dateFrom.AddMonths( 1 );
-                var dateTo = dateFrom.AddYears( 1 );
+                DateTime dateTo;
+                switch ( interval )
+                {
+                    case ReplayHistoryInterval.Year:
+                        dateTo = dateFrom.AddYears( 1 );
+                        break;
+                    case ReplayHistoryInterval.Month:
+                        dateTo = dateFrom.AddMonths( 1 );
+                        break;
+                    default:
+                        dateTo = DateTime.Now.AddDays( 1 );
+                        break;
+                }
                 var query =
                     dateTo > DateTime.Now ? 
                     Store.Advanced.GetFrom( dateFrom ) : 
-                    Store.Advanced.GetFromTo( "default", dateFrom, dateTo );
+                    Store.Advanced.GetFromTo( Bucket.Default, dateFrom, dateTo );
                 var commits = query.OrderBy( c => c.CommitStamp ).ThenBy( c => c.CheckpointToken ).ToList();
 
                 foreach ( var commit in commits )
                 {
-                    if ( commit.Headers.Keys.Any( s => s == "SagaType" ) )
+                    if ( commit.Headers.Keys.Any( s => s == SagaTypeHeader ) )
                         continue;
                     foreach ( var model in projections )
                         ReplayCommit( commit, model );
@@ -96,7 +112,7 @@ namespace EventStoreKit.Services
             }
         }
 
-        public void Rebuild( List<IProjection> projections, Action finishAllAction = null, Action<IProjection> finishProjectionAction = null )
+        public void Rebuild( List<IProjection> projections, Action finishAllAction = null, Action<IProjection> finishProjectionAction = null, ReplayHistoryInterval interval = ReplayHistoryInterval.Year )
         {
             lock ( LockRebuild )
             {
@@ -109,7 +125,8 @@ namespace EventStoreKit.Services
 
             var task = new Task( () =>
             {
-                RebuildInternal( projections );
+                RebuildInternal( projections, interval );
+                Status = RebuildStatus.WaitingForProjections;
                 EventSequence.OnFinish(
                     id =>
                     {
@@ -121,16 +138,6 @@ namespace EventStoreKit.Services
                     EventStoreConstants.RebuildSessionIdentity );
             });
             task.Start();
-
-            //EventSequence.OnFinish(
-            //    id =>
-            //    {
-            //        finishAllAction.Do( a => a() );
-            //        Status = RebuildStatus.Ready;
-            //    },
-            //    ( projection, id ) => finishProjectionAction.Do( a => a( projection ) ),
-            //    projections,
-            //    EventStoreConstants.RebuildSessionIdentity );
         }
 
         public bool IsRebuilding()

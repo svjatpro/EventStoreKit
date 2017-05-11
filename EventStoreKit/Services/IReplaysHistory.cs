@@ -11,7 +11,7 @@ namespace EventStoreKit.Services
         IEnumerable<ICommit> GetCommits();
 
         void CleanHistory( List<IProjection> projections );
-        void Rebuild( List<IProjection> projections, Action finishAllAction, Action<IProjection> finishProjectionAction );
+        void Rebuild( List<IProjection> projections, Action finishAllAction = null, Action<IProjection> finishProjectionAction = null, ReplayHistoryInterval interval = ReplayHistoryInterval.Year );
         bool IsRebuilding();
         List<IProjection> GetProjectionsUnderRebuild();
     }
