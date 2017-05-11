@@ -11,11 +11,6 @@ using NEventStore.Persistence;
 
 namespace EventStoreKit.Services
 {
-    public enum ReplayHistoryInterval
-    {
-        Year,
-        Month
-    }
     public class ReplayHistoryService : IReplaysHistory
     {
         #region Private fields
@@ -26,7 +21,7 @@ namespace EventStoreKit.Services
         private readonly EventSequence EventSequence;
 
         private readonly object LockRebuild = new object();
-        private List<IProjection> Projections;
+        private Dictionary<IProjection, ProjectionRebuildInfo> Projections;
         private enum RebuildStatus { Ready, Started, WaitingForProjections }
         private volatile RebuildStatus Status = RebuildStatus.Ready;
         
@@ -47,7 +42,10 @@ namespace EventStoreKit.Services
             }
         }
 
-        private void RebuildInternal( List<IProjection> projections, ReplayHistoryInterval interval )
+        private void RebuildInternal( 
+            List<IProjection> projections, 
+            ReplayHistoryInterval interval, 
+            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction )
         {
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
@@ -79,11 +77,32 @@ namespace EventStoreKit.Services
                     if ( commit.Headers.Keys.Any( s => s == SagaTypeHeader ) )
                         continue;
                     foreach ( var model in projections )
+                    {
                         ReplayCommit( commit, model );
+                    }
                 }
                 dateFrom = dateTo;
-                if( dateFrom <= DateTime.Now )
+
+                var count = commits.Count;
+                if ( projectionProgressAction != null )
+                {
+                    EventSequence.OnFinish( null, ( p, id ) =>
+                    {
+                        if ( Projections.ContainsKey( p ) )
+                        {
+                            Projections[p].MessagesProcessed += count;
+                            projectionProgressAction( p, Projections[p] );
+                        }
+                    } );
+                }
+                if ( dateFrom <= DateTime.Now )
+                {
                     EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
+                }
+                if ( projectionProgressAction == null )
+                {
+                    Projections.ToList().ForEach( p => p.Value.MessagesProcessed += count );
+                }
             }
         }
 
@@ -112,7 +131,12 @@ namespace EventStoreKit.Services
             }
         }
 
-        public void Rebuild( List<IProjection> projections, Action finishAllAction = null, Action<IProjection> finishProjectionAction = null, ReplayHistoryInterval interval = ReplayHistoryInterval.Year )
+        public void Rebuild( 
+            List<IProjection> projections, 
+            Action finishAllAction = null, 
+            Action<IProjection> finishProjectionAction = null,
+            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
+            ReplayHistoryInterval interval = ReplayHistoryInterval.Year )
         {
             lock ( LockRebuild )
             {
@@ -120,12 +144,12 @@ namespace EventStoreKit.Services
                     throw new InvalidOperationException( "Can't start two rebuild session" );
 
                 Status = RebuildStatus.Started;
-                Projections = projections.ToList();
+                Projections = projections.ToDictionary( p => p, p => new ProjectionRebuildInfo { MessagesProcessed = 0 });
             }
 
             var task = new Task( () =>
             {
-                RebuildInternal( projections, interval );
+                RebuildInternal( projections, interval, projectionProgressAction );
                 Status = RebuildStatus.WaitingForProjections;
                 EventSequence.OnFinish(
                     id =>
@@ -145,19 +169,21 @@ namespace EventStoreKit.Services
             return Status != RebuildStatus.Ready;
         }
 
-        public List<IProjection> GetProjectionsUnderRebuild()
+        public Dictionary<IProjection, ProjectionRebuildInfo> GetProjectionsUnderRebuild()
         {
             switch ( Status )
             {
                 case RebuildStatus.Started:
                     return Projections;
                 case RebuildStatus.WaitingForProjections:
-                    return EventSequence.GetActiveProjections( EventStoreConstants.RebuildSessionIdentity ).ToList();
+                    return EventSequence
+                        .GetActiveProjections( EventStoreConstants.RebuildSessionIdentity )
+                        .ToDictionary( p => p, p => Projections[p] );
 // ReSharper disable RedundantCaseLabel
                 case RebuildStatus.Ready:
 // ReSharper restore RedundantCaseLabel
                 default:
-                    return new List<IProjection>();
+                    return new Dictionary<IProjection, ProjectionRebuildInfo>();
             }
         }
 
