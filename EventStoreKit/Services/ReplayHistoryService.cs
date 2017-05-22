@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EventStoreKit.Constants;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Utility;
@@ -19,6 +20,7 @@ namespace EventStoreKit.Services
         private readonly IStoreEvents Store;
         private readonly IEventPublisher EventPublisher;
         private readonly EventSequence EventSequence;
+        private readonly ILogger<ReplayHistoryService> Logger;
 
         private readonly object LockRebuild = new object();
         private Dictionary<IProjection, ProjectionRebuildInfo> Projections;
@@ -108,11 +110,12 @@ namespace EventStoreKit.Services
 
         #endregion
 
-        public ReplayHistoryService( IStoreEvents store, IEventPublisher eventPublisher, EventSequence eventSequence )
+        public ReplayHistoryService( IStoreEvents store, IEventPublisher eventPublisher, EventSequence eventSequence, ILogger<ReplayHistoryService> logger )
         {
             Store = store;
             EventPublisher = eventPublisher;
             EventSequence = eventSequence;
+            Logger = logger;
         }
 
         public void CleanHistory( List<IProjection> projections = null )
@@ -133,7 +136,8 @@ namespace EventStoreKit.Services
 
         public void Rebuild( 
             List<IProjection> projections, 
-            Action finishAllAction = null, 
+            Action finishAllAction = null,
+            Action errorAction = null,
             Action<IProjection> finishProjectionAction = null,
             Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
             ReplayHistoryInterval interval = ReplayHistoryInterval.Year )
@@ -149,17 +153,25 @@ namespace EventStoreKit.Services
 
             var task = new Task( () =>
             {
-                RebuildInternal( projections, interval, projectionProgressAction );
-                Status = RebuildStatus.WaitingForProjections;
-                EventSequence.OnFinish(
-                    id =>
-                    {
-                        finishAllAction.Do( a => a() );
-                        Status = RebuildStatus.Ready;
-                    },
-                    ( projection, id ) => finishProjectionAction.Do( a => a( projection ) ),
-                    projections,
-                    EventStoreConstants.RebuildSessionIdentity );
+                try
+                {
+                    RebuildInternal( projections, interval, projectionProgressAction );
+                    Status = RebuildStatus.WaitingForProjections;
+                    EventSequence.OnFinish(
+                        id =>
+                        {
+                            finishAllAction.Do( a => a() );
+                            Status = RebuildStatus.Ready;
+                        },
+                        ( projection, id ) => finishProjectionAction.Do( a => a( projection ) ),
+                        projections,
+                        EventStoreConstants.RebuildSessionIdentity );
+                }
+                catch ( Exception ex )
+                {
+                    Logger.Error( "Rebuild error", ex );
+                    errorAction.Do( action => action() );
+                }
             });
             task.Start();
         }

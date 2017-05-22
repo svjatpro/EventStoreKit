@@ -26,6 +26,7 @@ namespace EventStoreKit.Services
         void Rebuild( 
             List<IProjection> projections, 
             Action finishAllAction = null, 
+            Action errorAction = null, 
             Action<IProjection> finishProjectionAction = null,
             Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
             ReplayHistoryInterval interval = ReplayHistoryInterval.Year );
