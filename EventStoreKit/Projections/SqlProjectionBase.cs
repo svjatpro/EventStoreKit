@@ -15,7 +15,7 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Projections
 {
-    public abstract class SqlProjectionBase : EventQueueSubscriber, IProjection
+    public abstract class SqlProjectionBase : EventQueueSubscriber
     {
         #region Protected fields
 
@@ -161,8 +161,6 @@ namespace EventStoreKit.Projections
         protected virtual void OnCleanup( SystemCleanedUpEvent message ) { }
         
         #endregion
-
-        public abstract string Name { get; }
         
         protected SqlProjectionBase(
             ILogger logger, 
