@@ -44,53 +44,17 @@ namespace EventStoreKit.Services
             }
         }
 
-        private void RebuildRange( List<IProjection> projections, List<ICommit> commits, Action<IProjection, ProjectionRebuildInfo> projectionProgressAction )
-        {
-            foreach ( var commit in commits )
-            {
-                if ( commit.Headers.Keys.Any( s => s == SagaTypeHeader ) )
-                    continue;
-                foreach ( var model in projections )
-                {
-                    ReplayCommit( commit, model );
-                }
-            }
-
-            var count = commits.Count;
-            if ( projectionProgressAction != null )
-            {
-                EventSequence.OnFinish( null, ( p, id ) =>
-                {
-                    if ( Projections.ContainsKey( p ) )
-                    {
-                        Projections[p].MessagesProcessed += count;
-                        projectionProgressAction( p, Projections[p] );
-                    }
-                } );
-            }
-
-            if ( projectionProgressAction == null )
-            {
-                Projections.ToList().ForEach( p => p.Value.MessagesProcessed += count );
-            }
-        }
         private void RebuildInternal( 
             List<IProjection> projections, 
             ReplayHistoryInterval interval, 
-            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction,
-            DateTime? from = null, 
-            DateTime? to = null,
-            int buffSize = 10000 )
+            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction )
         {
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
 
-            var dateFrom = from ?? new DateTime( 2015, 1, 1 );
-            var now = to ?? DateTime.Now;
-            while ( dateFrom <= now )
+            var dateFrom = new DateTime( 2015, 1, 1 );
+            while ( dateFrom <= DateTime.Now )
             {
-                EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
-
                 DateTime dateTo;
                 switch ( interval )
                 {
@@ -101,55 +65,46 @@ namespace EventStoreKit.Services
                         dateTo = dateFrom.AddMonths( 1 );
                         break;
                     default:
-                        dateTo = now.AddDays( 1 );
+                        dateTo = DateTime.Now.AddDays( 1 );
                         break;
                 }
                 var query =
-                    dateTo > now ? 
+                    dateTo > DateTime.Now ? 
                     Store.Advanced.GetFrom( dateFrom ) : 
                     Store.Advanced.GetFromTo( Bucket.Default, dateFrom, dateTo );
                 var commits = query.OrderBy( c => c.CommitStamp ).ThenBy( c => c.CheckpointToken ).ToList();
 
-                var processed = 0;
-                var commitsToProcess = commits.Take( buffSize ).ToList();
-                while ( commitsToProcess.Any() )
+                foreach ( var commit in commits )
                 {
-                    RebuildRange( projections, commits, projectionProgressAction );
-                    processed += commitsToProcess.Count();
-                    commitsToProcess = commits.Skip( processed ).Take( buffSize ).ToList();
+                    if ( commit.Headers.Keys.Any( s => s == SagaTypeHeader ) )
+                        continue;
+                    foreach ( var model in projections )
+                    {
+                        ReplayCommit( commit, model );
+                    }
                 }
                 dateFrom = dateTo;
 
-                //foreach ( var commit in commits )
-                //{
-                //    if ( commit.Headers.Keys.Any( s => s == SagaTypeHeader ) )
-                //        continue;
-                //    foreach ( var model in projections )
-                //    {
-                //        ReplayCommit( commit, model );
-                //    }
-                //}
-
-                //var count = commits.Count;
-                //if ( projectionProgressAction != null )
-                //{
-                //    EventSequence.OnFinish( null, ( p, id ) =>
-                //    {
-                //        if ( Projections.ContainsKey( p ) )
-                //        {
-                //            Projections[p].MessagesProcessed += count;
-                //            projectionProgressAction( p, Projections[p] );
-                //        }
-                //    } );
-                //}
-                //if ( dateFrom <= now )
-                //{
-                //    EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
-                //}
-                //if ( projectionProgressAction == null )
-                //{
-                //    Projections.ToList().ForEach( p => p.Value.MessagesProcessed += count );
-                //}
+                var count = commits.Count;
+                if ( projectionProgressAction != null )
+                {
+                    EventSequence.OnFinish( null, ( p, id ) =>
+                    {
+                        if ( Projections.ContainsKey( p ) )
+                        {
+                            Projections[p].MessagesProcessed += count;
+                            projectionProgressAction( p, Projections[p] );
+                        }
+                    } );
+                }
+                if ( dateFrom <= DateTime.Now )
+                {
+                    EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
+                }
+                if ( projectionProgressAction == null )
+                {
+                    Projections.ToList().ForEach( p => p.Value.MessagesProcessed += count );
+                }
             }
         }
 
