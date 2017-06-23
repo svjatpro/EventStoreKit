@@ -110,6 +110,9 @@
     <Compile Include="SearchOptions\SearchOptions.cs" />
     <Compile Include="SearchOptions\SearchOptionUtility.cs" />
     <Compile Include="SearchOptions\SorterInfo.cs" />
+    <Compile Include="Services\Configuration\ConfigurationService.cs" />
+    <Compile Include="Services\Configuration\EventStoreConfiguration.cs" />
+    <Compile Include="Services\Configuration\IEventStoreConfiguration.cs" />
     <Compile Include="Services\SagaFactory.cs" />
     <Compile Include="Services\DelegateAdjuster.cs" />
     <Compile Include="Services\EntityFactory.cs" />
@@ -136,9 +139,6 @@
     <Compile Include="Utility\StringUtility.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config">
-      <SubType>Designer</SubType>
-    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

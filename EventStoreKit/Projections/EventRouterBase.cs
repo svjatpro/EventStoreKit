@@ -4,6 +4,7 @@ using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Services;
+using EventStoreKit.Services.Configuration;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
@@ -17,8 +18,15 @@ namespace EventStoreKit.Projections
         private readonly IIdGenerator IdGenerator;
         private readonly ICurrentUserProvider CurrentUserProvider;
 
-        protected EventRouterBase( ILogger logger, IScheduler scheduler, Func<IDbProvider> dbProviderFactory, IStoreEvents storeEvents, IIdGenerator idGenerator, ICurrentUserProvider currentUserProvider )
-            : base( logger, scheduler, dbProviderFactory )
+        protected EventRouterBase( 
+            ILogger logger, 
+            IScheduler scheduler,
+            IEventStoreConfiguration config,
+            Func<IDbProvider> dbProviderFactory, 
+            IStoreEvents storeEvents, 
+            IIdGenerator idGenerator, 
+            ICurrentUserProvider currentUserProvider )
+            : base( logger, scheduler, config, dbProviderFactory )
         {
             StoreEvents = storeEvents;
             IdGenerator = idGenerator;

@@ -11,6 +11,7 @@ using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.ProjectionTemplates;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
+using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Projections
@@ -165,8 +166,9 @@ namespace EventStoreKit.Projections
         protected SqlProjectionBase(
             ILogger logger, 
             IScheduler scheduler,
+            IEventStoreConfiguration config,
             Func<IDbProvider> dbProviderFactory )
-            : base( logger, scheduler )
+            : base( logger, scheduler, config )
         {
             DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
 
@@ -188,8 +190,9 @@ namespace EventStoreKit.Projections
         protected SqlProjectionBase(
             ILogger logger, 
             IScheduler scheduler,
+            IEventStoreConfiguration config,
             Func<IDbProvider> dbProviderFactory ) : 
-            base( logger, scheduler, dbProviderFactory )
+            base( logger, scheduler, config, dbProviderFactory )
         {
             RegisterReadModel<TModel>();
 

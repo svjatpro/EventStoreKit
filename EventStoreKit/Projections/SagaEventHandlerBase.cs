@@ -1,6 +1,7 @@
 ﻿using System.Reactive.Concurrency;
 using CommonDomain.Persistence;
 using EventStoreKit.Logging;
+using EventStoreKit.Services.Configuration;
 
 namespace EventStoreKit.Projections
 {
@@ -8,8 +9,12 @@ namespace EventStoreKit.Projections
     {
         protected readonly ISagaRepository Repository;
 
-        protected SagaEventHandlerBase( ILogger logger, IScheduler scheduler, ISagaRepository repository )
-            : base( logger, scheduler )
+        protected SagaEventHandlerBase( 
+            ILogger logger, 
+            IScheduler scheduler,
+            IEventStoreConfiguration config,
+            ISagaRepository repository )
+            : base( logger, scheduler, config )
         {
             Repository = repository;
         }

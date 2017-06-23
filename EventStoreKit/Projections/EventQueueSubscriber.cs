@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
@@ -14,6 +13,7 @@ using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.Services;
+using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
 using Newtonsoft.Json;
 
@@ -28,13 +28,14 @@ namespace EventStoreKit.Projections
         private readonly BlockingCollection<EventInfo> MessageQueue;
         private readonly Dictionary<Type, IMessageHandler> Handlers;
         private readonly List<IMessageHandler> DynamicHandlers;
-        private readonly int OnIddleInterval;
         
 // ReSharper disable RedundantNameQualifier
         private System.Threading.Timer OnIddleTimer;
 // ReSharper restore RedundantNameQualifier
         private readonly object IddleLockObj = new object();
         private volatile bool MessageProcessed;
+
+        protected readonly IEventStoreConfiguration Config;
 
         #endregion
 
@@ -121,7 +122,7 @@ namespace EventStoreKit.Projections
             {
                 lock ( IddleLockObj )
                 {
-                    OnIddleTimer = new Timer( OnIddleTimerHandler, null, OnIddleInterval, OnIddleInterval );
+                    OnIddleTimer = new Timer( OnIddleTimerHandler, null, Config.OnIddleInterval, Config.OnIddleInterval );
                 }
             }
         }
@@ -249,8 +250,9 @@ namespace EventStoreKit.Projections
 
         public event EventHandler<SequenceEventArgs> SequenceFinished;
         
-        protected EventQueueSubscriber( ILogger logger, IScheduler scheduler )
+        protected EventQueueSubscriber( ILogger logger, IScheduler scheduler, IEventStoreConfiguration config )
         {
+            Config = config;
             Log = logger.CheckNull( "logger" );
 
             Handlers = new Dictionary<Type, IMessageHandler>();
@@ -273,9 +275,6 @@ namespace EventStoreKit.Projections
                     var messageType = interfaceType.GetGenericArguments()[0];
                     createHandlerMehod.MakeGenericMethod( messageType ).Invoke( this, new object[] { } );
                 } );
-
-            if ( !int.TryParse( ConfigurationManager.AppSettings["OnIddleInterval"], out OnIddleInterval ) )
-                OnIddleInterval = 500;
 
             Register<SequenceMarkerEvent>( Apply );
             Register<StreamOnIdleEvent>( Apply );

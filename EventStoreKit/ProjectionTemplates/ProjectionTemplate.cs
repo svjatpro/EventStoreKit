@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -10,6 +9,7 @@ using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.Services;
+using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.ProjectionTemplates
@@ -21,12 +21,12 @@ namespace EventStoreKit.ProjectionTemplates
 
         protected readonly Action<Type, Action<Message>, ActionMergeMethod> EventRegister;
         protected readonly Func<IDbProvider> PersistanceManagerFactory;
+        protected readonly IEventStoreConfiguration Config;
         protected readonly Dictionary<Type, IEventHandlerInitializer> EventHandlerInitializers = new Dictionary<Type, IEventHandlerInitializer>();
         protected readonly ILogger Logger;
 
 // ReSharper disable PrivateFieldCanBeConvertedToLocalVariable
         private readonly ProjectionTemplateOptions Options;
-        private readonly int InsertBufferSize = 5000;
 // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
         private readonly bool ReadModelCaching;
         private readonly IDbStrategy<TReadModel> DbStrategy;
@@ -79,11 +79,13 @@ namespace EventStoreKit.ProjectionTemplates
         public ProjectionTemplate(
             Action<Type, Action<Message>, ActionMergeMethod> eventRegister,
             Func<IDbProvider> dbProviderFactory,
+            IEventStoreConfiguration config,
             ILogger logger = null,
             ProjectionTemplateOptions options = ProjectionTemplateOptions.None )
         {
             EventRegister = eventRegister;
             PersistanceManagerFactory = dbProviderFactory;
+            Config = config;
             Logger = logger;
 
             Options = options;
@@ -94,8 +96,7 @@ namespace EventStoreKit.ProjectionTemplates
             // Init DbStrategy
             if ( Options.HasFlag( ProjectionTemplateOptions.InsertCaching ) )
             {
-                int.TryParse(ConfigurationManager.AppSettings["InsertBufferSize"], out InsertBufferSize);
-                DbStrategy = new DbStrategyBuffered<TReadModel>(dbProviderFactory, logger, InsertBufferSize);
+                DbStrategy = new DbStrategyBuffered<TReadModel>( dbProviderFactory, logger, Config.InsertBufferSize );
             }
             else
             {
