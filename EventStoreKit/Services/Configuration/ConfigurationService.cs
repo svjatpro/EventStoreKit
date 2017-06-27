@@ -9,7 +9,7 @@ namespace EventStoreKit.Services.Configuration
         {
             return ConfigurationManager.AppSettings["InsertBufferSize"] ?? defaultValue;
         }
-        protected T GetAppSetting<T>( string name, Func<string, T> parser, T defaultValue )
+        protected T GetAppSetting<T>( string name, Func<string, T> parser, T defaultValue = default(T) )
         {
             try
             {

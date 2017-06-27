@@ -18,8 +18,9 @@ namespace EventStoreKit.Projections
 {
     public abstract class SqlProjectionBase : EventQueueSubscriber
     {
-        #region Protected fields
+        #region Private fields
 
+        private readonly IEventStoreConfiguration EventStoreConfig;
         private readonly HashSet<Type> ReadModels = new HashSet<Type>();
         private readonly List<IProjectionTemplate> ProjectionTemplates = new List<IProjectionTemplate>();
 
@@ -43,7 +44,7 @@ namespace EventStoreKit.Projections
             OnCleanup( message );
         }
 
-        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, ActionMergeMethod> register, Func<IDbProvider> dbFactory, ILogger log, ProjectionTemplateOptions options )
+        private TTemplate CreateTemplate<TTemplate>( Action<Type, Action<Message>, ActionMergeMethod> register, Func<IDbProvider> dbFactory, IEventStoreConfiguration config, ILogger log, ProjectionTemplateOptions options )
             where TTemplate : IProjectionTemplate
         {
             var ttype = typeof (TTemplate);
@@ -52,12 +53,14 @@ namespace EventStoreKit.Projections
                 {
                     typeof (Action<Type, Action<Message>, ActionMergeMethod>),
                     typeof (Func<IDbProvider>),
+                    typeof (IEventStoreConfiguration),
                     typeof (ILogger),
                     typeof (ProjectionTemplateOptions)
                 } );
-            if( ctor == null )
-                throw new InvalidOperationException( ttype.Name + " doesn't have constructor ( Action<Type,Action<Message>,bool>, Func<IPerdistanceManagerProjection> )" );
-            return (TTemplate)( ctor.Invoke( new object[] { register, dbFactory, log, options } ) );
+
+            if ( ctor == null )
+                throw new InvalidOperationException( ttype.Name + " doesn't have constructor ( Action<Type,Action<Message>,bool>, Func<IDbProvider>, IEventStoreConfiguration, ILogger, ProjectionTemplateOptions )" );
+            return (TTemplate)( ctor.Invoke( new object[] { register, dbFactory, config, log, options } ) );
         }
 
         private void InitReadModel( IDbProvider db, Type modelType )
@@ -106,13 +109,13 @@ namespace EventStoreKit.Projections
         }
         protected TTemplate RegisterTemplate<TTemplate>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TTemplate : IProjectionTemplate
         {
-            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, Log, options );
+            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, EventStoreConfig, Log, options );
             RegisterTemplate( template );
             return template;
         }
         protected ProjectionTemplate<TModel> RegisterGenericTemplate<TModel>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TModel : class
         {
-            var template = CreateTemplate<ProjectionTemplate<TModel>>( Register, DbProviderFactory, Log, options );
+            var template = CreateTemplate<ProjectionTemplate<TModel>>( Register, DbProviderFactory, EventStoreConfig, Log, options );
             RegisterTemplate( template );
             return template;
         }
@@ -170,6 +173,7 @@ namespace EventStoreKit.Projections
             Func<IDbProvider> dbProviderFactory )
             : base( logger, scheduler, config )
         {
+            EventStoreConfig = config;
             DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
 
             Register<SystemCleanedUpEvent>( CleanUpProjection );

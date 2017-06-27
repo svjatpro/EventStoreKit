@@ -35,7 +35,7 @@ namespace EventStoreKit.Projections
         private readonly object IddleLockObj = new object();
         private volatile bool MessageProcessed;
 
-        protected readonly IEventStoreConfiguration Config;
+        private readonly IEventStoreConfiguration EventStoreConfig;
 
         #endregion
 
@@ -122,7 +122,7 @@ namespace EventStoreKit.Projections
             {
                 lock ( IddleLockObj )
                 {
-                    OnIddleTimer = new Timer( OnIddleTimerHandler, null, Config.OnIddleInterval, Config.OnIddleInterval );
+                    OnIddleTimer = new Timer( OnIddleTimerHandler, null, EventStoreConfig.OnIddleInterval, EventStoreConfig.OnIddleInterval );
                 }
             }
         }
@@ -252,7 +252,7 @@ namespace EventStoreKit.Projections
         
         protected EventQueueSubscriber( ILogger logger, IScheduler scheduler, IEventStoreConfiguration config )
         {
-            Config = config;
+            EventStoreConfig = config;
             Log = logger.CheckNull( "logger" );
 
             Handlers = new Dictionary<Type, IMessageHandler>();
