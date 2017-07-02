@@ -7,7 +7,7 @@ namespace EventStoreKit.Services.Configuration
     {
         protected string GetAppSetting( string name, string defaultValue = "" )
         {
-            return ConfigurationManager.AppSettings["InsertBufferSize"] ?? defaultValue;
+            return ConfigurationManager.AppSettings[name] ?? defaultValue;
         }
         protected T GetAppSetting<T>( string name, Func<string, T> parser, T defaultValue = default(T) )
         {
