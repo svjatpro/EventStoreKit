@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
-using EventStoreKit.Constants;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Utility;
 
@@ -133,14 +132,14 @@ namespace EventStoreKit.DbProviders
                     var sortExpression = sorterMapping[sorter.Property.ToLower()];
                     if ( index == 0 )
                     {
-                        if ( sorter.Direction == SorterDirectionType.Descending )
+                        if ( sorter.Direction == SorterDirection.Descending )
                             query = query.OrderByDescending( sortExpression );
                         else
                             query = query.OrderBy( sortExpression );
                     }
                     else
                     {
-                        if ( sorter.Direction == SorterDirectionType.Descending )
+                        if ( sorter.Direction == SorterDirection.Descending )
                             query = ( (IOrderedQueryable<TEntity>) query ).ThenByDescending( sortExpression );
                         else
                             query = ( (IOrderedQueryable<TEntity>) query ).ThenBy( sortExpression );
@@ -283,7 +282,7 @@ namespace EventStoreKit.DbProviders
             return options;
         }
 
-        public static SearchOptions.SearchOptions EnsureDefaultSorter<TEntity>( this SearchOptions.SearchOptions options, Expression<Func<TEntity,object>> getPropertyName, string direction  )
+        public static SearchOptions.SearchOptions EnsureDefaultSorter<TEntity>( this SearchOptions.SearchOptions options, Expression<Func<TEntity,object>> getPropertyName, SorterDirection direction  )
         {
             if ( options == null )
                 options = new SearchOptions.SearchOptions( filters: new List<SearchFilterInfo>(), sorters: new List<SorterInfo>() );
@@ -300,7 +299,7 @@ namespace EventStoreKit.DbProviders
         }
 
         public static SearchOptions.SearchOptions AddSorter<TEntity>
-            ( this SearchOptions.SearchOptions options, Expression<Func<TEntity, object>> getPropertyName, string direction )
+            ( this SearchOptions.SearchOptions options, Expression<Func<TEntity, object>> getPropertyName, SorterDirection direction )
         {
             if ( options == null )
                 options = new SearchOptions.SearchOptions( filters: new List<SearchFilterInfo>(), sorters: new List<SorterInfo>() );

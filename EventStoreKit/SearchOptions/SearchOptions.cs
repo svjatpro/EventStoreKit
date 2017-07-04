@@ -14,17 +14,6 @@ namespace EventStoreKit.SearchOptions
         public readonly IList<SorterInfo> Sorters;
         public readonly IList<SorterInfo> Groupers;
 
-        #region Private classes
-
-        private class FilterValueObject
-        {
-            public string gt { get; set; }
-            public string lt { get; set; }
-            public string eq { get; set; }
-        }
-
-        #endregion
-
         public static SearchOptions Init(
             int? page = null,
             int? limit = null,

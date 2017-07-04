@@ -1,10 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using EventStoreKit.Constants;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace EventStoreKit.SearchOptions
 {
+    public interface IFilter
+    {
+        string FieldName { get; }
+
+    }
+
     public class SearchFilterInfo
     {
         public string Field { get; set; }
@@ -19,7 +26,7 @@ namespace EventStoreKit.SearchOptions
             #endregion
 
             public string Type { get; set; }
-            public string Comparison { get; set; } // lt - Before, gt - After, eq - On
+            public SearchComparisonType Comparison { get; set; }
 
             public object Value
             {

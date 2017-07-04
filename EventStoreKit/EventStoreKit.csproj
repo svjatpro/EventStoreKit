@@ -70,7 +70,7 @@
     <Compile Include="Constants\EventStoreConstants.cs" />
     <Compile Include="Constants\SearchComparisonType.cs" />
     <Compile Include="Constants\SearchConstants.cs" />
-    <Compile Include="Constants\SorterDirectionType.cs" />
+    <Compile Include="SearchOptions\SorterDirection.cs" />
     <Compile Include="DbProviders\DbProviderProxy.cs" />
     <Compile Include="DbProviders\DbProviderUtility.cs" />
     <Compile Include="DbProviders\FieldIndexAttribute.cs" />
