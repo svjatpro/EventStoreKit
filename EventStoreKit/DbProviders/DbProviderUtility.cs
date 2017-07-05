@@ -107,7 +107,7 @@ namespace EventStoreKit.DbProviders
                 {
                     foreach ( var filter in options.Filters )
                     {
-                        var field = filter.Field.ToLower();
+                        var field = filter.FieldName.ToLower();
                         if ( filterMapping.ContainsKey( field ) )
                             query = query.Where( filterMapping[field]( filter ) );
                     }
@@ -119,7 +119,7 @@ namespace EventStoreKit.DbProviders
             // use groupers also for sorting
             if ( options.With( o => o.Groupers ).With( g => g.Any() ) )
             {
-                var grouperSort = options.Groupers.Where( g => !sorters.Any( s => s.Property == g.Property ) ).ToList();
+                var grouperSort = options.Groupers.Where( g => !sorters.Any( s => s.FieldName == g.FieldName ) ).ToList();
                 sorters.InsertRange( 0, grouperSort );
             }
             //if ( options.IsNotNull() && options.Sorters.With( s => s.Any() ) && sorterMapping.IsNotNull() )
@@ -129,7 +129,7 @@ namespace EventStoreKit.DbProviders
                 for ( var index = 0; index < sorters.Count; index++ )
                 {
                     var sorter = sorters[index];
-                    var sortExpression = sorterMapping[sorter.Property.ToLower()];
+                    var sortExpression = sorterMapping[sorter.FieldName.ToLower()];
                     if ( index == 0 )
                     {
                         if ( sorter.Direction == SorterDirection.Descending )
@@ -247,10 +247,10 @@ namespace EventStoreKit.DbProviders
         public static SearchOptions.SearchOptions EnsureFilterAtStart<TEntity>( 
             this SearchOptions.SearchOptions options,
             Expression<Func<TEntity, object>> getPropertyName,
-            Func<SearchFilterInfo.SearchFilterData> createfilterData,
+            Action<SearchFilterInfo> initFilterData,
             bool condition = true )
         {
-            return options.EnsureFilter( getPropertyName, createfilterData, ( list, filterInfo ) => list.Insert( 0, filterInfo ), condition );
+            return options.EnsureFilter( getPropertyName, initFilterData, ( list, filterInfo ) => list.Insert( 0, filterInfo ), condition );
         }
 
         /// <summary>
@@ -258,25 +258,21 @@ namespace EventStoreKit.DbProviders
         /// </summary>
         public static SearchOptions.SearchOptions EnsureFilter<TEntity>( 
             this SearchOptions.SearchOptions options,
-            Expression<Func<TEntity, object>> getPropertyName, 
-            Func<SearchFilterInfo.SearchFilterData> createfilterData, 
+            Expression<Func<TEntity, object>> getPropertyName,
+            Action<SearchFilterInfo> initFilterData, 
             Action<List<SearchFilterInfo>,SearchFilterInfo> addfilter = null,
             bool condition = true )
         {
             var field = getPropertyName.GetPropertyName().ToLower();
             options = options ?? new SearchOptions.SearchOptions();
             var filters = options.With( o => o.Filters ).With( f => f.ToList() ) ?? new List<SearchFilterInfo>();
-            if ( condition && filters.All( i => i.Field.ToLower() != field.ToLower() ) )
+            if ( condition && filters.All( i => i.FieldName.ToLower() != field.ToLower() ) )
             {
                 if ( addfilter == null )
                     addfilter = ( list, filterInfo ) => list.Add( filterInfo );
-                addfilter(
-                    filters,
-                    new SearchFilterInfo
-                    {
-                        Data = createfilterData(),
-                        Field = field
-                    } );
+                var filter = new SearchFilterInfo { FieldName = field };
+                initFilterData( filter );
+                addfilter( filters, filter );
                 options = new SearchOptions.SearchOptions( options.PageIndex, options.PageSize, filters, options.Sorters, options.Groupers );
             }
             return options;
@@ -291,7 +287,7 @@ namespace EventStoreKit.DbProviders
                 options.Sorters.Add
                     ( new SorterInfo
                     {
-                        Property = getPropertyName.GetPropertyName().ToLower(),
+                        FieldName = getPropertyName.GetPropertyName().ToLower(),
                         Direction = direction
                     } );
             }
@@ -306,7 +302,7 @@ namespace EventStoreKit.DbProviders
             options.Sorters.Add( 
                 new SorterInfo
                 {
-                    Property = getPropertyName.GetPropertyName().ToLower(),
+                    FieldName = getPropertyName.GetPropertyName().ToLower(),
                     Direction = direction
                 } );
             return options;
