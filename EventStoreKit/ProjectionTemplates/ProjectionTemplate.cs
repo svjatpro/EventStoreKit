@@ -30,7 +30,6 @@ namespace EventStoreKit.ProjectionTemplates
 // ReSharper restore PrivateFieldCanBeConvertedToLocalVariable
         private readonly bool ReadModelCaching;
         private readonly IDbStrategy<TReadModel> DbStrategy;
-        //private readonly ThreadSafeDictionary<Guid,TReadModel> Cache;
         private readonly ConcurrentDictionary<Guid,TReadModel> Cache;
         private Func<IDbProvider, Guid, object> GetByIdDelegate;
         

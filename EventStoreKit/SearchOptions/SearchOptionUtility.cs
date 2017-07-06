@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
-using EventStoreKit.Constants;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.SearchOptions
@@ -33,13 +32,13 @@ namespace EventStoreKit.SearchOptions
         public static Expression<Func<T, bool>> GetGuidPredicat<T>( this SearchFilterInfo filter, Expression<Func<T, Guid?>> getProperty )
         {
             Guid? value;
-            Guid parsedValue;
             if ( filter.Value is Guid )
             {
                 value = (Guid) filter.Value;
             }
-            else 
+            else
             {
+                Guid parsedValue;
                 if ( Guid.TryParse( filter.StringValue, out parsedValue ) )
                     value = parsedValue;
                 else

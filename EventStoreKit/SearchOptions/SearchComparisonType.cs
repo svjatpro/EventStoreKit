@@ -1,5 +1,5 @@
 ﻿
-namespace EventStoreKit.Constants
+namespace EventStoreKit.SearchOptions
 {
     public enum SearchComparisonType
     {
