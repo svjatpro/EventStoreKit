@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace EventStoreKit.SearchOptions
 {
@@ -31,15 +29,9 @@ namespace EventStoreKit.SearchOptions
             {
                 int intVal;
                 DateTime date;
-                StringValue = ( value as string ) ?? value.ToString();
+                var stringValue = value.ToString();
 
-                if ( value is JArray )
-                {
-                    var jValue = (JArray)value;
-                    if ( jValue.Type == JTokenType.Array )
-                        ValueInternal = jValue.ToObject<IList<string>>();
-                }
-                else if ( value is IEnumerable<string> )
+                if ( value is IEnumerable<string> )
                 {
                     ValueInternal = (IList<string>) value;
                 }
@@ -51,11 +43,11 @@ namespace EventStoreKit.SearchOptions
                 {
                     ValueInternal = (int) value;
                 }
-                else if ( int.TryParse( StringValue, out intVal ) )
+                else if ( int.TryParse( stringValue, out intVal ) )
                 {
                     ValueInternal = intVal;
                 }
-                else if ( DateTime.TryParse( StringValue, out date ) )
+                else if ( DateTime.TryParse( stringValue, out date ) )
                 {
                     ValueInternal = date;
                 }
@@ -66,7 +58,6 @@ namespace EventStoreKit.SearchOptions
             }
         }
 
-        [JsonIgnore]
-        public string StringValue { get; set; }
+        public string StringValue { get { return ValueInternal.ToString(); } }
     }
 }

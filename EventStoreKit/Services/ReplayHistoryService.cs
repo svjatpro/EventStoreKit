@@ -169,6 +169,7 @@ namespace EventStoreKit.Services
                 }
                 catch ( Exception ex )
                 {
+                    Status = RebuildStatus.Ready;
                     Logger.Error( "Rebuild error", ex );
                     errorAction.Do( action => action() );
                 }
