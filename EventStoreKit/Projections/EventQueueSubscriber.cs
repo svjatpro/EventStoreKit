@@ -322,7 +322,8 @@ namespace EventStoreKit.Projections
         /// </summary>
         /// <typeparam name="TMessage"></typeparam>
         /// <param name="mandatory">mandatory handlers</param>
-        /// <param name="optional">optional handlers</param>
+        /// <param name="optional">optional handlers. 
+        /// Usual case : mandatory events are 'happy path' for the schema, while optional handlers - all exceptional events ( and its handlers can throw exceptions to break the schema )</param>
         /// <param name="timeout"></param>
         /// <param name="sequence">if true, then mandatory handlers must be processed in sctrict order, otherwise it can be processed in any order</param>
         /// <param name="waitUnprocessed">if true, then after successfull processed of mandatory handlers it will wait until all unrpocessed messages in queue are processed</param>

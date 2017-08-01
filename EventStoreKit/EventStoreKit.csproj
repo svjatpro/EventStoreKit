@@ -135,7 +135,6 @@
     <Compile Include="Utility\EventStoreUtility.cs" />
     <Compile Include="Utility\ExpressionsUtility.cs" />
     <Compile Include="Utility\MonadsUtility.cs" />
-    <Compile Include="Utility\StringUtility.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
