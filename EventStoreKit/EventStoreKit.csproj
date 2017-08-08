@@ -84,7 +84,6 @@
     <Compile Include="Messages\SystemCleanedUpEvent.cs" />
     <Compile Include="Messages\SystemOnIdleEvent.cs" />
     <Compile Include="Projections\EventQueueSubscriber.cs" />
-    <Compile Include="Projections\EventRouterBase.cs" />
     <Compile Include="Projections\IEventRouter.cs" />
     <Compile Include="Projections\IEventSubscriber.cs" />
     <Compile Include="Projections\IProjection.cs" />
