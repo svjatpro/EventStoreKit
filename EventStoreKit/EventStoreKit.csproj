@@ -65,6 +65,7 @@
     <Compile Include="Aggregates\TrackableAggregateBase.cs" />
     <Compile Include="CommandBus\ICommandBus.cs" />
     <Compile Include="Constants\EventStoreConstants.cs" />
+    <Compile Include="DbProviders\Commits.cs" />
     <Compile Include="SearchOptions\SearchComparisonType.cs" />
     <Compile Include="SearchOptions\SorterDirection.cs" />
     <Compile Include="DbProviders\DbProviderProxy.cs" />
@@ -109,6 +110,9 @@
     <Compile Include="Services\Configuration\ConfigurationService.cs" />
     <Compile Include="Services\Configuration\EventStoreConfiguration.cs" />
     <Compile Include="Services\Configuration\IEventStoreConfiguration.cs" />
+    <Compile Include="Services\ReplayHistory\CommitsIteratorPaged.cs" />
+    <Compile Include="Services\ReplayHistory\CommitsIteratorByPeriod.cs" />
+    <Compile Include="Services\ReplayHistory\ICommitsIterator.cs" />
     <Compile Include="Services\SagaFactory.cs" />
     <Compile Include="Services\DelegateAdjuster.cs" />
     <Compile Include="Services\EntityFactory.cs" />
@@ -119,10 +123,10 @@
     <Compile Include="Services\IdGenerators\SequentialIdgenerator.cs" />
     <Compile Include="Services\IEventDispatcher.cs" />
     <Compile Include="Services\IEventPublisher.cs" />
-    <Compile Include="Services\IReplaysHistory.cs" />
+    <Compile Include="Services\ReplayHistory\IReplaysHistory.cs" />
     <Compile Include="Services\ICurrentUserProvider.cs" />
     <Compile Include="Services\MessageDispatcher.cs" />
-    <Compile Include="Services\ReplayHistoryService.cs" />
+    <Compile Include="Services\ReplayHistory\ReplayHistoryService.cs" />
     <Compile Include="Utility\AsyncUtility.cs" />
     <Compile Include="Utility\BaseEntityUtility.cs" />
     <Compile Include="Utility\CollectionUtility.cs" />

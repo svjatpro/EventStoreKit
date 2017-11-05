@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using EventStoreKit.Projections;
+using EventStoreKit.Services.ReplayHistory;
 using NEventStore;
 
 namespace EventStoreKit.Services
 {
-    public enum ReplayHistoryInterval
-    {
-        Year,
-        Month
-    }
-
     public class ProjectionRebuildInfo
     {
         public bool Done { get; set; }
@@ -29,7 +24,7 @@ namespace EventStoreKit.Services
             Action errorAction = null, 
             Action<IProjection> finishProjectionAction = null,
             Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
-            ReplayHistoryInterval interval = ReplayHistoryInterval.Year );
+            ICommitsIterator strategy = null );
         bool IsRebuilding();
         Dictionary<IProjection, ProjectionRebuildInfo> GetProjectionsUnderRebuild();
     }
