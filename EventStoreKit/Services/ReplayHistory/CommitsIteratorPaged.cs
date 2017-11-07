@@ -4,8 +4,10 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using EventStoreKit.DbProviders;
 using EventStoreKit.linq2db;
 using EventStoreKit.Logging;
+using Newtonsoft.Json;
 using NEventStore;
 using NEventStore.Persistence;
 

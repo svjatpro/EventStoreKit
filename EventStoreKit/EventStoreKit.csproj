@@ -37,6 +37,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NEventStore.5.2.0\lib\net40\NEventStore.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=7.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.7.0.1\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -66,6 +70,8 @@
     <Compile Include="CommandBus\ICommandBus.cs" />
     <Compile Include="Constants\EventStoreConstants.cs" />
     <Compile Include="DbProviders\Commits.cs" />
+    <Compile Include="DbProviders\IDbProviderFactory.cs" />
+    <Compile Include="DbProviders\SqlClientType.cs" />
     <Compile Include="SearchOptions\SearchComparisonType.cs" />
     <Compile Include="SearchOptions\SorterDirection.cs" />
     <Compile Include="DbProviders\DbProviderProxy.cs" />

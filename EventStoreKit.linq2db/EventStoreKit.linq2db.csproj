@@ -72,9 +72,7 @@
     <Compile Include="DbProviderFactory.cs" />
     <Compile Include="DbProviderMsSql.cs" />
     <Compile Include="DbProviderMySql.cs" />
-    <Compile Include="IDbProviderFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SqlClientType.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

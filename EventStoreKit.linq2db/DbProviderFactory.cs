@@ -42,7 +42,7 @@ namespace EventStoreKit.linq2db
 
         #region private methods
 
-        private ProviderInfo ResolveProvider( string configurationString )
+        private static ProviderInfo ResolveProvider( string configurationString )
         {
             var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
             var providerInfo = Providers.SingleOrDefault( p => p.SqlProviderName == providerName );
@@ -52,7 +52,7 @@ namespace EventStoreKit.linq2db
             return providerInfo;
         }
 
-        private ProviderInfo ResolveProvider( SqlClientType clientType )
+        private static ProviderInfo ResolveProvider( SqlClientType clientType )
         {
             var providerInfo = Providers.SingleOrDefault( p => p.SqlClientType == clientType );
             if ( providerInfo == null )
@@ -69,7 +69,7 @@ namespace EventStoreKit.linq2db
         /// </summary>
         /// <param name="clientType"></param>
         /// <exception cref="ArgumentException">Sql client type is not supported</exception>
-        public Type SqlDialectType( SqlClientType clientType )
+        public static Type SqlDialectType( SqlClientType clientType )
         {
             var providerInfo = ResolveProvider( clientType );
             return providerInfo.SqlProviderType;
@@ -80,7 +80,7 @@ namespace EventStoreKit.linq2db
         /// </summary>
         /// <param name="configurationString"></param>
         /// <exception cref="ArgumentException">Sql client type is not supported</exception>
-        public Type SqlDialectType( string configurationString )
+        public static Type SqlDialectType( string configurationString )
         {
             var providerInfo = ResolveProvider( configurationString );
             return providerInfo.SqlProviderType;
