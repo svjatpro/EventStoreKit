@@ -78,7 +78,35 @@ namespace EventStoreKit.Utility
         }
 
         /// <summary>
-        /// Resolve and process Saga message, but don't save it
+        /// Resolve and process Saga message, then dispatch commands and save saga, headers doesn't contain commands!
+        /// </summary>
+        /// <typeparam name="TSaga">Saga Type</typeparam>
+        /// <param name="message">Message to process</param>
+        /// <param name="sagaId">Unique Saga Identity</param>
+        /// <param name="repository">SagaRepository to resolve empty saga</param>
+        /// <param name="commandBus">command bus</param>
+        /// <param name="saga">Instance of saga ( If already resolved )</param>
+        /// <returns>Saga instance</returns>
+        public static TSaga ProcessAndSaveSaga<TSaga>( this Message message, string sagaId, ISagaRepository repository, ICommandBus commandBus, TSaga saga = null )
+            where TSaga : class, ISaga
+        {
+            saga = saga ?? repository.GetById<TSaga>( sagaId );
+            saga.Transition( message );
+            saga.PrepareMessages( message );
+
+            Enumerable.OfType<DomainCommand>( saga.GetUndispatchedMessages() )
+                .ToList()
+                .ForEach( commandBus.Send );
+
+            saga.ClearUndispatchedMessages();
+            repository.Save( saga, Guid.NewGuid(), a => { } );
+
+            return saga;
+        }
+
+        /// <summary>
+        /// Resolve and process Saga message, without saving
+        ///  Use this method if saga have saved and not saved messages at the same time
         /// </summary>
         /// <typeparam name="TSaga">Saga Type</typeparam>
         /// <param name="message">Message to process</param>
@@ -105,19 +133,17 @@ namespace EventStoreKit.Utility
         }
 
         /// <summary>
-        /// Resolve and process Saga message, then dispatch commands and save saga, headers doesn't contain commands!
+        /// Process Saga message without saving
+        ///  Use this method if saga have no saved messages at all
         /// </summary>
         /// <typeparam name="TSaga">Saga Type</typeparam>
         /// <param name="message">Message to process</param>
-        /// <param name="sagaId">Unique Saga Identity</param>
-        /// <param name="repository">SagaRepository to resolve empty saga</param>
-        /// <param name="commandBus">command bus</param>
         /// <param name="saga">Instance of saga ( If already resolved )</param>
+        /// <param name="commandBus">command bus</param>
         /// <returns>Saga instance</returns>
-        public static TSaga ProcessAndSaveSaga<TSaga>( this Message message, string sagaId, ISagaRepository repository, ICommandBus commandBus, TSaga saga = null )
+        public static TSaga ProcessSaga<TSaga>( this Message message, TSaga saga, ICommandBus commandBus )
             where TSaga : class, ISaga
         {
-            saga = saga ?? repository.GetById<TSaga>( sagaId );
             saga.Transition( message );
             saga.PrepareMessages( message );
 
@@ -125,8 +151,8 @@ namespace EventStoreKit.Utility
                 .ToList()
                 .ForEach( commandBus.Send );
 
+            saga.ClearUncommittedEvents();
             saga.ClearUndispatchedMessages();
-            repository.Save( saga, Guid.NewGuid(), a => { } );
 
             return saga;
         }
