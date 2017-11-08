@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>EventStoreKit.log4net</id>
+    <version>1.1.0.0</version>
+    <title>EventStoreKit.log4net</title>
+    <authors>SvjatPro</authors>
+    <owners>SvjatPro</owners>
+    <projectUrl>https://github.com/svjatpro/EventStoreKit</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>NEventStore tools, log4net adapter</description>
+    <summary />
+    <dependencies>
+      <dependency id="EventStoreKit" version="1.0.1" />
+      <dependency id="NEventStore" version="5.2.0" />
+      <dependency id="log4net" version="2.0.3" />
+      <dependency id="Rx-Core" version="2.2.5" />
+      <dependency id="Rx-Interfaces" version="2.2.5" />
+      <dependency id="Rx-Linq" version="2.2.5" />
+      <dependency id="Rx-PlatformServices" version="2.2.5" />
+    </dependencies>
+  </metadata>
+</package>

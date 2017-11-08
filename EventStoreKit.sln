@@ -19,8 +19,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Autofac", "Ev
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.linq2db", "EventStoreKit.linq2db\EventStoreKit.linq2db.csproj", "{020449A4-746C-45F4-A766-2403BD7E5996}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Example", "EventStoreKit.Example\EventStoreKit.Example.csproj", "{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Tests", "EventStoreKit.Tests\EventStoreKit.Tests.csproj", "{D6B607C3-E439-437A-BADE-CEB11F2C2A12}"
 EndProject
 Global
@@ -77,18 +75,6 @@ Global
 		{020449A4-746C-45F4-A766-2403BD7E5996}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{020449A4-746C-45F4-A766-2403BD7E5996}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{020449A4-746C-45F4-A766-2403BD7E5996}.Release|x86.ActiveCfg = Release|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Debug|x86.Build.0 = Debug|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|x86.ActiveCfg = Release|Any CPU
-		{FD995250-D7CD-41B1-9E0D-2EAC3FA8F92A}.Release|x86.Build.0 = Release|Any CPU
 		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D6B607C3-E439-437A-BADE-CEB11F2C2A12}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU

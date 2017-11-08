@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>EventStoreKit.linq2db</id>
+    <version>1.2.2.0</version>
+    <title>EventStoreKit.linq2db</title>
+    <authors>SvjatPro</authors>
+    <owners>SvjatPro</owners>
+    <projectUrl>https://github.com/svjatpro/EventStoreKit</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>NEventStore tools, linq2db adapter</description>
+    <summary />
+    <releaseNotes>- IDbProviderFactory interface updated and have been moved to EventStoreKit ( basic ) package</releaseNotes>
+    <dependencies>
+      <dependency id="EventStoreKit" version="1.2.2" />
+      <dependency id="NEventStore" version="5.2.0" />
+      <dependency id="linq2db" version="1.0.7.3" />
+      <dependency id="Rx-Core" version="2.2.5" />
+      <dependency id="Rx-Interfaces" version="2.2.5" />
+      <dependency id="Rx-Linq" version="2.2.5" />
+      <dependency id="Rx-PlatformServices" version="2.2.5" />
+    </dependencies>
+  </metadata>
+</package>
