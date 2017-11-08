@@ -73,7 +73,7 @@ namespace EventStoreKit.ProjectionTemplates
         public void Insert( Guid id, TReadModel readModel )
         {
             Buffer.Add( id, readModel );
-            if ( Buffer.Count() >= BufferCount )
+            if ( Buffer.Count >= BufferCount )
             {
                 Flush();
             }

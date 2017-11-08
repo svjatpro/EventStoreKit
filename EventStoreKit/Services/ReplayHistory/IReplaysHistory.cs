@@ -1,16 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using EventStoreKit.Projections;
-using NEventStore;
+using EventStoreKit.Services.ReplayHistory;
 
 namespace EventStoreKit.Services
 {
-    public enum ReplayHistoryInterval
-    {
-        Year,
-        Month
-    }
-
     public class ProjectionRebuildInfo
     {
         public bool Done { get; set; }
@@ -19,17 +13,14 @@ namespace EventStoreKit.Services
 
     public interface IReplaysHistory
     {
-        bool IsEventLogEmpty { get; }
-        IEnumerable<ICommit> GetCommits();
-
+        void SetIterator( ICommitsIterator iterator );
         void CleanHistory( List<IProjection> projections );
         void Rebuild( 
             List<IProjection> projections, 
             Action finishAllAction = null, 
             Action errorAction = null, 
             Action<IProjection> finishProjectionAction = null,
-            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
-            ReplayHistoryInterval interval = ReplayHistoryInterval.Year );
+            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null );
         bool IsRebuilding();
         Dictionary<IProjection, ProjectionRebuildInfo> GetProjectionsUnderRebuild();
     }

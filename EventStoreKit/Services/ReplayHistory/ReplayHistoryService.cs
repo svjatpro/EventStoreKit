@@ -6,9 +6,9 @@ using EventStoreKit.Constants;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
+using EventStoreKit.Services.ReplayHistory;
 using EventStoreKit.Utility;
 using NEventStore;
-using NEventStore.Persistence;
 
 namespace EventStoreKit.Services
 {
@@ -17,10 +17,10 @@ namespace EventStoreKit.Services
         #region Private fields
 
         private const string SagaTypeHeader = "SagaType";
-        private readonly IStoreEvents Store;
         private readonly IEventPublisher EventPublisher;
         private readonly EventSequence EventSequence;
         private readonly ILogger<ReplayHistoryService> Logger;
+        private ICommitsIterator Iterator;
 
         private readonly object LockRebuild = new object();
         private Dictionary<IProjection, ProjectionRebuildInfo> Projections;
@@ -45,35 +45,18 @@ namespace EventStoreKit.Services
         }
 
         private void RebuildInternal( 
-            List<IProjection> projections, 
-            ReplayHistoryInterval interval, 
+            List<IProjection> projections,
+            ICommitsIterator iterator, 
             Action<IProjection, ProjectionRebuildInfo> projectionProgressAction )
         {
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
 
-            var dateFrom = new DateTime( 2015, 1, 1 );
-            while ( dateFrom <= DateTime.Now )
+            //var commits = LoadNextCommits( interval );
+            iterator.Reset();
+            var commits = iterator.LoadNext();
+            while ( commits.Any() )
             {
-                DateTime dateTo;
-                switch ( interval )
-                {
-                    case ReplayHistoryInterval.Year:
-                        dateTo = dateFrom.AddYears( 1 );
-                        break;
-                    case ReplayHistoryInterval.Month:
-                        dateTo = dateFrom.AddMonths( 1 );
-                        break;
-                    default:
-                        dateTo = DateTime.Now.AddDays( 1 );
-                        break;
-                }
-                var query =
-                    dateTo > DateTime.Now ? 
-                    Store.Advanced.GetFrom( dateFrom ) : 
-                    Store.Advanced.GetFromTo( Bucket.Default, dateFrom, dateTo );
-                var commits = query.OrderBy( c => c.CommitStamp ).ThenBy( c => c.CheckpointToken ).ToList();
-
                 foreach ( var commit in commits )
                 {
                     if ( commit.Headers.Keys.Any( s => s == SagaTypeHeader ) )
@@ -83,8 +66,8 @@ namespace EventStoreKit.Services
                         ReplayCommit( commit, model );
                     }
                 }
-                dateFrom = dateTo;
-
+                //commits = LoadNextCommits( interval );
+                commits = iterator.LoadNext();
                 var count = commits.Count;
                 if ( projectionProgressAction != null )
                 {
@@ -97,25 +80,35 @@ namespace EventStoreKit.Services
                         }
                     } );
                 }
-                if ( dateFrom <= DateTime.Now )
-                {
-                    EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
-                }
-                if ( projectionProgressAction == null )
+                else
                 {
                     Projections.ToList().ForEach( p => p.Value.MessagesProcessed += count );
+                }
+                if ( commits.Any() )
+                {
+                    EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
                 }
             }
         }
 
         #endregion
-
-        public ReplayHistoryService( IStoreEvents store, IEventPublisher eventPublisher, EventSequence eventSequence, ILogger<ReplayHistoryService> logger )
+        
+        public ReplayHistoryService(
+            IStoreEvents store,
+            IEventPublisher eventPublisher,
+            EventSequence eventSequence,
+            ILogger<ReplayHistoryService> logger,
+            ICommitsIterator iterator = null )
         {
-            Store = store;
             EventPublisher = eventPublisher;
             EventSequence = eventSequence;
             Logger = logger;
+            Iterator = iterator ?? new CommitsIteratorByPeriod( store );
+        }
+
+        public void SetIterator( ICommitsIterator iterator )
+        {
+            Iterator = iterator;
         }
 
         public void CleanHistory( List<IProjection> projections = null )
@@ -139,8 +132,7 @@ namespace EventStoreKit.Services
             Action finishAllAction = null,
             Action errorAction = null,
             Action<IProjection> finishProjectionAction = null,
-            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
-            ReplayHistoryInterval interval = ReplayHistoryInterval.Year )
+            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null )
         {
             lock ( LockRebuild )
             {
@@ -148,14 +140,15 @@ namespace EventStoreKit.Services
                     throw new InvalidOperationException( "Can't start two rebuild session" );
 
                 Status = RebuildStatus.Started;
-                Projections = projections.ToDictionary( p => p, p => new ProjectionRebuildInfo { MessagesProcessed = 0 });
+                Projections = projections.ToDictionary( p => p, p => new ProjectionRebuildInfo { MessagesProcessed = 0 } );
             }
 
+            Iterator.Reset();
             var task = new Task( () =>
             {
                 try
                 {
-                    RebuildInternal( projections, interval, projectionProgressAction );
+                    RebuildInternal( projections, Iterator, projectionProgressAction );
                     Status = RebuildStatus.WaitingForProjections;
                     EventSequence.OnFinish(
                         id =>
@@ -199,16 +192,5 @@ namespace EventStoreKit.Services
                     return new Dictionary<IProjection, ProjectionRebuildInfo>();
             }
         }
-
-        public bool IsEventLogEmpty
-        {
-            get { return !Store.Advanced.GetFrom( new DateTime( 2010, 1, 1 ) ).Any(); }
-        }
-
-        public IEnumerable<ICommit> GetCommits()
-        {
-            return Store.Advanced.GetFromStart().ToList();
-        }
-        
     }
 }
