@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
 using EventStoreKit.DbProviders;
-using EventStoreKit.linq2db;
-using EventStoreKit.Logging;
 using Newtonsoft.Json;
 using NEventStore;
 using NEventStore.Persistence;
@@ -15,21 +12,15 @@ namespace EventStoreKit.Services.ReplayHistory
 {
     public class CommitsIteratorPaged : ICommitsIterator
     {
+        #region Private fields
+
         private readonly IDbProviderFactory DbProviderFactory;
         private const int PageSize = 7000;
         private Commits LastCommit = null;
 
-        public CommitsIteratorPaged(
-            IStoreEvents store,
-            IEventPublisher eventPublisher,
-            EventSequence eventSequence,
-            ILogger<ReplayHistoryService> logger,
-            IDbProviderFactory dbProviderFactory )
-            : base( store, eventPublisher, eventSequence, logger )
-        {
-            DbProviderFactory = dbProviderFactory;
-        }
+        #endregion
 
+        #region Private methods
 
         private Dictionary<string, object> ParseHeaders( byte[] data )
         {
@@ -56,9 +47,21 @@ namespace EventStoreKit.Services.ReplayHistory
             }
         }
 
-        protected override List<ICommit> LoadNextCommits( ReplayHistoryInterval interval )
+        #endregion
+
+        public CommitsIteratorPaged( IDbProviderFactory dbProviderFactory )
         {
-            var db = DbProviderFactory.CreateByConfiguration( OsbbConfiguration.EventStoreConfigName );
+            DbProviderFactory = dbProviderFactory;
+        }
+
+        public void Reset()
+        {
+            LastCommit = null;
+        }
+
+        public List<ICommit> LoadNext()
+        {
+            var db = DbProviderFactory.CreateEventStoreProvider();
             var query = db.Query<Commits>()
                 .OrderBy( c => c.CheckpointNumber )
                 .AsQueryable();

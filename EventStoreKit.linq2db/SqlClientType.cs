@@ -1,4 +1,4 @@
-﻿namespace EventStoreKit.DbProviders
+﻿namespace EventStoreKit.linq2db
 {
     /// <summary>
     /// Supported Sql dialects

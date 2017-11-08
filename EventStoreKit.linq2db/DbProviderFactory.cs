@@ -38,9 +38,27 @@ namespace EventStoreKit.linq2db
                 }
             };
 
+        private readonly Func<IDbProvider> EventStoreCreate;
+        private readonly Func<IDbProvider> ProjectionCreate;
+
         #endregion
 
         #region private methods
+
+        private Func<IDbProvider> InitProviderCreator( SqlClientType clientType, string connectionString )
+        {
+            var providerInfo = ResolveProvider( clientType );
+
+            var ctor = providerInfo.DbProviderType.GetConstructor( new[] { typeof( string ), typeof( string ) } );
+            return () => ctor.Invoke( new object[] { null, connectionString } ).OfType<IDbProvider>();
+        }
+        private Func<IDbProvider> InitProviderCreator( string configurationString )
+        {
+            var providerInfo = ResolveProvider( configurationString );
+
+            var ctor = providerInfo.DbProviderType.GetConstructor( new[] { typeof( string ), typeof( string ) } );
+            return () => ctor.Invoke( new object[] { configurationString, null } ).OfType<IDbProvider>();
+        }
 
         private static ProviderInfo ResolveProvider( string configurationString )
         {
@@ -62,8 +80,7 @@ namespace EventStoreKit.linq2db
         }
 
         #endregion
-
-
+        
         /// <summary>
         /// Return NEventStore sql dialect type
         /// </summary>
@@ -87,34 +104,44 @@ namespace EventStoreKit.linq2db
         }
 
         /// <summary>
-        /// Create DbProvider instance by clientType and connection string
+        /// Create DbProvider instance for event store Db
         /// </summary>
-        /// <param name="clientType"></param>
-        /// <param name="connectionString"></param>
-        /// <exception cref="ArgumentException">Sql client type is not supported</exception>
-        public IDbProvider CreateByConnectionString( SqlClientType clientType, string connectionString )
+        public IDbProvider CreateEventStoreProvider()
         {
-            var providerInfo = ResolveProvider( clientType );
-
-            var ctor = providerInfo.DbProviderType.GetConstructor( new [] {typeof(string), typeof(string)} );
-            var dbProvider = ctor.Invoke( new object[] {null, connectionString} ).OfType<IDbProvider>();
-
-            return dbProvider;
+            return EventStoreCreate();
         }
 
         /// <summary>
-        /// Create DbProvider instance by configuration string
+        /// Create DbProvider instance for projectiona Db
         /// </summary>
-        /// <param name="configurationString">configuration string name</param>
-        /// <exception cref="ArgumentException">Sql client type is not supported</exception>
-        public IDbProvider CreateByConfiguration( string configurationString )
+        public IDbProvider CreateProjectionProvider()
         {
-            var providerInfo = ResolveProvider( configurationString );
+            return ProjectionCreate();
+        }
 
-            var ctor = providerInfo.DbProviderType.GetConstructor( new[] { typeof( string ), typeof( string ) } );
-            var dbProvider = ctor.Invoke( new object[] { configurationString, null } ).OfType<IDbProvider>();
+        public DbProviderFactory( SqlClientType clientType, string connectionString )
+            : this( clientType, connectionString, clientType, connectionString )
+        {
+        }
+        public DbProviderFactory( 
+            SqlClientType eventStoreClientType, string eventStoreConnectionString,
+            SqlClientType projectionClientType, string projectionConnectionString )
+        {
+            EventStoreCreate = InitProviderCreator( eventStoreClientType, eventStoreConnectionString );
+            ProjectionCreate = InitProviderCreator( projectionClientType, projectionConnectionString );
+        }
 
-            return dbProvider;
+        public DbProviderFactory( string configurationString ) :
+            this( configurationString, configurationString )
+        {
+        }
+
+        public DbProviderFactory(
+            string eventStoreConfigurationString,
+            string projectionConfigurationString )
+        {
+            EventStoreCreate = InitProviderCreator( eventStoreConfigurationString );
+            ProjectionCreate = InitProviderCreator( projectionConfigurationString );
         }
     }
 }

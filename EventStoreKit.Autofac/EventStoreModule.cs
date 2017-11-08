@@ -18,6 +18,7 @@ using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Services.IdGenerators;
+using EventStoreKit.Services.ReplayHistory;
 using EventStoreKit.Utility;
 using NEventStore;
 using NEventStore.Persistence.Sql;
@@ -186,7 +187,11 @@ namespace EventStoreKit
                 .As<IStoreEvents>()
                 .SingleInstance();
 
-            builder.RegisterType<ReplayHistoryService>().As<IReplaysHistory>().SingleInstance();
+            builder.RegisterType<CommitsIteratorByPeriod>().As<ICommitsIterator>().ExternallyOwned();
+            builder
+                .RegisterType<ReplayHistoryService>()
+                .As<IReplaysHistory>()
+                .SingleInstance();
         }
 
         private Wireup CreateWireup( IComponentContext ctx )

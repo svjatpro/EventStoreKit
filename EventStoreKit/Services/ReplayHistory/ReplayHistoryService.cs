@@ -9,7 +9,6 @@ using EventStoreKit.Projections;
 using EventStoreKit.Services.ReplayHistory;
 using EventStoreKit.Utility;
 using NEventStore;
-using NEventStore.Persistence;
 
 namespace EventStoreKit.Services
 {
@@ -18,10 +17,10 @@ namespace EventStoreKit.Services
         #region Private fields
 
         private const string SagaTypeHeader = "SagaType";
-        //private readonly IStoreEvents Store;
         private readonly IEventPublisher EventPublisher;
         private readonly EventSequence EventSequence;
         private readonly ILogger<ReplayHistoryService> Logger;
+        private ICommitsIterator Iterator;
 
         private readonly object LockRebuild = new object();
         private Dictionary<IProjection, ProjectionRebuildInfo> Projections;
@@ -94,12 +93,22 @@ namespace EventStoreKit.Services
 
         #endregion
         
-        public ReplayHistoryService( IStoreEvents store, IEventPublisher eventPublisher, EventSequence eventSequence, ILogger<ReplayHistoryService> logger )
+        public ReplayHistoryService(
+            IStoreEvents store,
+            IEventPublisher eventPublisher,
+            EventSequence eventSequence,
+            ILogger<ReplayHistoryService> logger,
+            ICommitsIterator iterator = null )
         {
-            //Store = store;
             EventPublisher = eventPublisher;
             EventSequence = eventSequence;
             Logger = logger;
+            Iterator = iterator ?? new CommitsIteratorByPeriod( store );
+        }
+
+        public void SetIterator( ICommitsIterator iterator )
+        {
+            Iterator = iterator;
         }
 
         public void CleanHistory( List<IProjection> projections = null )
@@ -123,9 +132,7 @@ namespace EventStoreKit.Services
             Action finishAllAction = null,
             Action errorAction = null,
             Action<IProjection> finishProjectionAction = null,
-            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
-            ICommitsIterator iterator = null )
-            //ReplayHistoryInterval interval = ReplayHistoryInterval.Length )
+            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null )
         {
             lock ( LockRebuild )
             {
@@ -133,15 +140,15 @@ namespace EventStoreKit.Services
                     throw new InvalidOperationException( "Can't start two rebuild session" );
 
                 Status = RebuildStatus.Started;
-                Projections = projections.ToDictionary( p => p, p => new ProjectionRebuildInfo { MessagesProcessed = 0 });
+                Projections = projections.ToDictionary( p => p, p => new ProjectionRebuildInfo { MessagesProcessed = 0 } );
             }
 
+            Iterator.Reset();
             var task = new Task( () =>
             {
                 try
                 {
-                    //RebuildInternal( projections, interval, projectionProgressAction );
-                    RebuildInternal( projections, iterator, projectionProgressAction );
+                    RebuildInternal( projections, Iterator, projectionProgressAction );
                     Status = RebuildStatus.WaitingForProjections;
                     EventSequence.OnFinish(
                         id =>
@@ -185,16 +192,5 @@ namespace EventStoreKit.Services
                     return new Dictionary<IProjection, ProjectionRebuildInfo>();
             }
         }
-
-        public bool IsEventLogEmpty
-        {
-            get { return !Store.Advanced.GetFrom( new DateTime( 2010, 1, 1 ) ).Any(); }
-        }
-
-        public IEnumerable<ICommit> GetCommits()
-        {
-            return Store.Advanced.GetFromStart().ToList();
-        }
-        
     }
 }

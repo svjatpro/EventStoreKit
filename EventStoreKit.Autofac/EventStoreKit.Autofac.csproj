@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EventStoreKit">
-      <HintPath>..\packages\EventStoreKit.1.1.0.0\lib\net40\EventStoreKit.dll</HintPath>
+      <HintPath>..\packages\EventStoreKit.1.2.2.0\lib\net40\EventStoreKit.dll</HintPath>
     </Reference>
     <Reference Include="Autofac, Version=3.5.0.0, Culture=neutral, PublicKeyToken=17863af14b0044da, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

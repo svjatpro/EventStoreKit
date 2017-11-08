@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using EventStoreKit.Projections;
 using EventStoreKit.Services.ReplayHistory;
-using NEventStore;
 
 namespace EventStoreKit.Services
 {
@@ -14,17 +13,14 @@ namespace EventStoreKit.Services
 
     public interface IReplaysHistory
     {
-        bool IsEventLogEmpty { get; }
-        IEnumerable<ICommit> GetCommits();
-
+        void SetIterator( ICommitsIterator iterator );
         void CleanHistory( List<IProjection> projections );
         void Rebuild( 
             List<IProjection> projections, 
             Action finishAllAction = null, 
             Action errorAction = null, 
             Action<IProjection> finishProjectionAction = null,
-            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null,
-            ICommitsIterator strategy = null );
+            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null );
         bool IsRebuilding();
         Dictionary<IProjection, ProjectionRebuildInfo> GetProjectionsUnderRebuild();
     }
