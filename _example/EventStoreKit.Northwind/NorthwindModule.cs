@@ -19,11 +19,10 @@ namespace EventStoreKit.Example
         {
             base.Load( builder );
 
-            // DbProvider and factory are not registered by default, because there are more than one ways to initialize it
+            // Infrasctructure classes, which are not registered by default                        
             builder
-                .Register( context => new DbProviderFactory( "NorthwindDb" ) ) // before start, uncomment and validate 'NorthwindDb' connection string in app.config
-                //.Register( context => new DbProviderFactory( SqlClientType.MsSqlClient, "Server=localhost;Initial Catalog=NorthwindEventStore;Integrated Security=True" ) )
-                //.Register( context => new DbProviderFactory( SqlClientType.MySqlClient, "Server=127.0.0.1;Port=3306;Database=NorthwindEventStore;Uid=root;Pwd=thepassword;charset=utf8;AutoEnlist=false;" ) )
+                .Register( context => new DbProviderFactory( "NorthwindDb" ) ) // before start, validate 'NorthwindDb' connection string in *.config
+                //.Register( context => new DbProviderFactory( SqlClientType.MsSqlClient, "Server=localhost;Initial Catalog=NorthwindEventStore;Integrated Security=True" ) ) // alternative way
                 .As<IDbProviderFactory>()
                 .SingleInstance();
             builder

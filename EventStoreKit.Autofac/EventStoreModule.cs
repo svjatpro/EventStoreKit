@@ -192,6 +192,27 @@ namespace EventStoreKit
                 .RegisterType<ReplayHistoryService>()
                 .As<IReplaysHistory>()
                 .SingleInstance();
+
+            builder
+                .Register( ctx->
+                {
+                    var cfg = new EventStoreConfiguration();
+                    cfg.InsertBufferSize = 10000;
+                    cfg.OnIddleInterval = 500;
+                    return cfg;
+                } )
+                .As<IEventStoreConfiguration>()
+                .SingleInstance();
+
+            builder
+                .Register( ctx->
+                {
+                    var userProvider = new CurrentUserProviderStub();
+                    userProvider.CurrentUserId = Guid.NewGuid();
+                    return userProvider;
+                } )
+                .As<ICurrentUserProvider>()
+                .SingleInstance();
         }
 
         private Wireup CreateWireup( IComponentContext ctx )
