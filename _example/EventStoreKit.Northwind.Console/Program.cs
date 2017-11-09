@@ -39,22 +39,6 @@ namespace EventStoreKit.Northwind.Console
             } );
 
 
-            IDbProviderFactory
-            {
-                IDbProvider Create();
-                IDbProvider Create<ModelType>();
-            }
-            DbProviderFactory
-            {
-                // constructors receive default connection string, or if everything exist in single Db, then this is all we need
-                public DbProviderFactory( string configString ){}
-                public DbProviderFactory( SqlType sqlType, string connectionString ){}
-
-                // if we have several data bases, then we need additionaly map each ( or primary ) model to appropriate DataBase
-                public DbProviderFactory MapModel<ModelType>( string configString ){}
-                public DbProviderFactory MapModel<ModelType>( SqlType sqlType, string connectionString ){}
-            }
-
             builder
                 .Register( c => 
                     new DbProviderFactory( projectionConfig )

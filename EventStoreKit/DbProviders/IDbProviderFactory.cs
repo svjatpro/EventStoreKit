@@ -3,13 +3,13 @@
     public interface IDbProviderFactory
     {
         /// <summary>
-        /// Create DbProvider instance for event store Db
+        /// Create DbProvider instance
         /// </summary>
-        IDbProvider CreateEventStoreProvider();
+        IDbProvider Create();
 
         /// <summary>
-        /// Create DbProvider instance for projectiona Db
+        /// Create DbProvider instance
         /// </summary>
-        IDbProvider CreateProjectionProvider();
+        IDbProvider Create<TModel>() where TModel : class;
     }
 }

@@ -61,7 +61,7 @@ namespace EventStoreKit.Services.ReplayHistory
 
         public List<ICommit> LoadNext()
         {
-            var db = DbProviderFactory.CreateEventStoreProvider();
+            var db = DbProviderFactory.Create<Commits>();
             var query = db.Query<Commits>()
                 .OrderBy( c => c.CheckpointNumber )
                 .AsQueryable();

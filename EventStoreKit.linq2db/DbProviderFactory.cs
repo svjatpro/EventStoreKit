@@ -119,29 +119,49 @@ namespace EventStoreKit.linq2db
             return ProjectionCreate();
         }
 
+        /// <summary>
+        /// Constructors receive default configuration string, or if everything exist in single Db, then this is all we need
+        /// </summary>
+        public DbProviderFactory( string configurationString )
+        {
+            
+        }
+
+        /// <summary>
+        /// Constructors receive default connection string, or if everything exist in single Db, then this is all we need
+        /// </summary>
         public DbProviderFactory( SqlClientType clientType, string connectionString )
-            : this( clientType, connectionString, clientType, connectionString )
         {
-        }
-        public DbProviderFactory( 
-            SqlClientType eventStoreClientType, string eventStoreConnectionString,
-            SqlClientType projectionClientType, string projectionConnectionString )
-        {
-            EventStoreCreate = InitProviderCreator( eventStoreClientType, eventStoreConnectionString );
-            ProjectionCreate = InitProviderCreator( projectionClientType, projectionConnectionString );
+            
         }
 
-        public DbProviderFactory( string configurationString ) :
-            this( configurationString, configurationString )
-        {
-        }
+        // if we have several data bases, then we need additionaly map each ( or primary ) model to appropriate DataBase
+        public DbProviderFactory MapModel<ModelType>(string configString) { }
+        public DbProviderFactory MapModel<ModelType>(SqlType sqlType, string connectionString) { }
 
-        public DbProviderFactory(
-            string eventStoreConfigurationString,
-            string projectionConfigurationString )
-        {
-            EventStoreCreate = InitProviderCreator( eventStoreConfigurationString );
-            ProjectionCreate = InitProviderCreator( projectionConfigurationString );
-        }
+        //public DbProviderFactory( SqlClientType clientType, string connectionString )
+        //    : this( clientType, connectionString, clientType, connectionString )
+        //{
+        //}
+        //public DbProviderFactory( 
+        //    SqlClientType eventStoreClientType, string eventStoreConnectionString,
+        //    SqlClientType projectionClientType, string projectionConnectionString )
+        //{
+        //    EventStoreCreate = InitProviderCreator( eventStoreClientType, eventStoreConnectionString );
+        //    ProjectionCreate = InitProviderCreator( projectionClientType, projectionConnectionString );
+        //}
+
+        //public DbProviderFactory( string configurationString ) :
+        //    this( configurationString, configurationString )
+        //{
+        //}
+
+        //public DbProviderFactory(
+        //    string eventStoreConfigurationString,
+        //    string projectionConfigurationString )
+        //{
+        //    EventStoreCreate = InitProviderCreator( eventStoreConfigurationString );
+        //    ProjectionCreate = InitProviderCreator( projectionConfigurationString );
+        //}
     }
 }

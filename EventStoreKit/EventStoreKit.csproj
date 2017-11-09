@@ -113,6 +113,8 @@
     <Compile Include="Services\Configuration\ConfigurationService.cs" />
     <Compile Include="Services\Configuration\EventStoreConfiguration.cs" />
     <Compile Include="Services\Configuration\IEventStoreConfiguration.cs" />
+    <Compile Include="Services\CurrentUserProvider\CurrentUserProviderStub.cs" />
+    <Compile Include="Services\CurrentUserProvider\ICurrentUserProvider.cs" />
     <Compile Include="Services\ReplayHistory\CommitsIteratorPaged.cs" />
     <Compile Include="Services\ReplayHistory\CommitsIteratorByPeriod.cs" />
     <Compile Include="Services\ReplayHistory\ICommitsIterator.cs" />
@@ -127,7 +129,6 @@
     <Compile Include="Services\IEventDispatcher.cs" />
     <Compile Include="Services\IEventPublisher.cs" />
     <Compile Include="Services\ReplayHistory\IReplaysHistory.cs" />
-    <Compile Include="Services\ICurrentUserProvider.cs" />
     <Compile Include="Services\MessageDispatcher.cs" />
     <Compile Include="Services\ReplayHistory\ReplayHistoryService.cs" />
     <Compile Include="Utility\AsyncUtility.cs" />
