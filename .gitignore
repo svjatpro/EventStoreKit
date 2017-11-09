@@ -47,6 +47,6 @@ TestResult.xml
 *[Pp]ublish.xml
 Thumbs.db
 build.log
-*/packages/*.*
+**/packages/*.*
 */log.txt
 */log*.txt

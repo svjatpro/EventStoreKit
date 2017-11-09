@@ -182,6 +182,9 @@ namespace EventStoreKit.Projections
         }
     }
 
+    /// <summary>
+    /// TModel can be not single model, owned by the projection, but this is primary Model class / table
+    /// </summary>
     public abstract class SqlProjectionBase<TModel> : SqlProjectionBase where TModel : class
     {
         #region Private fields
@@ -195,8 +198,8 @@ namespace EventStoreKit.Projections
             ILogger logger, 
             IScheduler scheduler,
             IEventStoreConfiguration config,
-            Func<IDbProvider> dbProviderFactory ) : 
-            base( logger, scheduler, config, dbProviderFactory )
+            IDbProviderFactory dbProviderFactory ) : 
+            base( logger, scheduler, config, dbProviderFactory.Create<TModel> )
         {
             RegisterReadModel<TModel>();
 

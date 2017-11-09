@@ -12,11 +12,13 @@ using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Aggregates;
 using EventStoreKit.CommandBus;
+using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
+using EventStoreKit.Services.Configuration;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Services.ReplayHistory;
 using EventStoreKit.Utility;
@@ -194,24 +196,23 @@ namespace EventStoreKit
                 .SingleInstance();
 
             builder
-                .Register( ctx->
-                {
-                    var cfg = new EventStoreConfiguration();
-                    cfg.InsertBufferSize = 10000;
-                    cfg.OnIddleInterval = 500;
-                    return cfg;
-                } )
+                .Register( ctx => 
+                    new EventStoreConfiguration
+                    {
+                        InsertBufferSize = 10000,
+                        OnIddleInterval = 500
+                    } )
                 .As<IEventStoreConfiguration>()
                 .SingleInstance();
 
             builder
-                .Register( ctx->
-                {
-                    var userProvider = new CurrentUserProviderStub();
-                    userProvider.CurrentUserId = Guid.NewGuid();
-                    return userProvider;
-                } )
+                .Register( ctx => new CurrentUserProviderStub { CurrentUserId = Guid.NewGuid() } )
                 .As<ICurrentUserProvider>()
+                .SingleInstance();
+
+            builder
+                .Register( c => c.Resolve<IDbProviderFactory>().Create() )
+                .As<IDbProvider>()
                 .SingleInstance();
         }
 

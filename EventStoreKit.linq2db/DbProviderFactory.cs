@@ -38,26 +38,24 @@ namespace EventStoreKit.linq2db
                 }
             };
 
-        private readonly Func<IDbProvider> EventStoreCreate;
-        private readonly Func<IDbProvider> ProjectionCreate;
-
+        private readonly Func<IDbProvider> DefaultProvider;
+        private readonly Dictionary<Type, Func<IDbProvider>> ProvidersMap = new Dictionary<Type, Func<IDbProvider>>();
+        
         #endregion
 
         #region private methods
 
-        private Func<IDbProvider> InitProviderCreator( SqlClientType clientType, string connectionString )
-        {
-            var providerInfo = ResolveProvider( clientType );
-
-            var ctor = providerInfo.DbProviderType.GetConstructor( new[] { typeof( string ), typeof( string ) } );
-            return () => ctor.Invoke( new object[] { null, connectionString } ).OfType<IDbProvider>();
-        }
         private Func<IDbProvider> InitProviderCreator( string configurationString )
         {
             var providerInfo = ResolveProvider( configurationString );
-
             var ctor = providerInfo.DbProviderType.GetConstructor( new[] { typeof( string ), typeof( string ) } );
             return () => ctor.Invoke( new object[] { configurationString, null } ).OfType<IDbProvider>();
+        }
+        private Func<IDbProvider> InitProviderCreator( SqlClientType clientType, string connectionString )
+        {
+            var providerInfo = ResolveProvider( clientType );
+            var ctor = providerInfo.DbProviderType.GetConstructor( new[] { typeof( string ), typeof( string ) } );
+            return () => ctor.Invoke( new object[] { null, connectionString } ).OfType<IDbProvider>();
         }
 
         private static ProviderInfo ResolveProvider( string configurationString )
@@ -102,29 +100,13 @@ namespace EventStoreKit.linq2db
             var providerInfo = ResolveProvider( configurationString );
             return providerInfo.SqlProviderType;
         }
-
-        /// <summary>
-        /// Create DbProvider instance for event store Db
-        /// </summary>
-        public IDbProvider CreateEventStoreProvider()
-        {
-            return EventStoreCreate();
-        }
-
-        /// <summary>
-        /// Create DbProvider instance for projectiona Db
-        /// </summary>
-        public IDbProvider CreateProjectionProvider()
-        {
-            return ProjectionCreate();
-        }
-
+        
         /// <summary>
         /// Constructors receive default configuration string, or if everything exist in single Db, then this is all we need
         /// </summary>
         public DbProviderFactory( string configurationString )
         {
-            
+            DefaultProvider = InitProviderCreator( configurationString );
         }
 
         /// <summary>
@@ -132,36 +114,38 @@ namespace EventStoreKit.linq2db
         /// </summary>
         public DbProviderFactory( SqlClientType clientType, string connectionString )
         {
-            
+            DefaultProvider = InitProviderCreator( clientType, connectionString );
         }
 
-        // if we have several data bases, then we need additionaly map each ( or primary ) model to appropriate DataBase
-        public DbProviderFactory MapModel<ModelType>(string configString) { }
-        public DbProviderFactory MapModel<ModelType>(SqlType sqlType, string connectionString) { }
+        /// <inheritdoc />
+        public IDbProvider Create()
+        {
+            return DefaultProvider();
+        }
 
-        //public DbProviderFactory( SqlClientType clientType, string connectionString )
-        //    : this( clientType, connectionString, clientType, connectionString )
-        //{
-        //}
-        //public DbProviderFactory( 
-        //    SqlClientType eventStoreClientType, string eventStoreConnectionString,
-        //    SqlClientType projectionClientType, string projectionConnectionString )
-        //{
-        //    EventStoreCreate = InitProviderCreator( eventStoreClientType, eventStoreConnectionString );
-        //    ProjectionCreate = InitProviderCreator( projectionClientType, projectionConnectionString );
-        //}
+        /// <inheritdoc />
+        public IDbProvider Create<TModel>() where TModel : class
+        {
+            return ProvidersMap[typeof(TModel)]();
+        }
 
-        //public DbProviderFactory( string configurationString ) :
-        //    this( configurationString, configurationString )
-        //{
-        //}
+        /// <summary>
+        /// if we have several data bases, then we need additionaly map each ( or primary ) model to appropriate DataBase
+        /// </summary>
+        public DbProviderFactory MapModel<TModel>( string configString )
+        {
+            ProvidersMap.Add( typeof(TModel), InitProviderCreator( configString ) );
+            return this;
+        }
 
-        //public DbProviderFactory(
-        //    string eventStoreConfigurationString,
-        //    string projectionConfigurationString )
-        //{
-        //    EventStoreCreate = InitProviderCreator( eventStoreConfigurationString );
-        //    ProjectionCreate = InitProviderCreator( projectionConfigurationString );
-        //}
+        /// <summary>
+        /// if we have several data bases, then we need additionaly map each ( or primary ) model to appropriate DataBase
+        /// </summary>
+        public DbProviderFactory MapModel<TModel>( SqlClientType clientType, string connectionString )
+        {
+            ProvidersMap.Add( typeof( TModel ), InitProviderCreator( clientType, connectionString ) );
+            return this;
+        }
+       
     }
 }

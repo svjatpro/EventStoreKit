@@ -17,21 +17,14 @@ namespace EventStoreKit.Example
     {
         protected override void Load( ContainerBuilder builder )
         {
-            base.Load( builder );
-
             // Infrasctructure classes, which are not registered by default                        
+            builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
             builder
                 .Register( context => new DbProviderFactory( "NorthwindDb" ) ) // before start, validate 'NorthwindDb' connection string in *.config
                 //.Register( context => new DbProviderFactory( SqlClientType.MsSqlClient, "Server=localhost;Initial Catalog=NorthwindEventStore;Integrated Security=True" ) ) // alternative way
                 .As<IDbProviderFactory>()
                 .SingleInstance();
-            builder
-                .Register( context => context.Resolve<IDbProviderFactory>().CreateProjectionProvider() )
-                .As<IDbProvider>()
-                .ExternallyOwned();
-
-            builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
-
+            
             // handlers for Aggregates
             builder.RegisterType<CustomerHandler>().AsImplementedInterfaces().SingleInstance();
             
@@ -44,18 +37,8 @@ namespace EventStoreKit.Example
             //builder.RegisterType<PaymentContainerSagaHandlers>().As<IEventSubscriber>().SingleInstance();
             //builder.RegisterType<OrganizationPremisesSagaHandlers>().As<IEventSubscriber>().SingleInstance();
 
-            //// Services
-            ////builder.RegisterType<SecurityManagerStub>().As<ISecurityManager>();
-            //builder.RegisterType<ReportService>().As<IReportService>();
-
-            //builder.RegisterType<DataSourceText>().As<IDataSource>();
-            //builder.RegisterType<DataSourceHtml>().As<IDataSource>();
-            //builder.RegisterType<DataImporter>().AsSelf();
-            //builder.RegisterType<PaymentImporter>().As<IPaymentImporter>();
-
-            //builder.RegisterType<OsbbConfiguration>()
-            //    .As<IOsbbConfiguration>()
-            //    .As<IEventStoreConfiguration>();
+            // Projections
+            builder.RegisterType<OsbbUserProjection>().AsImplementedInterfaces().SingleInstance();
         }
     }
 }
