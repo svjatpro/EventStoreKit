@@ -18,9 +18,10 @@ namespace EventStoreKit.Example
         protected override void Load( ContainerBuilder builder )
         {
             // Infrasctructure classes, which are not registered by default                        
-            builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) );
+            builder.RegisterGeneric( typeof( Logger<> ) ).As( typeof( ILogger<> ) ); // log4net logger
             builder
                 .Register( context => new DbProviderFactory( "NorthwindDb" ) ) // before start, validate 'NorthwindDb' connection string in *.config
+                //.Register( context => new DbProviderFactory( "NorthwindDb" ) ) // before start, validate 'NorthwindDb' connection string in *.config
                 //.Register( context => new DbProviderFactory( SqlClientType.MsSqlClient, "Server=localhost;Initial Catalog=NorthwindEventStore;Integrated Security=True" ) ) // alternative way
                 .As<IDbProviderFactory>()
                 .SingleInstance();
@@ -38,7 +39,7 @@ namespace EventStoreKit.Example
             //builder.RegisterType<OrganizationPremisesSagaHandlers>().As<IEventSubscriber>().SingleInstance();
 
             // Projections
-            builder.RegisterType<OsbbUserProjection>().AsImplementedInterfaces().SingleInstance();
+            //builder.RegisterType<OsbbUserProjection>().AsImplementedInterfaces().SingleInstance();
         }
     }
 }

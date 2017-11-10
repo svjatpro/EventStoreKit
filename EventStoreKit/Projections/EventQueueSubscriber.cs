@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
@@ -16,6 +15,7 @@ using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.Services;
 using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
+using Newtonsoft.Json;
 
 namespace EventStoreKit.Projections
 {
@@ -102,7 +102,7 @@ namespace EventStoreKit.Projections
             {
                 Log.Error( 
                     string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", msgType.Name, GetType().Name, ex.Message ),
-                    ex, new Dictionary<string, string> { { "Event", new JavaScriptSerializer().Serialize( message ) } });
+                    ex, new Dictionary<string, string> { { "Event", JsonConvert.SerializeObject( message ) } });
             }
             finally
             {
