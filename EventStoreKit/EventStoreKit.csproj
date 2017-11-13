@@ -25,6 +25,11 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
+    <Reference Include="System" />
+    <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
   <ItemGroup>    
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="7.0.1" />

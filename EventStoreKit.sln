@@ -5,14 +5,6 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit", "EventStoreKit\EventStoreKit.csproj", "{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{4919CB59-EC0D-4E17-AB1D-707C8AB444B1}"
-	ProjectSection(SolutionItems) = preProject
-		.nuget\NuGet.Config = .nuget\NuGet.Config
-		.nuget\NuGet.exe = .nuget\NuGet.exe
-		.nuget\NuGet.targets = .nuget\NuGet.targets
-		.nuget\packages.config = .nuget\packages.config
-	EndProjectSection
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.log4net", "EventStoreKit.log4net\EventStoreKit.log4net.csproj", "{A4A3590B-9711-4F78-92F9-542BA44A3999}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit.Autofac", "EventStoreKit.Autofac\EventStoreKit.Autofac.csproj", "{08304086-2CCB-4742-8D1C-B33EA3E5216F}"
