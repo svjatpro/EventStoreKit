@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>Sample EventStoreKit.Northwind project</Description>
     <Authors>svjatpro</Authors>
-    <TargetFramework>net47</TargetFramework>
+    <TargetFramework>net40</TargetFramework>
     <AssemblyName>EventStoreKit.Northwind</AssemblyName>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>

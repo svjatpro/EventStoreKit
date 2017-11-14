@@ -46,6 +46,7 @@ namespace EventStoreKit
 
         private class Startup : IStartable
         {
+            private readonly IIdGenerator IdGenerator;
             private readonly ILogger<EventStoreModule> Logger;
             private readonly ICurrentUserProvider CurrentUserProvider;
             private readonly IComponentContext Container;
@@ -83,7 +84,7 @@ namespace EventStoreKit
 
                     handler.Handle( cmd, context );
                     Logger.Info( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
-                    repository.Save( context.Entity, Guid.NewGuid() ); // todo: idgenerator
+                    repository.Save( context.Entity, IdGenerator.NewGuid() );
                 } );
                 Dispatcher.RegisterHandler( handleAction );
             }
@@ -94,7 +95,8 @@ namespace EventStoreKit
                 IEventDispatcher dispatcher,
                 IEnumerable<ICommandHandler> commandHandlers,
                 ILogger<EventStoreModule> logger,
-                IEnumerable<IEventSubscriber> subscribers )
+                IIdGenerator idGenerator, 
+                IEnumerable<IEventSubscriber> subscribers)
             {
                 CurrentUserProvider = currentUserProvider;
                 Container = container;
@@ -102,6 +104,7 @@ namespace EventStoreKit
                 CommandHandlers = commandHandlers;
                 Logger = logger;
                 Subscribers = subscribers;
+                IdGenerator = idGenerator;
             }
 
             #region Implementation of IStartable
@@ -159,6 +162,7 @@ namespace EventStoreKit
             base.Load( builder );
             builder.RegisterType<Startup>().As<IStartable>();
 
+            builder.RegisterGeneric(typeof(LoggerStub<>)).As(typeof(ILogger<>));
             builder.RegisterType<ConflictDetector>().As<IDetectConflicts>();
             builder.RegisterType<EventStoreRepository>().As<IRepository>().ExternallyOwned();
             builder.RegisterType<SagaEventStoreRepository>().As<ISagaRepository>().ExternallyOwned();
