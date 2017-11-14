@@ -27,7 +27,7 @@ using NEventStore.Persistence.Sql;
 using NEventStore.Persistence.Sql.SqlDialects;
 using Module = Autofac.Module;
 
-namespace EventStoreKit
+namespace EventStoreKit.Autofac
 {
     public class EventStoreModule : Module
     {
@@ -214,6 +214,10 @@ namespace EventStoreKit
                 .As<ICurrentUserProvider>()
                 .SingleInstance();
 
+            builder
+                .Register( context => new DbProviderFactoryStub() )
+                .As<IDbProviderFactory>()
+                .SingleInstance();
             builder
                 .Register( c => c.Resolve<IDbProviderFactory>().Create() )
                 .As<IDbProvider>()

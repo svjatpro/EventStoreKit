@@ -182,10 +182,6 @@ namespace EventStoreKit.linq2db
             return DbManager.BulkCopy( entities ).RowsCopied;
         }
 
-        public int Insert<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class
-        {
-            return Insert<T, T>( predicat, evaluator );
-        }
         public int Insert<TSource, TDestination>( Expression<Func<TSource, bool>> predicat, Expression<Func<TSource, TDestination>> evaluator )
             where TSource : class
             where TDestination : class
@@ -195,29 +191,10 @@ namespace EventStoreKit.linq2db
                 .Where( predicat )
                 .Insert( DbManager.GetTable<TDestination>(), evaluator );
         }
-        public int Insert<TQuery, TSource, TDestination>(
-            Func<IQueryable<TQuery>, IQueryable<TSource>> converter,
-            Expression<Func<TSource, TDestination>> evaluator )
-            where TQuery : class
-            where TSource : class
-            where TDestination : class
-        {
-            throw new NotImplementedException();
-            //var query = DbManager.GetTable<TQuery>(); //.Where( predicat );
-            //var source = converter( query );
-            //source.Insert( DbManager.GetTable<TDestination>(), evaluator );
-        }
 
         public int Update<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class
         {
             return DbManager.GetTable<T>().Update( predicat, evaluator );
-        }
-
-        public int Update<TSource, TDestination>( IQueryable<TSource> source, Expression<Func<TSource, TDestination>> evaluator )
-            where TSource : class
-            where TDestination : class
-        {
-            return source.Update( DbManager.GetTable<TDestination>(), evaluator );
         }
 
         public int ExecuteNonQuery( string query )

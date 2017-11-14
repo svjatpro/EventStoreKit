@@ -75,10 +75,6 @@ namespace EventStoreKit.DbProviders
 
         public void TruncateTable<T>() where T : class { Instance.TruncateTable<T>(); }
 
-        public string GetTableName<T>() { return Instance.GetTableName<T>(); }
-
-        public IList<string> GetTableFields<T>() { return Instance.GetTableFields<T>(); }
-
         public IQueryable<T> Query<T>() where T : class { return Instance.Query<T>(); }
 
         public int Count<T>() where T : class { return Instance.Count<T>(); }
@@ -98,33 +94,16 @@ namespace EventStoreKit.DbProviders
         public long InsertBulk<T>( IEnumerable<T> entities, string connectionString ) 
             where T : class { return Instance.InsertBulk( entities, connectionString ); }
 
-        public int Insert<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator )
-            where T : class { return Instance.Insert<T>( predicat, evaluator ); }
-
         public int Insert<TSource, TDestination>( Expression<Func<TSource, bool>> predicat, Expression<Func<TSource, TDestination>> evaluator )
             where TSource : class where TDestination : class
         {
             return Instance.Insert( predicat, evaluator );
         }
 
-        public int Insert<TQuery, TSource, TDestination>( Func<IQueryable<TQuery>, IQueryable<TSource>> converter,
-            Expression<Func<TSource, TDestination>> evaluator )
-            where TQuery : class where TSource : class where TDestination : class
-        {
-            return Instance.Insert( converter, evaluator );
-        }
-
         public int Update<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator )
             where T : class
         {
             return Instance.Update( predicat, evaluator );
-        }
-
-        public int Update<TSource, TDestination>( IQueryable<TSource> source,
-            Expression<Func<TSource, TDestination>> evaluator )
-            where TSource : class where TDestination : class
-        {
-            return Instance.Update( source, evaluator );
         }
 
         public int ExecuteNonQuery( string query ) { return Instance.ExecuteNonQuery( query ); }
