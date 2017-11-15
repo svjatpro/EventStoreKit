@@ -102,7 +102,11 @@ namespace EventStoreKit.Projections
             {
                 Log.Error( 
                     string.Format( "Error occured during processing '{0}' in '{1}': '{2}'", msgType.Name, GetType().Name, ex.Message ),
-                    ex, new Dictionary<string, string> { { "Event", JsonConvert.SerializeObject( message ) } });
+                    ex, new Dictionary<string, string> 
+                    { 
+                        { "Event", JsonConvert.SerializeObject( message ) },
+                        { "User", message.CreatedBy }
+                    });
             }
             finally
             {

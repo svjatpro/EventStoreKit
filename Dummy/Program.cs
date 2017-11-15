@@ -86,11 +86,25 @@ namespace Dummy
     {
         static void Main(string[] args)
         {
-            var service = new EventStoreKitService();
-            service.RegisterCommandHandler<SpeakerHandler>();
-            service.Initialize();
+            EventStoreKitService.RegisterCommandHandler<SpeakerHandler>();
+            var server = EventStoreKitService.Initialize();
+
+            var projection = server.GetProjection<>();
+
+
+
+            //ServerKit.Register<TheAggregateHandlers>();
+            //ServerKit.Register<TheProjection>();
+
+            //ServerKit.MapEventStoreDb(configString / (SqlClient, connection string ) )
+            //ServerKit.MapReadModel(configString / (SqlClient, connection string ) )
+
+            //var server = new ServerKit.Initialize();
+
+            //server.SendCommand( new Command() );
+            //// 
 
 
         }
-    }
+}
 }
