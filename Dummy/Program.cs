@@ -86,10 +86,11 @@ namespace Dummy
     {
         static void Main(string[] args)
         {
-            EventStoreKitService.RegisterCommandHandler<SpeakerHandler>();
-            var server = EventStoreKitService.Initialize();
+            EventStoreKit.Services.EventStoreKit.RegisterCommandHandler<SpeakerHandler>();
+            //EventStoreKit.RegisterProjection<GreetingsProjection>();
+            var server = EventStoreKit.Services.EventStoreKit.Initialize();
 
-            var projection = server.GetProjection<>();
+            //var projection = server.GetProjection<>();
 
 
 
@@ -105,6 +106,32 @@ namespace Dummy
             //// 
 
 
+            // ------------------------------------------------------
+            //var builder = new ContainerBuilder();
+
+            //builder.RegisterModule(new EventStoreModule(DbProviderFactory.SqlDialectType(OsbbConfiguration.EventStoreConfigName), configurationString: OsbbConfiguration.EventStoreConfigName));
+            //builder.RegisterModule(new MembershipModule(new MembershipConfiguration(OsbbConfiguration.ProjectionsConfigName)));
+            //builder.RegisterModule(new OsbbAccountModule());
+            //builder.RegisterModule(new OrganizationModule());
+            //builder.RegisterModule(new HouseModule());
+            //builder.RegisterModule(new DomainModule());
+            //builder.RegisterModule(new ProjectionsModule());
+            //builder.RegisterModule(new WebModule());
+
+            //builder.RegisterApiControllers(Assembly.GetExecutingAssembly());
+            //builder.RegisterWebApiModelBinders(Assembly.GetExecutingAssembly());
+
+            //var container = builder.Build();
+            //config.DependencyResolver = new AutofacWebApiDependencyResolver(container);
+
+            // ------------------------------------------------------
+            //var builder = new ContainerBuilder();
+            //EventStoreKit....
+            //EventStoreKitServiceAutofac.Initialize( ref builder );
+
+            // builder....
+            //var container = builder.Build();
+            //config.DependencyResolver = new AutofacWebApiDependencyResolver(container);
         }
-}
+    }
 }
