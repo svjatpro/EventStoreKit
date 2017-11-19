@@ -50,6 +50,6 @@ build.log
 **/packages/*.*
 */log.txt
 */log*.txt
-.packages/*
+.packages/**
 **/.vs
 **/.vs/**
