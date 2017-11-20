@@ -5,10 +5,14 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using CommonDomain.Persistence;
+using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Aggregates;
 using EventStoreKit.CommandBus;
 using EventStoreKit.Handler;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
+using NEventStore;
+using NEventStore.Persistence.Sql;
 
 namespace EventStoreKit.Services
 {
@@ -21,10 +25,41 @@ namespace EventStoreKit.Services
         private readonly IEventDispatcher Dispatcher;
         private static HashSet<Type> CommandHandlerTypes = new HashSet<Type>();
 
+        private EventStoreAdapter Adapter;
+
+        protected virtual Func<ILogger<T>> ResolveLoggerFactory<T>() { return () => new LoggerStub<T>(); }
+
         protected virtual IRepository ResolveRepository()
         {
-            
+            //builder.RegisterType<EventStoreRepository>().As<IRepository>().ExternallyOwned();
+            return new EventStoreRepository();
         }
+
+        private void InitializeEventStore()
+        {
+            
+
+            Adapter = new EventStoreAdapter();
+        }
+        private Wireup CreateWireup()
+        {
+            var wireup = Wireup.Init();
+
+            var logFactory = ResolveLoggerFactory<EventStoreAdapter>();
+            wireup.LogTo(type => logFactory());
+
+            var persistanceWireup =
+                ConfigurationString != null ?
+                    wireup.UsingSqlPersistence(ConfigurationString) :
+                    wireup.UsingSqlPersistence(null, ProvidersMap[SqlDialectType], ConnectionString);
+
+            return persistanceWireup
+                .WithDialect((ISqlDialect)Activator.CreateInstance(SqlDialectType))
+                .PageEvery(1024)
+                .InitializeStorageEngine()
+                .UsingJsonSerialization();
+        }
+
 
         private void RegisterCommandHandler<TCommand, TEntity>()
             // ReSharper restore UnusedMember.Local
