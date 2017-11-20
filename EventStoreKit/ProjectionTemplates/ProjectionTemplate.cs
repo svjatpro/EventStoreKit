@@ -140,6 +140,8 @@ namespace EventStoreKit.ProjectionTemplates
                 ReadModelCaching ? 
                 Cache.GetOrAdd( id, id1 => PersistanceManagerFactory.Run( db => (TReadModel)GetByIdDelegate( db, id1 ) ) ) :
                 PersistanceManagerFactory.Run( db => (TReadModel)GetByIdDelegate( db, id ) );
+            if ( result == null )
+                Cache.TryRemove( id, out result );
             return result;
         }
         public TReadModel GetById( IDbProvider db, Guid id )
@@ -150,6 +152,8 @@ namespace EventStoreKit.ProjectionTemplates
                 ReadModelCaching ?
                 Cache.GetOrAdd( id, id1 => (TReadModel) GetByIdDelegate( db, id1 ) ) :
                 (TReadModel) GetByIdDelegate( db, id );
+            if ( result == null )
+                Cache.TryRemove( id, out result );
             return result;
         }
 
