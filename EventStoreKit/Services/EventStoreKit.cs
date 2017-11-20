@@ -2,18 +2,64 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using CommonDomain.Persistence;
+using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Aggregates;
 using EventStoreKit.CommandBus;
 using EventStoreKit.Handler;
+using EventStoreKit.Logging;
 using EventStoreKit.Messages;
+using NEventStore;
+using NEventStore.Persistence.Sql;
 
 namespace EventStoreKit.Services
 {
-    public class EventStoreKitService
+    public interface IEventStoreKit
+    {
+        
+    }
+    public class EventStoreKit : IEventStoreKit
     {
         private readonly IEventDispatcher Dispatcher;
+        private static HashSet<Type> CommandHandlerTypes = new HashSet<Type>();
+
+        private EventStoreAdapter Adapter;
+
+        protected virtual Func<ILogger<T>> ResolveLoggerFactory<T>() { return () => new LoggerStub<T>(); }
+
+        protected virtual IRepository ResolveRepository()
+        {
+            //builder.RegisterType<EventStoreRepository>().As<IRepository>().ExternallyOwned();
+            return new EventStoreRepository();
+        }
+
+        private void InitializeEventStore()
+        {
+            
+
+            Adapter = new EventStoreAdapter();
+        }
+        private Wireup CreateWireup()
+        {
+            var wireup = Wireup.Init();
+
+            var logFactory = ResolveLoggerFactory<EventStoreAdapter>();
+            wireup.LogTo(type => logFactory());
+
+            var persistanceWireup =
+                ConfigurationString != null ?
+                    wireup.UsingSqlPersistence(ConfigurationString) :
+                    wireup.UsingSqlPersistence(null, ProvidersMap[SqlDialectType], ConnectionString);
+
+            return persistanceWireup
+                .WithDialect((ISqlDialect)Activator.CreateInstance(SqlDialectType))
+                .PageEvery(1024)
+                .InitializeStorageEngine()
+                .UsingJsonSerialization();
+        }
+
 
         private void RegisterCommandHandler<TCommand, TEntity>()
             // ReSharper restore UnusedMember.Local
@@ -49,12 +95,19 @@ namespace EventStoreKit.Services
             //Dispatcher.RegisterHandler( handleAction );
         }
 
+        //public static void RegisterCommandHandler<THandler>(THandler handler)
+        //{
+            
+        //}
         public static void RegisterCommandHandler<THandler>()
         {
+            var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
+            typeof(THandler)
+                .GetInterfaces()
+                .Where(i => i.Name == commandHandlerInterfaceType.Name)
+                .ToList()
+                .ForEach(h => CommandHandlerTypes.Add(h));
 
-
-            //var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
-            //var registerCommandMehod = GetType().GetMethod("RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance);
             //CommandHandlers
             //    .ToList()
             //    .ForEach(handler =>
@@ -75,15 +128,29 @@ namespace EventStoreKit.Services
             //    });
         }
 
-        private EventStoreKitService()
+        private EventStoreKit()
         {
             
         }
 
-        public static EventStoreKitService Initialize()
+        public static EventStoreKit Initialize()
         {
-            var service = new EventStoreKitService();
+            var service = new EventStoreKit();
+
             // handlers for Aggregates
+
+            var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
+            var registerCommandMehod = service.GetType().GetMethod("RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            CommandHandlerTypes
+                .ToList()
+                .ForEach(cmdType =>
+                {
+                    var genericArgs = cmdType.GetGenericArguments();
+                    registerCommandMehod
+                        .MakeGenericMethod(genericArgs[0], genericArgs[1])
+                        .Invoke(service, new object[] { });
+                });
 
             //builder.RegisterType<MessageDispatcher>()
             //    .As<IEventPublisher>()
@@ -91,7 +158,7 @@ namespace EventStoreKit.Services
             //    .As<ICommandBus>()
             //    .SingleInstance();
 
-            
+
 
             return service;
         }
