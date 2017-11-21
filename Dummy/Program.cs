@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
-using CommonDomain.Core;
 using EventStoreKit.Aggregates;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
@@ -84,54 +83,14 @@ namespace Dummy
 
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            EventStoreKit.Services.EventStoreKit.RegisterCommandHandler<SpeakerHandler>();
-            //EventStoreKit.RegisterProjection<GreetingsProjection>();
-            var server = EventStoreKit.Services.EventStoreKit.Initialize();
+            EventStoreKitService.RegisterCommandHandler<SpeakerHandler>();
+            var server = EventStoreKitService.Initialize()
+                .RegisterEventsSubscriber<GreetingsProjection>();
 
-            //var projection = server.GetProjection<>();
-
-
-
-            //ServerKit.Register<TheAggregateHandlers>();
-            //ServerKit.Register<TheProjection>();
-
-            //ServerKit.MapEventStoreDb(configString / (SqlClient, connection string ) )
-            //ServerKit.MapReadModel(configString / (SqlClient, connection string ) )
-
-            //var server = new ServerKit.Initialize();
-
-            //server.SendCommand( new Command() );
-            //// 
-
-
-            // ------------------------------------------------------
-            //var builder = new ContainerBuilder();
-
-            //builder.RegisterModule(new EventStoreModule(DbProviderFactory.SqlDialectType(OsbbConfiguration.EventStoreConfigName), configurationString: OsbbConfiguration.EventStoreConfigName));
-            //builder.RegisterModule(new MembershipModule(new MembershipConfiguration(OsbbConfiguration.ProjectionsConfigName)));
-            //builder.RegisterModule(new OsbbAccountModule());
-            //builder.RegisterModule(new OrganizationModule());
-            //builder.RegisterModule(new HouseModule());
-            //builder.RegisterModule(new DomainModule());
-            //builder.RegisterModule(new ProjectionsModule());
-            //builder.RegisterModule(new WebModule());
-
-            //builder.RegisterApiControllers(Assembly.GetExecutingAssembly());
-            //builder.RegisterWebApiModelBinders(Assembly.GetExecutingAssembly());
-
-            //var container = builder.Build();
-            //config.DependencyResolver = new AutofacWebApiDependencyResolver(container);
-
-            // ------------------------------------------------------
-            //var builder = new ContainerBuilder();
-            //EventStoreKit....
-            //EventStoreKitServiceAutofac.Initialize( ref builder );
-
-            // builder....
-            //var container = builder.Build();
-            //config.DependencyResolver = new AutofacWebApiDependencyResolver(container);
+            server.SendCommand( new GreetCommand{ Object = "World" } );
+            Console.ReadLine();
         }
     }
 }
