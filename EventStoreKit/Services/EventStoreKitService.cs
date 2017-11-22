@@ -27,6 +27,8 @@ namespace EventStoreKit.Services
     }
     public class EventStoreKitService : IEventStoreKitService
     {
+        #region Private fields
+
         private IEventDispatcher Dispatcher;
         private IEventPublisher EventPublisher;
         private ICommandBus CommandBus;
@@ -38,14 +40,9 @@ namespace EventStoreKit.Services
         private IEventStoreConfiguration Configuration;
         private IDbProviderFactory DbProviderFactory;
 
-        private static Dictionary<Type, ICommandHandler> CommandHandlerTypes = new Dictionary<Type, ICommandHandler>();
-
-        protected virtual ICurrentUserProvider ResolveCurrentUserProvider() { return CurrentUserProvider; }
-        protected virtual ILogger<T> ResolveLogger<T>() { return new LoggerStub<T>(); }
-        protected virtual IRepository ResolveRepository()
-        {
-            return new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() );
-        }
+        #endregion
+        
+        #region Private methods
 
         private void InitializeEventStore()
         {
@@ -73,7 +70,8 @@ namespace EventStoreKit.Services
             return wireup.UsingInMemoryPersistence();
         }
 
-        private void RegisterCommandHandler<TCommand, TEntity>()
+        //private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
+        private void RegisterCommandHandler<TCommand, TEntity>( ICommandHandler<TCommand, TEntity> handlerFactory )
             // ReSharper restore UnusedMember.Local
             where TCommand : DomainCommand
             where TEntity : class, ITrackableAggregate
@@ -81,12 +79,13 @@ namespace EventStoreKit.Services
             // register Action as handler to dispatcher
             var logger = ResolveLogger<EventStoreKitService>();
             var repositoryFactory = new Func<IRepository>( ResolveRepository );
-            var handlerFactory = new Func<ICommandHandler<TCommand,TEntity>>(() => (ICommandHandler<TCommand, TEntity>) CommandHandlerTypes[typeof(ICommandHandler<TCommand, TEntity>)]);
+            //var handlerFactory = new Func<ICommandHandler<TCommand, TEntity>>(() => (ICommandHandler<TCommand, TEntity>)CommandHandlerTypes[typeof(ICommandHandler<TCommand, TEntity>)]);
 
             var handleAction = new Action<TCommand>( cmd =>
             {
                 var repository = repositoryFactory();
-                var handler = handlerFactory();
+                //var handler = handlerFactory();
+                var handler = handlerFactory;
 
                 if ( cmd.Created == default( DateTime ) )
                     cmd.Created = DateTime.Now;
@@ -108,18 +107,43 @@ namespace EventStoreKit.Services
             Dispatcher.RegisterHandler( handleAction );
         }
 
-        public static void RegisterCommandHandler<THandler>( THandler handler = null ) where THandler : class, ICommandHandler, new()
+        #endregion
+
+        #region Protected methods
+
+        protected virtual ICurrentUserProvider ResolveCurrentUserProvider() { return CurrentUserProvider; }
+        protected virtual ILogger<T> ResolveLogger<T>() { return new LoggerStub<T>(); }
+        protected virtual IRepository ResolveRepository()
+        {
+            return new EventStoreRepository(StoreEvents, ConstructAggregates, new ConflictDetector());
+        }
+
+        #endregion
+
+        public EventStoreKitService RegisterCommandHandler<THandler>( THandler handler = null ) where THandler : class, ICommandHandler, new()
         {
             // todo: remove constraints for class and new(), try to create by reflectin, otherwise throw exception
             // but user is able to register subscriber instance, which has no parameterless constructor
             if ( handler == null )
                 handler = new THandler();
+
+            var handlerType = typeof(THandler);
             var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
-            typeof(THandler)
+            var registerCommandMehod = GetType().GetMethod("RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            handlerType
                 .GetInterfaces()
-                .Where(i => i.Name == commandHandlerInterfaceType.Name)
+                .Where(h => h.Name == commandHandlerInterfaceType.Name)
                 .ToList()
-                .ForEach(h => CommandHandlerTypes.Add(h, handler ));
+                .ForEach(h =>
+                {
+                    var genericArgs = h.GetGenericArguments();
+                    registerCommandMehod
+                        .MakeGenericMethod(genericArgs[0], genericArgs[1])
+                        .Invoke(this, new object[] { handler });
+                });
+
+            return this;
         }
 
         public EventStoreKitService RegisterEventsSubscriber<TSubscriber>( IEventSubscriber subscriber = null ) where TSubscriber : class, IEventSubscriber
@@ -155,31 +179,9 @@ namespace EventStoreKit.Services
             return this;
         }
 
-        private EventStoreKitService()
+        public EventStoreKitService()
         {
-            
-        }
-
-        public static EventStoreKitService Initialize()
-        {
-            var service = new EventStoreKitService();
-            service.InitializeEventStore();
-
-            // handlers for Aggregates
-            //var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
-            var registerCommandMehod = service.GetType().GetMethod("RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance);
-
-            CommandHandlerTypes
-                .ToList()
-                .ForEach(cmdType =>
-                {
-                    var genericArgs = cmdType.Key.GetGenericArguments();
-                    registerCommandMehod
-                        .MakeGenericMethod(genericArgs[0], genericArgs[1])
-                        .Invoke(service, new object[] { });
-                });
-
-            return service;
+            InitializeEventStore();
         }
 
         public void SendCommand(DomainCommand command)

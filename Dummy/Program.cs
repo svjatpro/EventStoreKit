@@ -85,8 +85,8 @@ namespace Dummy
     {
         static void Main()
         {
-            EventStoreKitService.RegisterCommandHandler<SpeakerHandler>();
-            var server = EventStoreKitService.Initialize()
+            var server = new EventStoreKitService()
+                .RegisterCommandHandler<SpeakerHandler>()
                 .RegisterEventsSubscriber<GreetingsProjection>();
 
             server.SendCommand( new GreetCommand{ Object = "World" } );
