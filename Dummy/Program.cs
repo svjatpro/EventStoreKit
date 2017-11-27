@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
-using CommonDomain.Core;
 using EventStoreKit.Aggregates;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
@@ -61,21 +60,22 @@ namespace Dummy
     public class GreetingsProjection : SqlProjectionBase<GreetingModel>,
         IEventHandler<GreetedEvent>
     {
+        public GreetingsProjection(IEventStoreSubscriberContext context) : base(context)
+        {
+        }
+
         public void Handle( GreetedEvent message )
         {
-            DbProviderFactory.Run( db => db.Insert( 
-                new GreetingModel
-                {
-                    SpeakerId = message.Id,
-                    Message = message.HelloMessage
-                } ) );
+            DbProviderFactory.Run( db =>
+                db.Insert(
+                    new GreetingModel
+                    {
+                        SpeakerId = message.Id,
+                        Message = message.HelloMessage
+                    })
+            );
         }
-
-        public GreetingsProjection( ILogger logger, IScheduler scheduler, IEventStoreConfiguration config, IDbProviderFactory dbProviderFactory ) : 
-            base( logger, scheduler, config, dbProviderFactory )
-        {
-        }
-
+        
         public List<GreetingModel> GetAllMessages()
         {
             return DbProviderFactory.Run( db => db.Query<GreetingModel>().ToList() );
@@ -84,54 +84,24 @@ namespace Dummy
 
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
-            EventStoreKit.Services.EventStoreKit.RegisterCommandHandler<SpeakerHandler>();
-            //EventStoreKit.RegisterProjection<GreetingsProjection>();
-            var server = EventStoreKit.Services.EventStoreKit.Initialize();
+            // initialize event store service with two handlers
+            var service = new EventStoreKitService()
+                .RegisterCommandHandler<SpeakerHandler>()
+                .RegisterEventSubscriber<GreetingsProjection>();
 
-            //var projection = server.GetProjection<>();
+            // resolve projection
+            var projection = service.ResolveSubscriber<GreetingsProjection>();
 
+            // send command
+            service.SendCommand( new GreetCommand{ Object = "World" } );
+            
+            // wait until projection receives and handles message
+            projection.WaitMessages();
 
-
-            //ServerKit.Register<TheAggregateHandlers>();
-            //ServerKit.Register<TheProjection>();
-
-            //ServerKit.MapEventStoreDb(configString / (SqlClient, connection string ) )
-            //ServerKit.MapReadModel(configString / (SqlClient, connection string ) )
-
-            //var server = new ServerKit.Initialize();
-
-            //server.SendCommand( new Command() );
-            //// 
-
-
-            // ------------------------------------------------------
-            //var builder = new ContainerBuilder();
-
-            //builder.RegisterModule(new EventStoreModule(DbProviderFactory.SqlDialectType(OsbbConfiguration.EventStoreConfigName), configurationString: OsbbConfiguration.EventStoreConfigName));
-            //builder.RegisterModule(new MembershipModule(new MembershipConfiguration(OsbbConfiguration.ProjectionsConfigName)));
-            //builder.RegisterModule(new OsbbAccountModule());
-            //builder.RegisterModule(new OrganizationModule());
-            //builder.RegisterModule(new HouseModule());
-            //builder.RegisterModule(new DomainModule());
-            //builder.RegisterModule(new ProjectionsModule());
-            //builder.RegisterModule(new WebModule());
-
-            //builder.RegisterApiControllers(Assembly.GetExecutingAssembly());
-            //builder.RegisterWebApiModelBinders(Assembly.GetExecutingAssembly());
-
-            //var container = builder.Build();
-            //config.DependencyResolver = new AutofacWebApiDependencyResolver(container);
-
-            // ------------------------------------------------------
-            //var builder = new ContainerBuilder();
-            //EventStoreKit....
-            //EventStoreKitServiceAutofac.Initialize( ref builder );
-
-            // builder....
-            //var container = builder.Build();
-            //config.DependencyResolver = new AutofacWebApiDependencyResolver(container);
+            // write data, stored in projection
+            projection.GetAllMessages().ForEach( m => Console.WriteLine( m.Message ) );
         }
     }
 }

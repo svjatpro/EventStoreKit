@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -10,8 +11,13 @@ namespace EventStoreKit.DbProviders
     public class DbProviderStub : IDbProvider
     {
         #region Private fields
+        
+        private readonly ConcurrentDictionary<Type, IList> StorageMap;
 
-        private readonly Dictionary<Type, IList> StorageMap = new Dictionary<Type, IList>();
+        public DbProviderStub(ConcurrentDictionary<Type, IList> storageMap )
+        {
+            StorageMap = storageMap;
+        }
 
         #endregion
 
@@ -26,9 +32,9 @@ namespace EventStoreKit.DbProviders
             var typeKey = typeof(TEntity);
             if (!StorageMap.ContainsKey(typeKey))
             {
-                StorageMap.Add(typeKey, new List<TEntity>());
+                StorageMap.TryAdd( typeKey, new List<TEntity>() );
             }
-            return (List<TEntity>)StorageMap[typeKey];
+            return (List<TEntity>)(StorageMap[typeKey]);
         }
 
         #endregion
@@ -53,7 +59,7 @@ namespace EventStoreKit.DbProviders
 
         public void Dispose()
         {
-            StorageMap.Clear();
+            //StorageMap.Clear();
         }
 
         #endregion
@@ -85,7 +91,11 @@ namespace EventStoreKit.DbProviders
             return toDelete.Count;
         }
 
-        public int Insert<T>( T entity ) where T : class { Storage<T>().Add( entity ); return 1; }
+        public int Insert<T>(T entity) where T : class
+        {
+            Storage<T>().Add( entity );
+            return 1;
+        }
 
         public int InsertOrReplace<T>(T entity) where T : class { return Insert( entity ); }
 

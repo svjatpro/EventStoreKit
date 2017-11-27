@@ -163,9 +163,10 @@ namespace EventStoreKit.Projections
         }
 
         protected virtual void OnCleanup( SystemCleanedUpEvent message ) { }
-        
+
         #endregion
-        
+
+        protected SqlProjectionBase( IEventStoreSubscriberContext context ) : this( context.Logger, context.Scheduler, context.Configuration, () => context.DbProviderFactory.Create() ){ }
         protected SqlProjectionBase(
             ILogger logger, 
             IScheduler scheduler,
@@ -194,6 +195,7 @@ namespace EventStoreKit.Projections
 
         #endregion
 
+        protected SqlProjectionBase(IEventStoreSubscriberContext context) : this(context.Logger, context.Scheduler, context.Configuration, context.DbProviderFactory ) { }
         protected SqlProjectionBase(
             ILogger logger, 
             IScheduler scheduler,

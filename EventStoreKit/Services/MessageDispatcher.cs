@@ -63,7 +63,7 @@ namespace EventStoreKit.Services
             if ( Routes.TryGetValue( command.GetType(), out handlers ) )
             {
                 if ( handlers.Count != 1 )
-                    throw new InvalidOperationException( "cannot send to more than one handler" ); // todo: ???
+                    throw new InvalidOperationException( "cannot send to more than one handler" ); // todo: check on registration
                 handlers[0]( command );
             }
             else
