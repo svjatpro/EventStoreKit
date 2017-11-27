@@ -21,8 +21,26 @@ using NEventStore;
 
 namespace EventStoreKit.Services
 {
+    public interface IEventStoreSubscriberContext
+    {
+        ILogger Logger { get; }
+        IScheduler Scheduler { get; }
+        IEventStoreConfiguration Configuration { get; }
+        IDbProviderFactory DbProviderFactory { get; }
+    }
+
+    public class EventStoreSubscriberContext : IEventStoreSubscriberContext
+    {
+        public ILogger Logger { get; set; }
+        public IScheduler Scheduler { get; set; }
+        public IEventStoreConfiguration Configuration { get; set; }
+        public IDbProviderFactory DbProviderFactory { get; set; }
+    }
+
     public interface IEventStoreKitService
     {
+        TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
+
         void SendCommand( DomainCommand command );
     }
     public class EventStoreKitService : IEventStoreKitService
@@ -38,7 +56,9 @@ namespace EventStoreKit.Services
         private IIdGenerator IdGenerator;
         private IScheduler Scheduler;
         private IEventStoreConfiguration Configuration;
-        private IDbProviderFactory DbProviderFactory;
+        public IDbProviderFactory DbProviderFactory;
+                
+        private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
 
         #endregion
         
@@ -72,7 +92,7 @@ namespace EventStoreKit.Services
 
         //private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
         private void RegisterCommandHandler<TCommand, TEntity>( ICommandHandler<TCommand, TEntity> handlerFactory )
-            // ReSharper restore UnusedMember.Local
+        // ReSharper restore UnusedMember.Local
             where TCommand : DomainCommand
             where TEntity : class, ITrackableAggregate
         {
@@ -107,6 +127,17 @@ namespace EventStoreKit.Services
             Dispatcher.RegisterHandler( handleAction );
         }
 
+        private IEventStoreSubscriberContext CreateContext<TSubscriber>() where TSubscriber : class, IEventSubscriber
+        {
+            return new EventStoreSubscriberContext
+            {
+                Logger = ResolveLogger<TSubscriber>(),
+                Scheduler = Scheduler,
+                Configuration = Configuration,
+                DbProviderFactory = DbProviderFactory
+            };
+        }
+
         #endregion
 
         #region Protected methods
@@ -119,6 +150,11 @@ namespace EventStoreKit.Services
         }
 
         #endregion
+
+        public EventStoreKitService()
+        {
+            InitializeEventStore();
+        }
 
         public EventStoreKitService RegisterCommandHandler<THandler>( THandler handler = null ) where THandler : class, ICommandHandler, new()
         {
@@ -146,25 +182,33 @@ namespace EventStoreKit.Services
             return this;
         }
 
-        public EventStoreKitService RegisterEventsSubscriber<TSubscriber>( IEventSubscriber subscriber = null ) where TSubscriber : class, IEventSubscriber
+
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory)
+            where TSubscriber : class, IEventSubscriber
         {
-            if (subscriber == null) // todo: use GetConstructors
+            return RegisterEventSubscriber<TSubscriber>( subscriberFactory( CreateContext<TSubscriber>() ) );
+        }
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber = null ) 
+            where TSubscriber : class, IEventSubscriber
+        {
+            if (subscriber == null)
             {
                 var stype = typeof(TSubscriber);
-                var ctor = stype
-                    .GetConstructor(new[]
-                    {
-                        typeof (ILogger),
-                        typeof (IScheduler),
-                        typeof (IEventStoreConfiguration),
-                        typeof (IDbProviderFactory)
-                    });
 
-                //if (ctor == null)
-                //    throw new InvalidOperationException(stype.Name + " doesn't have constructor ( Action<Type,Action<Message>,bool>, Func<IDbProvider>, IEventStoreConfiguration, ILogger, ProjectionTemplateOptions )");
-                subscriber = (TSubscriber)(ctor.Invoke(new object[] { ResolveLogger<TSubscriber>(), Scheduler, Configuration, DbProviderFactory }));
+                var ctor = stype
+                    .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                    .FirstOrDefault( c =>
+                    {
+                        var args = c.GetParameters();
+                        return 
+                            args.Length == 1 &&
+                            args[0].ParameterType == typeof(IEventStoreSubscriberContext);
+                    });
+                if (ctor == null)
+                    throw new  InvalidOperationException( $"Can't create {stype.Name} instance, because there is no public constructore" );
+                
+                subscriber = (TSubscriber)ctor.Invoke( new object[] { CreateContext<TSubscriber>() } );
             }
-            //ILogger logger, IScheduler scheduler, IEventStoreConfiguration config, IDbProviderFactory dbProviderFactory
 
             var dispatcherType = Dispatcher.GetType();
             var subscriberType = typeof(IEventSubscriber);
@@ -176,14 +220,15 @@ namespace EventStoreKit.Services
                 registerMethod.Invoke(Dispatcher, new object[] { handleDelegate });
             }
 
+            EventSubscribers.Add( typeof(TSubscriber), subscriber );
             return this;
         }
-
-        public EventStoreKitService()
+        
+        public TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
         {
-            InitializeEventStore();
+            return (TSubscriber) EventSubscribers[typeof(TSubscriber)];
         }
-
+        
         public void SendCommand(DomainCommand command)
         {
             CommandBus.Send( command );

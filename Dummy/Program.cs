@@ -60,21 +60,22 @@ namespace Dummy
     public class GreetingsProjection : SqlProjectionBase<GreetingModel>,
         IEventHandler<GreetedEvent>
     {
+        public GreetingsProjection(IEventStoreSubscriberContext context) : base(context)
+        {
+        }
+
         public void Handle( GreetedEvent message )
         {
-            DbProviderFactory.Run( db => db.Insert( 
-                new GreetingModel
-                {
-                    SpeakerId = message.Id,
-                    Message = message.HelloMessage
-                } ) );
+            DbProviderFactory.Run( db =>
+                db.Insert(
+                    new GreetingModel
+                    {
+                        SpeakerId = message.Id,
+                        Message = message.HelloMessage
+                    })
+            );
         }
-
-        public GreetingsProjection( ILogger logger, IScheduler scheduler, IEventStoreConfiguration config, IDbProviderFactory dbProviderFactory ) : 
-            base( logger, scheduler, config, dbProviderFactory )
-        {
-        }
-
+        
         public List<GreetingModel> GetAllMessages()
         {
             return DbProviderFactory.Run( db => db.Query<GreetingModel>().ToList() );
@@ -85,12 +86,22 @@ namespace Dummy
     {
         static void Main()
         {
-            var server = new EventStoreKitService()
+            // initialize event store service with two handlers
+            var service = new EventStoreKitService()
                 .RegisterCommandHandler<SpeakerHandler>()
-                .RegisterEventsSubscriber<GreetingsProjection>();
+                .RegisterEventSubscriber<GreetingsProjection>();
 
-            server.SendCommand( new GreetCommand{ Object = "World" } );
-            Console.ReadLine();
+            // resolve projection
+            var projection = service.ResolveSubscriber<GreetingsProjection>();
+
+            // send command
+            service.SendCommand( new GreetCommand{ Object = "World" } );
+            
+            // wait until projection receives and handles message
+            projection.WaitMessages();
+
+            // write data, stored in projection
+            projection.GetAllMessages().ForEach( m => Console.WriteLine( m.Message ) );
         }
     }
 }

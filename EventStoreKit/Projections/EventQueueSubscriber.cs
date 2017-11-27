@@ -253,7 +253,8 @@ namespace EventStoreKit.Projections
         #endregion
 
         public event EventHandler<SequenceEventArgs> SequenceFinished;
-        
+
+        protected EventQueueSubscriber( IEventStoreSubscriberContext context ) : this( context.Logger, context.Scheduler, context.Configuration ){}
         protected EventQueueSubscriber( ILogger logger, IScheduler scheduler, IEventStoreConfiguration config )
         {
             EventStoreConfig = config;
