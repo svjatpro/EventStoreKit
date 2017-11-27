@@ -1,25 +1,23 @@
 ﻿using System;
-using System.Reflection;
-using Autofac;
+using System.Linq;
 using EventStoreKit.CommandBus;
-using EventStoreKit.DbProviders;
-using EventStoreKit.Example;
-using EventStoreKit.linq2db;
+using EventStoreKit.Northwind.AggregatesHandlers;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Services;
+using OSMD.Projections.Projections;
 
 namespace EventStoreKit.Northwind.Console
 {
     class Program
     {
-        static Guid CreateCustomer( 
-            ICommandBus bus, 
-            string companyName, 
-            string contactName, string contactTitle, string contactPhone, 
-            string address, string city, string region, string country, string postalCode )
+        static Guid CreateCustomer(
+            IEventStoreKitService service,
+            string companyName,
+            string contactName, string contactTitle, string contactPhone,
+            string address, string city, string region, string country, string postalCode)
         {
             var id = Guid.NewGuid();
-            bus.Send( new CreateCustomerCommand
+            service.SendCommand( new CreateCustomerCommand
             {
                 Id = id,
                 CompanyName = companyName,
@@ -31,25 +29,27 @@ namespace EventStoreKit.Northwind.Console
                 Country = country,
                 Region = region,
                 PostalCode = postalCode
-            } );
+            });
             return id;
         }
 
         static void Main( string[] args )
         {
-            const string dbConfig = "NorthwindDb";
-            log4net.Config.XmlConfigurator.Configure();
+            var service = new EventStoreKitService()
+                .RegisterCommandHandler<CustomerHandler>()
+                .RegisterCommandHandler<ProductHandler>()
+                .RegisterEventSubscriber<CustomerProjection>();
 
-            var builder = new ContainerBuilder();
-            builder.RegisterModule( new EventStoreModule( DbProviderFactory.SqlDialectType( dbConfig ), configurationString: dbConfig ) );
-            builder.RegisterModule( new NorthwindModule() );
-            var container = builder.Build();
+            var customerProjection = service.ResolveSubscriber<CustomerProjection>();
             
-            var commandBus = container.Resolve<ICommandBus>();
+            CreateCustomer( service, "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
 
-            CreateCustomer( commandBus, "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
+            customerProjection.WaitMessages();
 
-
+            customerProjection
+                .GetCustomers( null )
+                .ToList()
+                .ForEach( c => System.Console.WriteLine( c.CompanyName ) );
         }
     }
 }

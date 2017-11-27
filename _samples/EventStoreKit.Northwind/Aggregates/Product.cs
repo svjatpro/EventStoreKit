@@ -6,7 +6,7 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
 {
-    public class Customer : TrackableAggregateBase
+    public class Product : TrackableAggregateBase
     {
         #region Private fields
 
@@ -65,7 +65,7 @@ namespace EventStoreKit.Northwind.Aggregates
 
         #endregion
 
-        public Customer( Guid id )
+        public Product( Guid id )
         {
             Id = id;
             
@@ -76,32 +76,32 @@ namespace EventStoreKit.Northwind.Aggregates
             Register<CustomerAddresChangedEvent>( Apply );
         }
         
-        public Customer( CreateProductCommand cmd ) : this( cmd.Id )
+        public Product( CreateProductCommand cmd ) : this( cmd.Id )
         {
             IssuedBy = cmd.CreatedBy;
             RaiseEvent( cmd.CopyTo( c => new CustomerCreatedEvent() ) ); // its Ok if all fields equal in command and event
         }
 
-        public void Update( UpdateCustomerCommand cmd )
-        {
-            if( CompanyName != cmd.CompanyName )
-                RaiseEvent( new CustomerRenamedEvent { Id = Id, CompanyName = cmd.CompanyName } );
+        //public void Update( UpdateCustomerCommand cmd )
+        //{
+        //    if( CompanyName != cmd.CompanyName )
+        //        RaiseEvent( new CustomerRenamedEvent { Id = Id, CompanyName = cmd.CompanyName } );
 
-            if ( ContactName != cmd.ContactName ||
-                 ContactTitle != cmd.ContactTitle ||
-                 ContactPhone != cmd.ContactPhone )
-            {
-                RaiseEvent( cmd.CopyTo( c => new CustomerContactChangedEvent() ) );
-            }
+        //    if ( ContactName != cmd.ContactName ||
+        //         ContactTitle != cmd.ContactTitle ||
+        //         ContactPhone != cmd.ContactPhone )
+        //    {
+        //        RaiseEvent( cmd.CopyTo( c => new CustomerContactChangedEvent() ) );
+        //    }
 
-            if ( Address != cmd.Address ||
-                 City != cmd.City ||
-                 Region != cmd.Region ||
-                 Country != cmd.Country ||
-                 PostalCode != cmd.PostalCode )
-            {
-                RaiseEvent( cmd.CopyTo( c => new CustomerAddresChangedEvent() ) );
-            }
-        }
+        //    if ( Address != cmd.Address ||
+        //         City != cmd.City ||
+        //         Region != cmd.Region ||
+        //         Country != cmd.Country ||
+        //         PostalCode != cmd.PostalCode )
+        //    {
+        //        RaiseEvent( cmd.CopyTo( c => new CustomerAddresChangedEvent() ) );
+        //    }
+        //}
     }
 }

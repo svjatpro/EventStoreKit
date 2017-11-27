@@ -5,10 +5,10 @@ using EventStoreKit.Northwind.Messages.Commands;
 namespace EventStoreKit.Northwind.AggregatesHandlers
 {
     public class CustomerHandler :
-        ICommandHandler<CreateCustomerCommand, Customer>,
+        ICommandHandler<CreateProductCommand, Customer>,
         ICommandHandler<UpdateCustomerCommand, Customer>
     {
-        public void Handle( CreateCustomerCommand cmd, CommandHandlerContext<Customer> context )
+        public void Handle( CreateProductCommand cmd, CommandHandlerContext<Customer> context )
         {
             context.Entity = new Customer( cmd );
         }
