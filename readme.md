@@ -5,3 +5,8 @@ EventStoreKit is a library, which provide various tool to work with EventSourcin
 ## Easy start to make project prototypes or experiment with EventSourcing
 
 ## Easy migration to another technology
+
+## Let's get started
+
+From **NuGet**:
+* `Install-Package EventStoreKit`

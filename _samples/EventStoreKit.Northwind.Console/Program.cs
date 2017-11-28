@@ -51,8 +51,11 @@ namespace EventStoreKit.Northwind.Console
         static void Main( string[] args )
         {
             var service = new EventStoreKitService()
+                .RegisterDbProviderFactory(  )
+
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
+ 
                 .RegisterEventSubscriber<CustomerProjection>()
                 .RegisterEventSubscriber<ProductProjection>();
 

@@ -1,9 +1,9 @@
-﻿namespace EventStoreKit.linq2db
+﻿namespace EventStoreKit.DbProviders
 {
     /// <summary>
-    /// Supported Sql dialects
+    /// Supported Data Bases
     /// </summary>
-    public enum SqlClientType
+    public enum DbConnectionType
     {
         MsSqlClient = 0x01,
         MySqlClient = 0x02

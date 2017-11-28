@@ -80,7 +80,7 @@ namespace EventStoreKit.linq2db
 
         #endregion
 
-        public DbProvider( DataConnection dbManager )
+        protected DbProvider( DataConnection dbManager )
         {
             DbManager = dbManager;
         }

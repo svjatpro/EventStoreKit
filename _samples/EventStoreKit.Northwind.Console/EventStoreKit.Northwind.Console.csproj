@@ -24,10 +24,11 @@
     <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
     <PackageReference Include="linq2db" Version="1.0.7.3" />
     <PackageReference Include="MySql.Data" Version="6.9.9" />
+    <PackageReference Include="EventStoreKit" Version="2.0.0" />
+    <PackageReference Include="EventStoreKit.linq2db" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\EventStoreKit\EventStoreKit.csproj" />
     <ProjectReference Include="..\EventStoreKit.Northwind\EventStoreKit.Northwind.csproj" />
   </ItemGroup>
 

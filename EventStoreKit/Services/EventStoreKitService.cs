@@ -223,7 +223,18 @@ namespace EventStoreKit.Services
             EventSubscribers.Add( typeof(TSubscriber), subscriber );
             return this;
         }
-        
+
+        public EventStoreKitService RegisterEventStoreDb<TDbProviderFactory>( string configurationString )
+            where TDbProviderFactory : IDbProviderFactory
+        {
+            return this;
+        }
+        public EventStoreKitService RegisterEventStoreDb<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) 
+            where TDbProviderFactory : IDbProviderFactory
+        {
+            return this;
+        }
+
         public TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
         {
             return (TSubscriber) EventSubscribers[typeof(TSubscriber)];
