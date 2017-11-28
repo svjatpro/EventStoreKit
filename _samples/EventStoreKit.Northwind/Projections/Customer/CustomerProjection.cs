@@ -1,17 +1,13 @@
 ﻿using System;
-using System.Reactive.Concurrency;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
-using EventStoreKit.Logging;
-using EventStoreKit.Northwind.Aggregates;
 using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Projections;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
-using EventStoreKit.Services.Configuration;
 using OSMD.Common.ReadModels;
 
-namespace OSMD.Projections.Projections
+namespace EventStoreKit.Northwind.Projections.Customer
 {
     public class CustomerProjection : SqlProjectionBase<CustomerModel>,
         IEventHandler<CustomerCreatedEvent>
@@ -44,7 +40,7 @@ namespace OSMD.Projections.Projections
 
         #region Overrides of EventQueueSubscriber
 
-        public string Name { get { return "Customers Projection"; } }
+        public string Name => "Customers Projection";
 
         #endregion
 
@@ -54,7 +50,7 @@ namespace OSMD.Projections.Projections
         {
             return DbProviderFactory.Run( db => db.Single<CustomerModel>( c => c.Id == id ) );
         }
-        public QueryResult<CustomerModel> GetCustomers( SearchOptions options )
+        public QueryResult<CustomerModel> GetCustomers( SearchOptions.SearchOptions options )
         {
             return Search( options );
         }

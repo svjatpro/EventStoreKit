@@ -76,7 +76,7 @@ namespace EventStoreKit.Northwind.Aggregates
             Register<CustomerAddresChangedEvent>( Apply );
         }
         
-        public Customer( CreateProductCommand cmd ) : this( cmd.Id )
+        public Customer(CreateCustomerCommand cmd ) : this( cmd.Id )
         {
             IssuedBy = cmd.CreatedBy;
             RaiseEvent( cmd.CopyTo( c => new CustomerCreatedEvent() ) ); // its Ok if all fields equal in command and event

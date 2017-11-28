@@ -3,15 +3,17 @@ using System.Linq;
 using EventStoreKit.CommandBus;
 using EventStoreKit.Northwind.AggregatesHandlers;
 using EventStoreKit.Northwind.Messages.Commands;
+using EventStoreKit.Northwind.Projections.Customer;
 using EventStoreKit.Services;
-using OSMD.Projections.Projections;
 
 namespace EventStoreKit.Northwind.Console
 {
-    class Program
+    static class Program
     {
-        static Guid CreateCustomer(
-            IEventStoreKitService service,
+        #region Private methods
+
+        private static Guid CreateCustomer(
+            this IEventStoreKitService service,
             string companyName,
             string contactName, string contactTitle, string contactPhone,
             string address, string city, string region, string country, string postalCode)
@@ -33,6 +35,20 @@ namespace EventStoreKit.Northwind.Console
             return id;
         }
 
+        private static Guid CreateProduct( this IEventStoreKitService service, string name, decimal price )
+        {
+            var id = Guid.NewGuid();
+            service.SendCommand(new CreateProductCommand
+            {
+                Id = id,
+                ProductName = name,
+                UnitPrice = price
+            });
+            return id;
+        }
+
+        #endregion
+
         static void Main( string[] args )
         {
             var service = new EventStoreKitService()
@@ -42,7 +58,10 @@ namespace EventStoreKit.Northwind.Console
 
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
             
-            CreateCustomer( service, "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
+            service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
+            service.CreateProduct("product1", 12.3m );
+            service.CreateProduct("product2", 23.4m );
+            service.CreateProduct("product3", 34.5m );
 
             customerProjection.WaitMessages();
 
