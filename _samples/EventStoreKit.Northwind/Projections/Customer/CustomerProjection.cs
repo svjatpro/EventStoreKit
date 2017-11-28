@@ -35,16 +35,9 @@ namespace EventStoreKit.Northwind.Projections.Customer
 
         public CustomerProjection( IEventStoreSubscriberContext context ) : base( context )
         {
-            //RegisterTemplate<PersonProjectionTemplate<PersonModel>>( ProjectionTemplateOptions.InsertCaching );
         }
 
-        #region Overrides of EventQueueSubscriber
-
         public string Name => "Customers Projection";
-
-        #endregion
-
-        #region Implementation of IPersonProjection
 
         public CustomerModel GetById( Guid id )
         {
@@ -55,7 +48,5 @@ namespace EventStoreKit.Northwind.Projections.Customer
             return Search( options );
         }
 
-        #endregion
-        
     }
 }

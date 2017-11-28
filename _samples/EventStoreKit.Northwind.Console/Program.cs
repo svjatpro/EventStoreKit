@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using EventStoreKit.CommandBus;
 using EventStoreKit.Northwind.AggregatesHandlers;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Projections.Customer;
@@ -54,21 +53,22 @@ namespace EventStoreKit.Northwind.Console
             var service = new EventStoreKitService()
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
-                .RegisterEventSubscriber<CustomerProjection>();
+                .RegisterEventSubscriber<CustomerProjection>()
+                .RegisterEventSubscriber<ProductProjection>();
 
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
+            var productProjection = service.ResolveSubscriber<ProductProjection>();
             
             service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
-            service.CreateProduct("product1", 12.3m );
-            service.CreateProduct("product2", 23.4m );
-            service.CreateProduct("product3", 34.5m );
+            service.CreateProduct( "product1", 12.3m );
+            service.CreateProduct( "product2", 23.4m );
+            service.CreateProduct( "product3", 34.5m );
 
             customerProjection.WaitMessages();
+            productProjection.WaitMessages();
 
-            customerProjection
-                .GetCustomers( null )
-                .ToList()
-                .ForEach( c => System.Console.WriteLine( c.CompanyName ) );
+            customerProjection.GetCustomers( null ).ToList().ForEach( c => System.Console.WriteLine( c.CompanyName ) );
+            productProjection.GetProducts( null ).ToList().ForEach( p => System.Console.WriteLine( p.ProductName ) );
         }
     }
 }

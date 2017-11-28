@@ -1,7 +1,6 @@
 ﻿using System;
 using EventStoreKit.Aggregates;
 using EventStoreKit.Northwind.Messages.Commands;
-using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
@@ -25,25 +24,14 @@ namespace EventStoreKit.Northwind.Aggregates
             UnitPrice = msg.UnitPrice;
         }
 
-        private void Apply( CustomerRenamedEvent msg )
+        private void Apply(ProductRenamedEvent msg )
         {
-            CompanyName = msg.CompanyName;
+            ProductName = msg.ProductName;
         }
 
-        private void Apply( CustomerContactChangedEvent msg )
+        private void Apply(ProductPriceUpdatedEvent msg )
         {
-            ContactName = msg.ContactName;
-            ContactTitle = msg.ContactTitle;
-            ContactPhone = msg.ContactPhone;
-        }
-
-        private void Apply( CustomerAddresChangedEvent msg )
-        {
-            Address = msg.Address;
-            City = msg.City;
-            Region = msg.Region;
-            Country = msg.Country;
-            PostalCode = msg.PostalCode;
+            UnitPrice = msg.UnitPrice;
         }
 
         #endregion
@@ -53,10 +41,8 @@ namespace EventStoreKit.Northwind.Aggregates
             Id = id;
             
             Register<ProductCreatedEvent>( Apply );
-
-            Register<CustomerRenamedEvent>( Apply );
-            Register<CustomerContactChangedEvent>( Apply );
-            Register<CustomerAddresChangedEvent>( Apply );
+            Register<ProductRenamedEvent>( Apply );
+            Register<ProductPriceUpdatedEvent>( Apply );
         }
         
         public Product( CreateProductCommand cmd ) : this( cmd.Id )
@@ -65,30 +51,22 @@ namespace EventStoreKit.Northwind.Aggregates
             RaiseEvent( cmd.CopyTo( c => new ProductCreatedEvent()) );
         }
 
-        //public void Update( UpdateCustomerCommand cmd )
-        //{
-        //    if( CompanyName != cmd.CompanyName )
-        //        RaiseEvent( new CustomerRenamedEvent { Id = Id, CompanyName = cmd.CompanyName } );
-
-        //    if ( ContactName != cmd.ContactName ||
-        //         ContactTitle != cmd.ContactTitle ||
-        //         ContactPhone != cmd.ContactPhone )
-        //    {
-        //        RaiseEvent( cmd.CopyTo( c => new CustomerContactChangedEvent() ) );
-        //    }
-
-        //    if ( Address != cmd.Address ||
-        //         City != cmd.City ||
-        //         Region != cmd.Region ||
-        //         Country != cmd.Country ||
-        //         PostalCode != cmd.PostalCode )
-        //    {
-        //        RaiseEvent( cmd.CopyTo( c => new CustomerAddresChangedEvent() ) );
-        //    }
-        //}
         public void Update(UpdateProductCommand cmd)
         {
-            
+            if( ProductName != cmd.ProductName )
+                RaiseEvent( new ProductRenamedEvent
+                {
+                    Id = cmd.Id,
+                    ProductName = cmd.ProductName
+                } );
+            if ( UnitPrice != cmd.UnitPrice )
+            {
+                RaiseEvent( new ProductPriceUpdatedEvent
+                {
+                    Id = cmd.Id,
+                    UnitPrice = cmd.UnitPrice
+                } );
+            }
         }
     }
 }
