@@ -40,6 +40,7 @@ namespace EventStoreKit.Services
     public interface IEventStoreKitService
     {
         TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
+        //IDbProviderFactory ResolveDbProviderFactory<TModel>();
 
         void SendCommand( DomainCommand command );
     }
@@ -56,7 +57,9 @@ namespace EventStoreKit.Services
         private IIdGenerator IdGenerator;
         private IScheduler Scheduler;
         private IEventStoreConfiguration Configuration;
-        public IDbProviderFactory DbProviderFactory;
+
+
+        private IDbProviderFactory DbProviderFactory;
                 
         private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
 
@@ -224,9 +227,26 @@ namespace EventStoreKit.Services
             return this;
         }
 
+
+
         public EventStoreKitService RegisterEventStoreDb<TDbProviderFactory>( string configurationString )
             where TDbProviderFactory : IDbProviderFactory
         {
+            var stype = typeof(TDbProviderFactory);
+            var ctor = stype
+                .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(c =>
+                {
+                    var args = c.GetParameters();
+                    return
+                        args.Length == 1 &&
+                        args[0].ParameterType == typeof(string);
+                });
+            if (ctor == null)
+                throw new InvalidOperationException($"Can't create {stype.Name} instance, because there is no appropriate constructor");
+
+            var factory = (TDbProviderFactory)ctor.Invoke(new object[] { configurationString });
+
             return this;
         }
         public EventStoreKitService RegisterEventStoreDb<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) 

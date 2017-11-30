@@ -13,7 +13,7 @@ namespace EventStoreKit.linq2db
 
         private class ProviderInfo
         {
-            public SqlClientType SqlClientType { get; set; }
+            public DbConnectionType SqlClientType { get; set; }
             public string SqlProviderName { get; set; }
             public Type SqlProviderType { get; set; }
             public Type DbProviderType { get; set; }
