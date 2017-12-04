@@ -18,6 +18,8 @@ using EventStoreKit.Services.Configuration;
 using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
+using NEventStore.Persistence.Sql;
+using NEventStore.Persistence.Sql.SqlDialects;
 
 namespace EventStoreKit.Services
 {
@@ -44,6 +46,7 @@ namespace EventStoreKit.Services
 
         void SendCommand( DomainCommand command );
     }
+
     public class EventStoreKitService : IEventStoreKitService
     {
         #region Private fields
@@ -57,40 +60,65 @@ namespace EventStoreKit.Services
         private IIdGenerator IdGenerator;
         private IScheduler Scheduler;
         private IEventStoreConfiguration Configuration;
-
-
-        private IDbProviderFactory DbProviderFactory;
-                
+        
         private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
 
+        private readonly Dictionary<Type, string> ProvidersMap = new Dictionary<Type, string>
+        {
+            { typeof( MsSqlDialect ), "System.Data.SqlClient" },
+            { typeof( MySqlDialect ), "MySql.Data.MySqlClient" }
+        };
+        private Type DefaultDbProviderType;
+        private IDbProviderFactory DbProviderFactoryDefault;
+        private Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
+
         #endregion
-        
+
         #region Private methods
 
+        private void InitizlizeCommon()
+        {
+            DefaultDbProviderType = typeof(DbProviderFactoryStub);
+            DbProviderFactoryDefault = new DbProviderFactoryStub();
+
+            IdGenerator = new SequentialIdgenerator();
+            Scheduler = new NewThreadScheduler(action => new Thread(action) { IsBackground = true }); // todo:
+            Configuration = new EventStoreConfiguration
+            {
+                InsertBufferSize = 10000,
+                OnIddleInterval = 500
+            };
+
+            CurrentUserProvider = new CurrentUserProviderStub { CurrentUserId = Guid.NewGuid() };
+        }
         private void InitializeEventStore()
         {
             var dispatcher = new MessageDispatcher(ResolveLogger<MessageDispatcher>());
             Dispatcher = dispatcher;
             EventPublisher = dispatcher;
             CommandBus = dispatcher;
-            StoreEvents = new EventStoreAdapter(CreateWireup(), ResolveLogger<EventStoreAdapter>(), EventPublisher,CommandBus);
-            ConstructAggregates = new EntityFactory();
 
-            CurrentUserProvider = new CurrentUserProviderStub {CurrentUserId = Guid.NewGuid()};
-            IdGenerator = new SequentialIdgenerator();
-            Scheduler = new NewThreadScheduler(action => new Thread(action) { IsBackground = true }); // todo:
-            Configuration = new EventStoreConfiguration // todo:
-            {
-                InsertBufferSize = 10000,
-                OnIddleInterval = 500
-            };
-            DbProviderFactory = new DbProviderFactoryStub(); // todo:
+            var wireup = Wireup
+                .Init()
+                .LogTo(type => ResolveLogger<EventStoreAdapter>())
+                .UsingInMemoryPersistence();
+
+            StoreEvents = new EventStoreAdapter(wireup, ResolveLogger<EventStoreAdapter>(), EventPublisher,CommandBus);
+            ConstructAggregates = new EntityFactory();
+            //SagaFactory
         }
-        private Wireup CreateWireup()
+
+        private void InitializeWireup( Wireup wireup )
         {
-            var wireup = Wireup.Init();
-            wireup.LogTo(type => ResolveLogger<EventStoreAdapter>());
-            return wireup.UsingInMemoryPersistence();
+            ConfigurationString != null ?
+                wireup.UsingSqlPersistence(ConfigurationString) :
+                wireup.UsingSqlPersistence(null, ProvidersMap[SqlDialectType], ConnectionString);
+
+            return persistanceWireup
+                .WithDialect((ISqlDialect)Activator.CreateInstance(SqlDialectType))
+                .PageEvery(1024)
+                .InitializeStorageEngine()
+                .UsingJsonSerialization();
         }
 
         //private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
@@ -137,7 +165,7 @@ namespace EventStoreKit.Services
                 Logger = ResolveLogger<TSubscriber>(),
                 Scheduler = Scheduler,
                 Configuration = Configuration,
-                DbProviderFactory = DbProviderFactory
+                DbProviderFactory = DbProviderFactoryDefault
             };
         }
 
@@ -156,6 +184,7 @@ namespace EventStoreKit.Services
 
         public EventStoreKitService()
         {
+            InitizlizeCommon();
             InitializeEventStore();
         }
 
@@ -226,14 +255,13 @@ namespace EventStoreKit.Services
             EventSubscribers.Add( typeof(TSubscriber), subscriber );
             return this;
         }
+        
 
-
-
-        public EventStoreKitService RegisterEventStoreDb<TDbProviderFactory>( string configurationString )
+        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( string configurationString )
             where TDbProviderFactory : IDbProviderFactory
         {
-            var stype = typeof(TDbProviderFactory);
-            var ctor = stype
+            DefaultDbProviderType = typeof(TDbProviderFactory);
+            var ctor = DefaultDbProviderType
                 .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .FirstOrDefault(c =>
                 {
@@ -243,17 +271,64 @@ namespace EventStoreKit.Services
                         args[0].ParameterType == typeof(string);
                 });
             if (ctor == null)
-                throw new InvalidOperationException($"Can't create {stype.Name} instance, because there is no appropriate constructor");
+                throw new InvalidOperationException($"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor");
 
-            var factory = (TDbProviderFactory)ctor.Invoke(new object[] { configurationString });
+            DbProviderFactoryDefault = (TDbProviderFactory)ctor.Invoke(new object[] { configurationString });
+            InitializeEventStore();
 
             return this;
         }
-        public EventStoreKitService RegisterEventStoreDb<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) 
+        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) 
             where TDbProviderFactory : IDbProviderFactory
         {
+            DefaultDbProviderType = typeof(TDbProviderFactory);
+            var ctor = DefaultDbProviderType
+                .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .FirstOrDefault(c =>
+                {
+                    var args = c.GetParameters();
+                    return
+                        args.Length == 2 &&
+                        args[0].ParameterType == typeof(DbConnectionType) &&
+                        args[1].ParameterType == typeof(string);
+                });
+            if (ctor == null)
+                throw new InvalidOperationException($"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor");
+
+            DbProviderFactoryDefault = (TDbProviderFactory)ctor.Invoke(new object[] { dbConnection, connectionString });
+            InitializeEventStore();
+
             return this;
         }
+
+        public EventStoreKitService MapEventStoreDb( string configurationString )
+        {
+            // (re)initialize wireup
+            InitializeEventStore();
+
+            return this;
+        }
+        public EventStoreKitService MapEventStoreDb( DbConnectionType dbConnection, string connectionString )
+        {
+            // (re)initialize wireup
+            InitializeEventStore();
+
+            return this;
+        }
+
+        public EventStoreKitService MapReadModelDb<TReadModel>( string configurationString )
+        {
+            // add to providers map
+            return this;
+        }
+        public EventStoreKitService MapReadModelDb<TReadModel>( DbConnectionType dbConnection, string connectionString )
+        {
+            // add to providers map
+            return this;
+        }
+
+        // create subscriber context : get propper provider factory
+
 
         public TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
         {

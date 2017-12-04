@@ -51,7 +51,8 @@ namespace EventStoreKit.Northwind.Console
         static void Main( string[] args )
         {
             var service = new EventStoreKitService()
-                .RegisterDbProviderFactory(  )
+                .RegisterDbProviderFactory<IDbProviderLinq2Db>( configurationString )
+                .RegisterDbProviderFactory<IDbProviderLinq2Db>( configurationString )
 
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()

@@ -16,7 +16,7 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Projections
 {
-    public abstract class SqlProjectionBase : EventQueueSubscriber
+    public abstract class SqlProjectionBase : EventQueueSubscriber, IReadModelOwner
     {
         #region Private fields
 
@@ -35,9 +35,9 @@ namespace EventStoreKit.Projections
             DbProviderFactory.Run( db =>
             {
                 var createTableMethod = db.GetType().GetMethod( "CreateTable", BindingFlags.Public | BindingFlags.Instance );
-                GetReadModels().ForEach( modelType =>
+                GetReadModels.ForEach( modelType =>
                 {
-                    createTableMethod.MakeGenericMethod( modelType ).Invoke( db, new object[] { true } );
+                    createTableMethod?.MakeGenericMethod( modelType ).Invoke( db, new object[] { true } );
                 } );
             } );
                 
@@ -66,7 +66,7 @@ namespace EventStoreKit.Projections
         private void InitReadModel( IDbProvider db, Type modelType )
         {
             var createTableMethod = db.GetType().GetMethod( "CreateTable", BindingFlags.Public | BindingFlags.Instance );
-            createTableMethod.MakeGenericMethod( modelType ).Invoke( db, new object[] { false } );
+            createTableMethod?.MakeGenericMethod( modelType ).Invoke( db, new object[] { false } );
         }
 
         #endregion
@@ -92,11 +92,7 @@ namespace EventStoreKit.Projections
                 DbProviderFactory.Run( db => InitReadModel( db, tModel ) );
             }
         }
-        protected List<Type> GetReadModels()
-        {
-            return ReadModels.ToList();
-        }
-
+        
         #endregion
 
         #region ProjectionTemplates
@@ -181,6 +177,9 @@ namespace EventStoreKit.Projections
             Register<SequenceMarkerEvent>( m => Flush(), ActionMergeMethod.MultipleRunBefore );
             Register<StreamOnIdleEvent>( m => Flush(), ActionMergeMethod.MultipleRunBefore );
         }
+
+        public abstract Type GetPrimaryReadModel { get; }
+        public List<Type> GetReadModels => ReadModels.ToList();
     }
 
     /// <summary>
@@ -194,7 +193,7 @@ namespace EventStoreKit.Projections
         protected readonly Dictionary<string, Func<SearchFilterInfo, Expression<Func<TModel, bool>>>> FilterMapping;
 
         #endregion
-
+        
         protected SqlProjectionBase(IEventStoreSubscriberContext context) : this(context.Logger, context.Scheduler, context.Configuration, context.DbProviderFactory ) { }
         protected SqlProjectionBase(
             ILogger logger, 
@@ -269,5 +268,7 @@ namespace EventStoreKit.Projections
 
             return new QueryResult<TModel>( result, new SearchOptions.SearchOptions(), total: result.Count, summary: summary );
         }
+
+        public override Type GetPrimaryReadModel => typeof(TModel);
     }
 }
