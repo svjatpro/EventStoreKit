@@ -68,6 +68,8 @@ namespace EventStoreKit.Services
             { typeof( MsSqlDialect ), "System.Data.SqlClient" },
             { typeof( MySqlDialect ), "MySql.Data.MySqlClient" }
         };
+
+        private DbConnectionType DbConnectionType = ;
         private Type DefaultDbProviderType;
         private IDbProviderFactory DbProviderFactoryDefault;
         private Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
@@ -98,18 +100,24 @@ namespace EventStoreKit.Services
             EventPublisher = dispatcher;
             CommandBus = dispatcher;
 
-            var wireup = Wireup
-                .Init()
-                .LogTo(type => ResolveLogger<EventStoreAdapter>())
-                .UsingInMemoryPersistence();
+            var wireup = InitializeWireup();
+            //var wireup = Wireup
+            //    .Init()
+            //    .LogTo(type => ResolveLogger<EventStoreAdapter>())
+            //    .UsingInMemoryPersistence();
 
             StoreEvents = new EventStoreAdapter(wireup, ResolveLogger<EventStoreAdapter>(), EventPublisher,CommandBus);
             ConstructAggregates = new EntityFactory();
             //SagaFactory
         }
 
-        private void InitializeWireup( Wireup wireup )
+        private Wireup InitializeWireup()
         {
+            var wireup = Wireup
+                .Init()
+                .LogTo(type => ResolveLogger<EventStoreAdapter>())
+                .UsingInMemoryPersistence();
+
             ConfigurationString != null ?
                 wireup.UsingSqlPersistence(ConfigurationString) :
                 wireup.UsingSqlPersistence(null, ProvidersMap[SqlDialectType], ConnectionString);
@@ -278,7 +286,7 @@ namespace EventStoreKit.Services
 
             return this;
         }
-        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) 
+        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
             where TDbProviderFactory : IDbProviderFactory
         {
             DefaultDbProviderType = typeof(TDbProviderFactory);
