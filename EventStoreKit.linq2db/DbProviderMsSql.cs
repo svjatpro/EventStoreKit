@@ -11,13 +11,15 @@ namespace EventStoreKit.linq2db
             : base(
                   configurationString != null ? 
                   new DataConnection( configurationString ) :
+// ReSharper disable AssignNullToNotNullAttribute
                   new DataConnection( new SqlServerDataProvider( ProviderName.SqlServer, SqlServerVersion.v2008 ), connectionString ) )
+// ReSharper restore AssignNullToNotNullAttribute
         {
         }
 
         protected override bool TableExist<T>()
         {
-            var command = string.Format("SELECT count(*) FROM sys.objects WHERE object_id = OBJECT_ID(N'{0}') AND type in (N'U')", GetTableName<T>());
+            var command = $"SELECT count(*) FROM sys.objects WHERE object_id = OBJECT_ID(N'{GetTableName<T>()}') AND type in (N'U')";
             var cmd = DbManager.CreateCommand();
             cmd.CommandText = command;
             return (int)cmd.ExecuteScalar() > 0;
@@ -25,14 +27,7 @@ namespace EventStoreKit.linq2db
 
         protected override string GenerateIndexCommand(IndexInfo indexInfo)
         {
-            return string.Format("CREATE {0}NONCLUSTERED INDEX [IX_{1}_{2}] ON [{3}].[{4}] ( {5} )",
-                indexInfo.Unique ? "UNIQUE " : "",
-                indexInfo.TableName,
-                indexInfo.IndexName,
-                indexInfo.Owner,
-                indexInfo.TableName,
-                string.Join(", ", indexInfo.Columns.Select(c => string.Format("[{0}] ASC", c)))
-            );
+            return $"CREATE {(indexInfo.Unique ? "UNIQUE " : "")}NONCLUSTERED INDEX [IX_{indexInfo.TableName}_{indexInfo.IndexName}] ON [{indexInfo.Owner}].[{indexInfo.TableName}] ( {string.Join(", ", indexInfo.Columns.Select(c => $"[{c}] ASC"))} )";
         }
     }
 }

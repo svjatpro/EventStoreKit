@@ -12,7 +12,9 @@ namespace EventStoreKit.linq2db
             base(
                 configurationString != null ?
                 new DataConnection( configurationString ) :
+// ReSharper disable AssignNullToNotNullAttribute
                 new DataConnection( ProviderName.MySql, connectionString ) )
+// ReSharper restore AssignNullToNotNullAttribute
         {
             // According to http://dev.mysql.com/doc/connector-net/en/connector-net-connection-options.html
             //  "This option was introduced in Connector/Net 6.1.1. 
@@ -32,10 +34,7 @@ namespace EventStoreKit.linq2db
         
         protected override bool TableExist<T>()
         {
-            var command = string.Format(
-                "SELECT count(*) FROM information_schema.tables WHERE table_schema = '{0}' AND table_name = '{1}';", 
-                DbManager.Connection.Database,
-                GetTableName<T>() );
+            var command = $"SELECT count(*) FROM information_schema.tables WHERE table_schema = '{DbManager.Connection.Database}' AND table_name = '{GetTableName<T>()}';";
             var cmd = DbManager.CreateCommand();
             cmd.CommandText = command;
             return (long)cmd.ExecuteScalar() > 0;
@@ -43,13 +42,7 @@ namespace EventStoreKit.linq2db
 
         protected override string GenerateIndexCommand(IndexInfo indexInfo)
         {
-            return string.Format("CREATE {0} INDEX IX_{1}_{2} ON {3} ( {4} )",
-                indexInfo.Unique ? "UNIQUE " : "",
-                indexInfo.TableName,
-                indexInfo.IndexName,
-                indexInfo.TableName,
-                string.Join(", ", indexInfo.Columns.Select(c => string.Format("{0} ASC", c)))
-            );
+            return $"CREATE {(indexInfo.Unique ? "UNIQUE " : "")} INDEX IX_{indexInfo.TableName}_{indexInfo.IndexName} ON {indexInfo.TableName} ( {string.Join(", ", indexInfo.Columns.Select(c => string.Format("{0} ASC", c)))} )";
         }
     }
 }

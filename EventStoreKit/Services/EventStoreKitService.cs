@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
@@ -47,6 +48,111 @@ namespace EventStoreKit.Services
         void SendCommand( DomainCommand command );
     }
 
+    public interface IDataBaseConfiguration
+    {
+        DbConnectionType DbConnectionType { get; }
+        string ConnectionProviderName { get; }
+        string ConfigurationString { get; }
+        string ConnectionString { get; }
+    }
+    public class DataBaseConfiguration : IDataBaseConfiguration
+    {
+        public DbConnectionType DbConnectionType { get; set; }
+        public string ConnectionProviderName { get; set; }
+        public string ConfigurationString { get; set; }
+        public string ConnectionString { get; set; }
+
+        #region Static members
+
+        private class DbConnectionInfo
+        {
+            public DbConnectionType DbConnectionType { get; set; }
+            public string SqlProviderName { get; set; }
+        }
+
+        private static readonly List<DbConnectionInfo> DbConnectionMap =
+            new List<DbConnectionInfo>
+            {
+                new DbConnectionInfo
+                {
+                    DbConnectionType = DbConnectionType.MsSql,
+                    SqlProviderName = "System.Data.SqlClient"
+                    //SqlProviderType = typeof(NEventStore.Persistence.Sql.SqlDialects.MsSqlDialect),
+                },
+                new DbConnectionInfo
+                {
+                    DbConnectionType = DbConnectionType.MySql,
+                    SqlProviderName = "MySql.Data.MySqlClient"
+                    //SqlProviderType = typeof(NEventStore.Persistence.Sql.SqlDialects.MySqlDialect),
+                }
+            };
+
+        public static IDataBaseConfiguration Initialize( string configurationString )
+        {
+            var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
+            var providerInfo = DbConnectionMap.SingleOrDefault( p => p.SqlProviderName == providerName );
+            if ( providerInfo == null )
+                throw new ArgumentException( "Client is not supported" );
+
+            return new DataBaseConfiguration
+            {
+                DbConnectionType = providerInfo.DbConnectionType,
+                ConnectionProviderName = providerInfo.SqlProviderName,
+                ConfigurationString = configurationString
+            };
+        }
+
+        public static IDataBaseConfiguration Initialize( DbConnectionType connectionType, string connectionString )
+        {
+            var providerInfo = DbConnectionMap.SingleOrDefault( p => p.DbConnectionType == connectionType );
+            if ( providerInfo == null )
+                throw new ArgumentException( "Client is not supported" );
+
+            return new DataBaseConfiguration
+            {
+                DbConnectionType = providerInfo.DbConnectionType,
+                ConnectionProviderName = providerInfo.SqlProviderName,
+                ConnectionString = connectionString
+            };
+        }
+
+        #endregion
+
+        //private Func<IDbProvider> InitProviderCreator(string configurationString)
+        //{
+        //    var providerInfo = ResolveProvider(configurationString);
+        //    var ctor = providerInfo.DbProviderType.GetConstructor(new[] { typeof(string), typeof(string) });
+        //    return () => ctor.Invoke(new object[] { configurationString, null }).OfType<IDbProvider>();
+        //}
+        //private Func<IDbProvider> InitProviderCreator(SqlClientType clientType, string connectionString)
+        //{
+        //    var providerInfo = ResolveProvider(clientType);
+        //    var ctor = providerInfo.DbProviderType.GetConstructor(new[] { typeof(string), typeof(string) });
+        //    return () => ctor.Invoke(new object[] { null, connectionString }).OfType<IDbProvider>();
+        //}
+
+        //private static ProviderInfo ResolveProvider(string configurationString)
+        //{
+        //    var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
+        //    var providerInfo = Providers.SingleOrDefault(p => p.SqlProviderName == providerName);
+        //    if (providerInfo == null)
+        //        throw new ArgumentException("Client is not supported");
+
+        //    return providerInfo;
+        //}
+
+        //private static ProviderInfo ResolveProvider(SqlClientType clientType)
+        //{
+        //    var providerInfo = Providers.SingleOrDefault(p => p.SqlClientType == clientType);
+        //    if (providerInfo == null)
+        //        throw new ArgumentException("Client is not supported");
+
+        //    return providerInfo;
+        //}
+    }
+
+
+
     public class EventStoreKitService : IEventStoreKitService
     {
         #region Private fields
@@ -63,14 +169,9 @@ namespace EventStoreKit.Services
         
         private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
 
-        private readonly Dictionary<Type, string> ProvidersMap = new Dictionary<Type, string>
-        {
-            { typeof( MsSqlDialect ), "System.Data.SqlClient" },
-            { typeof( MySqlDialect ), "MySql.Data.MySqlClient" }
-        };
-
-        private DbConnectionType DbConnectionType = ;
         private Type DefaultDbProviderType;
+        private IDataBaseConfiguration DbConfigurationDefault = null;
+        private IDataBaseConfiguration DbConfigurationEventStore = null;
         private IDbProviderFactory DbProviderFactoryDefault;
         private Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
 
@@ -84,7 +185,7 @@ namespace EventStoreKit.Services
             DbProviderFactoryDefault = new DbProviderFactoryStub();
 
             IdGenerator = new SequentialIdgenerator();
-            Scheduler = new NewThreadScheduler(action => new Thread(action) { IsBackground = true }); // todo:
+            Scheduler = new NewThreadScheduler( action => new Thread(action) { IsBackground = true } ); // todo:
             Configuration = new EventStoreConfiguration
             {
                 InsertBufferSize = 10000,
@@ -95,38 +196,47 @@ namespace EventStoreKit.Services
         }
         private void InitializeEventStore()
         {
-            var dispatcher = new MessageDispatcher(ResolveLogger<MessageDispatcher>());
+            var dispatcher = new MessageDispatcher( ResolveLogger<MessageDispatcher>() );
             Dispatcher = dispatcher;
             EventPublisher = dispatcher;
             CommandBus = dispatcher;
 
             var wireup = InitializeWireup();
-            //var wireup = Wireup
-            //    .Init()
-            //    .LogTo(type => ResolveLogger<EventStoreAdapter>())
-            //    .UsingInMemoryPersistence();
 
-            StoreEvents = new EventStoreAdapter(wireup, ResolveLogger<EventStoreAdapter>(), EventPublisher,CommandBus);
+            StoreEvents = new EventStoreAdapter( wireup, ResolveLogger<EventStoreAdapter>(), EventPublisher, CommandBus );
             ConstructAggregates = new EntityFactory();
-            //SagaFactory
+            // todo: register also SagaFactory
         }
 
         private Wireup InitializeWireup()
         {
             var wireup = Wireup
                 .Init()
-                .LogTo(type => ResolveLogger<EventStoreAdapter>())
-                .UsingInMemoryPersistence();
+                .LogTo( type => ResolveLogger<EventStoreAdapter>() );
 
-            ConfigurationString != null ?
-                wireup.UsingSqlPersistence(ConfigurationString) :
-                wireup.UsingSqlPersistence(null, ProvidersMap[SqlDialectType], ConnectionString);
+            if ( DbConfigurationEventStore == null )
+            {
+                return wireup.UsingInMemoryPersistence();
+            }
+            else
+            {
+                var persistanceWireup =
+                    DbConfigurationEventStore.ConfigurationString != null ?
+                    wireup.UsingSqlPersistence( DbConfigurationEventStore.ConfigurationString ) :
+                    wireup.UsingSqlPersistence( null, DbConfigurationEventStore.ConnectionProviderName, DbConfigurationEventStore.ConnectionString );
 
-            return persistanceWireup
-                .WithDialect((ISqlDialect)Activator.CreateInstance(SqlDialectType))
-                .PageEvery(1024)
-                .InitializeStorageEngine()
-                .UsingJsonSerialization();
+                // todo: move NEventStore related stuff to separate module
+                var dialectTypeMap = new Dictionary< DbConnectionType, Type>
+                {
+                    { DbConnectionType.MsSql, typeof( MsSqlDialect ) },
+                    { DbConnectionType.MySql, typeof( MySqlDialect ) }
+                };
+                return persistanceWireup
+                    .WithDialect( (ISqlDialect)Activator.CreateInstance( dialectTypeMap[DbConfigurationEventStore.DbConnectionType] ) )
+                    .PageEvery( 1024 )
+                    .InitializeStorageEngine()
+                    .UsingJsonSerialization();
+            }
         }
 
         //private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
@@ -263,25 +373,48 @@ namespace EventStoreKit.Services
             EventSubscribers.Add( typeof(TSubscriber), subscriber );
             return this;
         }
-        
 
-        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( string configurationString )
-            where TDbProviderFactory : IDbProviderFactory
+
+        private IDbProviderFactory TryInitializeDbProvider( Type factoryType, Dictionary<Type,object> arguments )
         {
-            DefaultDbProviderType = typeof(TDbProviderFactory);
-            var ctor = DefaultDbProviderType
+            var ctor = factoryType
                 .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .FirstOrDefault(c =>
                 {
                     var args = c.GetParameters();
-                    return
-                        args.Length == 1 &&
-                        args[0].ParameterType == typeof(string);
+                    if( args.Length != arguments.Count )
+                        return false;
+                    var types = arguments.Keys.ToList();
+                    for ( var i = 0; i < types.Count; i++ )
+                    {
+                        if ( args[i].ParameterType != types[i] )
+                            return false;
+                    }
+                    return true;
                 });
-            if (ctor == null)
-                throw new InvalidOperationException($"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor");
+            return ctor.With( c => c.Invoke( arguments.Values.ToArray() ).OfType<IDbProviderFactory>() );
+        }
+        private IDbProviderFactory InitializeDbProviderFactory( Type factoryType, IDataBaseConfiguration config )
+        {
+            var factory =
+                TryInitializeDbProvider( factoryType, new Dictionary<Type, object>{ { typeof(IDataBaseConfiguration), config } } ) ??
+                TryInitializeDbProvider( factoryType, new Dictionary<Type, object>{ { typeof(string), config.ConfigurationString } } ) ??
+                TryInitializeDbProvider( factoryType, new Dictionary<Type, object>{ { typeof(DbConnectionType), config.DbConnectionType }, { typeof(string), config.ConnectionString } } );
+            if ( factory == null )
+                throw new InvalidOperationException( $"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor" );
 
-            DbProviderFactoryDefault = (TDbProviderFactory)ctor.Invoke(new object[] { configurationString });
+            return factory;
+        }
+
+        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( string configurationString )
+            where TDbProviderFactory : IDbProviderFactory
+        {
+            DbConfigurationDefault = DataBaseConfiguration.Initialize( configurationString );
+            DbConfigurationEventStore = DbConfigurationDefault;
+
+            DefaultDbProviderType = typeof(TDbProviderFactory);
+            DbProviderFactoryDefault = InitializeDbProviderFactory( DefaultDbProviderType, DbConfigurationDefault );
+
             InitializeEventStore();
 
             return this;
@@ -289,21 +422,12 @@ namespace EventStoreKit.Services
         public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
             where TDbProviderFactory : IDbProviderFactory
         {
-            DefaultDbProviderType = typeof(TDbProviderFactory);
-            var ctor = DefaultDbProviderType
-                .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(c =>
-                {
-                    var args = c.GetParameters();
-                    return
-                        args.Length == 2 &&
-                        args[0].ParameterType == typeof(DbConnectionType) &&
-                        args[1].ParameterType == typeof(string);
-                });
-            if (ctor == null)
-                throw new InvalidOperationException($"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor");
+            DbConfigurationDefault = DataBaseConfiguration.Initialize( dbConnection, connectionString );
+            DbConfigurationEventStore = DbConfigurationDefault;
 
-            DbProviderFactoryDefault = (TDbProviderFactory)ctor.Invoke(new object[] { dbConnection, connectionString });
+            DefaultDbProviderType = typeof(TDbProviderFactory);
+            DbProviderFactoryDefault = InitializeDbProviderFactory(DefaultDbProviderType, DbConfigurationDefault);
+
             InitializeEventStore();
 
             return this;
@@ -311,6 +435,8 @@ namespace EventStoreKit.Services
 
         public EventStoreKitService MapEventStoreDb( string configurationString )
         {
+            DbConfigurationEventStore = DataBaseConfiguration.Initialize( configurationString );
+
             // (re)initialize wireup
             InitializeEventStore();
 
@@ -318,6 +444,8 @@ namespace EventStoreKit.Services
         }
         public EventStoreKitService MapEventStoreDb( DbConnectionType dbConnection, string connectionString )
         {
+            DbConfigurationEventStore = DataBaseConfiguration.Initialize( dbConnection, connectionString );
+
             // (re)initialize wireup
             InitializeEventStore();
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using EventStoreKit.linq2db;
 using EventStoreKit.Northwind.AggregatesHandlers;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Projections.Customer;
@@ -51,15 +52,15 @@ namespace EventStoreKit.Northwind.Console
         static void Main( string[] args )
         {
             var service = new EventStoreKitService()
-                .RegisterDbProviderFactory<IDbProviderLinq2Db>( configurationString )
-                .RegisterDbProviderFactory<IDbProviderLinq2Db>( configurationString )
+
+                .RegisterDbProviderFactory<Linq2DbProviderFactory>( "Northwind" )
 
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
- 
+                
                 .RegisterEventSubscriber<CustomerProjection>()
                 .RegisterEventSubscriber<ProductProjection>();
-
+            
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
             var productProjection = service.ResolveSubscriber<ProductProjection>();
             
