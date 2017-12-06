@@ -102,13 +102,14 @@ namespace EventStoreKit.linq2db
 
         public void CreateTable<T>( bool overwrite = false ) where T : class
         {
-            var exist = TableExist<T>();
+            //var exist = TableExist<T>();
 
-            if ( overwrite && exist )
+            //if ( overwrite && exist )
+            if ( overwrite  )
                 DropTable<T>();
 
-            if ( !exist || overwrite )
-            {
+            //if ( !exist || overwrite )
+            //{
                 try
                 {
                     DbManager.CreateTable<T>();
@@ -117,7 +118,7 @@ namespace EventStoreKit.linq2db
                 catch ( DbException )
                 {
                 }
-            }
+            //}
         }
 
         public void TruncateTable<T>() where T : class

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.Data;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
@@ -77,13 +78,16 @@ namespace EventStoreKit.Services
                 {
                     DbConnectionType = DbConnectionType.MsSql,
                     SqlProviderName = "System.Data.SqlClient"
-                    //SqlProviderType = typeof(NEventStore.Persistence.Sql.SqlDialects.MsSqlDialect),
                 },
                 new DbConnectionInfo
                 {
                     DbConnectionType = DbConnectionType.MySql,
                     SqlProviderName = "MySql.Data.MySqlClient"
-                    //SqlProviderType = typeof(NEventStore.Persistence.Sql.SqlDialects.MySqlDialect),
+                },
+                new DbConnectionInfo
+                {
+                    DbConnectionType = DbConnectionType.SqlLite,
+                    SqlProviderName = "System.Data.SQLite"
                 }
             };
 
@@ -229,7 +233,8 @@ namespace EventStoreKit.Services
                 var dialectTypeMap = new Dictionary< DbConnectionType, Type>
                 {
                     { DbConnectionType.MsSql, typeof( MsSqlDialect ) },
-                    { DbConnectionType.MySql, typeof( MySqlDialect ) }
+                    { DbConnectionType.MySql, typeof( MySqlDialect ) },
+                    { DbConnectionType.SqlLite, typeof( SqliteDialect ) }
                 };
                 return persistanceWireup
                     .WithDialect( (ISqlDialect)Activator.CreateInstance( dialectTypeMap[DbConfigurationEventStore.DbConnectionType] ) )

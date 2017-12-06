@@ -13,7 +13,8 @@ namespace EventStoreKit.linq2db
         private readonly Dictionary<DbConnectionType, Type> ProvidersMap = new Dictionary<DbConnectionType, Type>
         {
             {DbConnectionType.MsSql, typeof(DbProviderMsSql)},
-            {DbConnectionType.MySql, typeof(DbProviderMySql)}
+            {DbConnectionType.MySql, typeof(DbProviderMySql)},
+            {DbConnectionType.SqlLite, typeof(DbProviderSqlLite)}
         };
         private readonly Func<IDbProvider> DefaultProvider;
         

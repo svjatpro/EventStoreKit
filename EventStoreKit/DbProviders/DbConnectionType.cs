@@ -6,6 +6,7 @@
     public enum DbConnectionType
     {
         MsSql = 0x01,
-        MySql = 0x02
+        MySql = 0x02,
+        SqlLite = 0x03,
     }
 }
