@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
@@ -25,136 +23,13 @@ using NEventStore.Persistence.Sql.SqlDialects;
 
 namespace EventStoreKit.Services
 {
-    public interface IEventStoreSubscriberContext
-    {
-        ILogger Logger { get; }
-        IScheduler Scheduler { get; }
-        IEventStoreConfiguration Configuration { get; }
-        IDbProviderFactory DbProviderFactory { get; }
-    }
-
-    public class EventStoreSubscriberContext : IEventStoreSubscriberContext
-    {
-        public ILogger Logger { get; set; }
-        public IScheduler Scheduler { get; set; }
-        public IEventStoreConfiguration Configuration { get; set; }
-        public IDbProviderFactory DbProviderFactory { get; set; }
-    }
-
     public interface IEventStoreKitService
     {
         TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
-        //IDbProviderFactory ResolveDbProviderFactory<TModel>();
+        IDbProviderFactory ResolveDbProviderFactory<TModel>();
 
         void SendCommand( DomainCommand command );
     }
-
-    public interface IDataBaseConfiguration
-    {
-        DbConnectionType DbConnectionType { get; }
-        string ConnectionProviderName { get; }
-        string ConfigurationString { get; }
-        string ConnectionString { get; }
-    }
-    public class DataBaseConfiguration : IDataBaseConfiguration
-    {
-        public DbConnectionType DbConnectionType { get; set; }
-        public string ConnectionProviderName { get; set; }
-        public string ConfigurationString { get; set; }
-        public string ConnectionString { get; set; }
-
-        #region Static members
-
-        private class DbConnectionInfo
-        {
-            public DbConnectionType DbConnectionType { get; set; }
-            public string SqlProviderName { get; set; }
-        }
-
-        private static readonly List<DbConnectionInfo> DbConnectionMap =
-            new List<DbConnectionInfo>
-            {
-                new DbConnectionInfo
-                {
-                    DbConnectionType = DbConnectionType.MsSql,
-                    SqlProviderName = "System.Data.SqlClient"
-                },
-                new DbConnectionInfo
-                {
-                    DbConnectionType = DbConnectionType.MySql,
-                    SqlProviderName = "MySql.Data.MySqlClient"
-                },
-                new DbConnectionInfo
-                {
-                    DbConnectionType = DbConnectionType.SqlLite,
-                    SqlProviderName = "System.Data.SQLite"
-                }
-            };
-
-        public static IDataBaseConfiguration Initialize( string configurationString )
-        {
-            var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
-            var providerInfo = DbConnectionMap.SingleOrDefault( p => p.SqlProviderName == providerName );
-            if ( providerInfo == null )
-                throw new ArgumentException( "Client is not supported" );
-
-            return new DataBaseConfiguration
-            {
-                DbConnectionType = providerInfo.DbConnectionType,
-                ConnectionProviderName = providerInfo.SqlProviderName,
-                ConfigurationString = configurationString
-            };
-        }
-
-        public static IDataBaseConfiguration Initialize( DbConnectionType connectionType, string connectionString )
-        {
-            var providerInfo = DbConnectionMap.SingleOrDefault( p => p.DbConnectionType == connectionType );
-            if ( providerInfo == null )
-                throw new ArgumentException( "Client is not supported" );
-
-            return new DataBaseConfiguration
-            {
-                DbConnectionType = providerInfo.DbConnectionType,
-                ConnectionProviderName = providerInfo.SqlProviderName,
-                ConnectionString = connectionString
-            };
-        }
-
-        #endregion
-
-        //private Func<IDbProvider> InitProviderCreator(string configurationString)
-        //{
-        //    var providerInfo = ResolveProvider(configurationString);
-        //    var ctor = providerInfo.DbProviderType.GetConstructor(new[] { typeof(string), typeof(string) });
-        //    return () => ctor.Invoke(new object[] { configurationString, null }).OfType<IDbProvider>();
-        //}
-        //private Func<IDbProvider> InitProviderCreator(SqlClientType clientType, string connectionString)
-        //{
-        //    var providerInfo = ResolveProvider(clientType);
-        //    var ctor = providerInfo.DbProviderType.GetConstructor(new[] { typeof(string), typeof(string) });
-        //    return () => ctor.Invoke(new object[] { null, connectionString }).OfType<IDbProvider>();
-        //}
-
-        //private static ProviderInfo ResolveProvider(string configurationString)
-        //{
-        //    var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
-        //    var providerInfo = Providers.SingleOrDefault(p => p.SqlProviderName == providerName);
-        //    if (providerInfo == null)
-        //        throw new ArgumentException("Client is not supported");
-
-        //    return providerInfo;
-        //}
-
-        //private static ProviderInfo ResolveProvider(SqlClientType clientType)
-        //{
-        //    var providerInfo = Providers.SingleOrDefault(p => p.SqlClientType == clientType);
-        //    if (providerInfo == null)
-        //        throw new ArgumentException("Client is not supported");
-
-        //    return providerInfo;
-        //}
-    }
-
 
 
     public class EventStoreKitService : IEventStoreKitService
@@ -244,21 +119,17 @@ namespace EventStoreKit.Services
             }
         }
 
-        //private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
         private void RegisterCommandHandler<TCommand, TEntity>( ICommandHandler<TCommand, TEntity> handlerFactory )
-        // ReSharper restore UnusedMember.Local
             where TCommand : DomainCommand
             where TEntity : class, ITrackableAggregate
         {
             // register Action as handler to dispatcher
             var logger = ResolveLogger<EventStoreKitService>();
             var repositoryFactory = new Func<IRepository>( ResolveRepository );
-            //var handlerFactory = new Func<ICommandHandler<TCommand, TEntity>>(() => (ICommandHandler<TCommand, TEntity>)CommandHandlerTypes[typeof(ICommandHandler<TCommand, TEntity>)]);
 
             var handleAction = new Action<TCommand>( cmd =>
             {
                 var repository = repositoryFactory();
-                //var handler = handlerFactory();
                 var handler = handlerFactory;
 
                 if ( cmd.Created == default( DateTime ) )
@@ -320,7 +191,7 @@ namespace EventStoreKit.Services
 
             var handlerType = typeof(THandler);
             var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
-            var registerCommandMehod = GetType().GetMethod("RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance);
+            var registerCommandMehod = GetType().GetMethod( "RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
 
             handlerType
                 .GetInterfaces()
@@ -378,8 +249,7 @@ namespace EventStoreKit.Services
             EventSubscribers.Add( typeof(TSubscriber), subscriber );
             return this;
         }
-
-
+        
         private IDbProviderFactory TryInitializeDbProvider( Type factoryType, Dictionary<Type,object> arguments )
         {
             var ctor = factoryType
@@ -438,44 +308,74 @@ namespace EventStoreKit.Services
             return this;
         }
 
+        private void MapReadModelToDbFactory<TReadModel>( IDbProviderFactory factory )
+        {
+            var key = typeof( TReadModel );
+            if( !DbProviderFactoryMap.ContainsKey( key ) )
+                DbProviderFactoryMap.Add( key, factory );
+            else
+                DbProviderFactoryMap[key] = factory;
+        }
+        private void InitDbProviderFactory( Type dbProviderFactoryType, IDataBaseConfiguration dbConfig )
+        {
+            DbConfigurationEventStore = dbConfig;
+            var factory = InitializeDbProviderFactory( dbProviderFactoryType, dbConfig );
+            MapReadModelToDbFactory<Commits>( factory );
+
+            InitializeEventStore();
+        }
         public EventStoreKitService MapEventStoreDb( string configurationString )
         {
-            DbConfigurationEventStore = DataBaseConfiguration.Initialize( configurationString );
-
-            // (re)initialize wireup
-            InitializeEventStore();
-
+            InitDbProviderFactory( DefaultDbProviderType, DataBaseConfiguration.Initialize( configurationString ) );
             return this;
         }
-        public EventStoreKitService MapEventStoreDb( DbConnectionType dbConnection, string connectionString )
+        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( string configurationString )
         {
-            DbConfigurationEventStore = DataBaseConfiguration.Initialize( dbConnection, connectionString );
-
-            // (re)initialize wireup
-            InitializeEventStore();
-
+            InitDbProviderFactory( typeof( TDbProviderFactory ), DataBaseConfiguration.Initialize( configurationString ) );
+            return this;
+        }
+        public EventStoreKitService MapEventStoreDb(DbConnectionType dbConnection, string connectionString)
+        {
+            InitDbProviderFactory( DefaultDbProviderType, DataBaseConfiguration.Initialize( dbConnection, connectionString ) );
+            return this;
+        }
+        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
+        {
+            InitDbProviderFactory( typeof( TDbProviderFactory ), DataBaseConfiguration.Initialize( dbConnection, connectionString ) );
             return this;
         }
 
         public EventStoreKitService MapReadModelDb<TReadModel>( string configurationString )
         {
-            // add to providers map
+            var dbConfig = DataBaseConfiguration.Initialize( configurationString );
+            var factory = InitializeDbProviderFactory( DefaultDbProviderType, dbConfig );
+            MapReadModelToDbFactory<TReadModel>( factory );
+
             return this;
         }
         public EventStoreKitService MapReadModelDb<TReadModel>( DbConnectionType dbConnection, string connectionString )
         {
-            // add to providers map
+            var dbConfig = DataBaseConfiguration.Initialize( dbConnection, connectionString );
+            var factory = InitializeDbProviderFactory( DefaultDbProviderType, dbConfig );
+            MapReadModelToDbFactory<TReadModel>( factory );
+
             return this;
         }
-
-        // create subscriber context : get propper provider factory
-
 
         public TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
         {
             return (TSubscriber) EventSubscribers[typeof(TSubscriber)];
         }
-        
+
+        public IDbProviderFactory ResolveDbProviderFactory<TModel>()
+        {
+            var key = typeof(TModel);
+            if ( DbProviderFactoryMap.ContainsKey( key ) )
+                return DbProviderFactoryMap[key];
+            else
+                return DbProviderFactoryDefault;
+        }
+
         public void SendCommand(DomainCommand command)
         {
             CommandBus.Send( command );

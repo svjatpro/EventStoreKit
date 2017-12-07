@@ -17,14 +17,6 @@ namespace EventStoreKit.linq2db
         {
         }
 
-        protected override bool TableExist<T>()
-        {
-            var command = $"SELECT count(*) FROM sys.objects WHERE object_id = OBJECT_ID(N'{GetTableName<T>()}') AND type in (N'U')";
-            var cmd = DbManager.CreateCommand();
-            cmd.CommandText = command;
-            return (int)cmd.ExecuteScalar() > 0;
-        }
-
         protected override string GenerateIndexCommand(IndexInfo indexInfo)
         {
             return $"CREATE {(indexInfo.Unique ? "UNIQUE " : "")}NONCLUSTERED INDEX [IX_{indexInfo.TableName}_{indexInfo.IndexName}] ON [{indexInfo.Owner}].[{indexInfo.TableName}] ( {string.Join(", ", indexInfo.Columns.Select(c => $"[{c}] ASC"))} )";

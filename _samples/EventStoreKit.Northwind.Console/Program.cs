@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Linq;
+using EventStoreKit.DbProviders;
 using EventStoreKit.linq2db;
 using EventStoreKit.Northwind.AggregatesHandlers;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Projections.Customer;
 using EventStoreKit.Services;
+using OSMD.Common.ReadModels;
 
 namespace EventStoreKit.Northwind.Console
 {
@@ -53,7 +55,9 @@ namespace EventStoreKit.Northwind.Console
         {
             var service = new EventStoreKitService()
 
-                .RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
+                //.RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
+                .RegisterDbProviderFactory<Linq2DbProviderFactory>("b1")
+                //.MapEventStoreDb(  )
 
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
@@ -63,17 +67,26 @@ namespace EventStoreKit.Northwind.Console
             
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
             var productProjection = service.ResolveSubscriber<ProductProjection>();
-            
-            service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
-            service.CreateProduct( "product1", 12.3m );
-            service.CreateProduct( "product2", 23.4m );
-            service.CreateProduct( "product3", 34.5m );
 
-            customerProjection.WaitMessages();
-            productProjection.WaitMessages();
+            new Func<IDbProvider>( () => service.ResolveDbProviderFactory<ProductModel>().Create() )
+                .Run( db => db.Query<ProductModel>().ToList() )
+                .ForEach( p => System.Console.WriteLine( p.ProductName ) );
 
-            customerProjection.GetCustomers( null ).ToList().ForEach( c => System.Console.WriteLine( c.CompanyName ) );
-            productProjection.GetProducts( null ).ToList().ForEach( p => System.Console.WriteLine( p.ProductName ) );
+            var c = new Func<IDbProvider>( () => service.ResolveDbProviderFactory<Commits>().Create() )
+                .Run( db => db.Query<Commits>().ToList() );
+                //.ForEach( c => System.Console.WriteLine( c.CheckpointNumber ) );
+                
+
+            //service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
+            //service.CreateProduct( "product1", 12.3m );
+            //service.CreateProduct( "product2", 23.4m );
+            //service.CreateProduct( "product3", 34.5m );
+
+            //customerProjection.WaitMessages();
+            //productProjection.WaitMessages();
+
+            //customerProjection.GetCustomers( null ).ToList().ForEach( c => System.Console.WriteLine( c.CompanyName ) );
+            //productProjection.GetProducts( null ).ToList().ForEach( p => System.Console.WriteLine( p.ProductName ) );
         }
     }
 }

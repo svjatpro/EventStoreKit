@@ -31,14 +31,6 @@ namespace EventStoreKit.linq2db
             //  also it will not break other DB mapping, because NVarChar is default data type for string columns in MsSql
             DbManager.MappingSchema.SetDataType( typeof(string), DataType.Text );
         }
-        
-        protected override bool TableExist<T>()
-        {
-            var command = $"SELECT count(*) FROM information_schema.tables WHERE table_schema = '{DbManager.Connection.Database}' AND table_name = '{GetTableName<T>()}';";
-            var cmd = DbManager.CreateCommand();
-            cmd.CommandText = command;
-            return (long)cmd.ExecuteScalar() > 0;
-        }
 
         protected override string GenerateIndexCommand(IndexInfo indexInfo)
         {

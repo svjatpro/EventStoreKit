@@ -16,16 +16,6 @@ namespace EventStoreKit.linq2db
         {
         }
 
-        protected override bool TableExist<T>()
-        {
-            var command = $"SELECT name FROM sqlite_master WHERE type='table' AND name='{GetTableName<T>()}';";
-            var cmd = DbManager.CreateCommand();
-            cmd.CommandText = command;
-
-            return true;
-            //return (int)cmd.ExecuteScalar() > 0;
-        }
-
         protected override string GenerateIndexCommand(IndexInfo indexInfo)
         {
             return $"CREATE {(indexInfo.Unique ? "UNIQUE " : "")} INDEX [IX_{indexInfo.TableName}_{indexInfo.IndexName}] ON [{indexInfo.Owner}].[{indexInfo.TableName}] ( {string.Join(", ", indexInfo.Columns.Select(c => $"[{c}] ASC"))} )";

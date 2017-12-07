@@ -76,8 +76,6 @@ namespace EventStoreKit.linq2db
                 DbManager.SetCommand( createIndexScript ).Execute();
         }
 
-        protected abstract bool TableExist<T>();
-
         #endregion
 
         protected DbProvider( DataConnection dbManager )
@@ -100,25 +98,19 @@ namespace EventStoreKit.linq2db
             }
         }
 
-        public void CreateTable<T>( bool overwrite = false ) where T : class
+        public void CreateTable<T>(bool overwrite = false) where T : class
         {
-            //var exist = TableExist<T>();
-
-            //if ( overwrite && exist )
-            if ( overwrite  )
+            if (overwrite)
                 DropTable<T>();
 
-            //if ( !exist || overwrite )
-            //{
-                try
-                {
-                    DbManager.CreateTable<T>();
-                    CreateTableIndexes<T>();
-                }
-                catch ( DbException )
-                {
-                }
-            //}
+            try
+            {
+                DbManager.CreateTable<T>();
+                CreateTableIndexes<T>();
+            }
+            catch (DbException)
+            {
+            }
         }
 
         public void TruncateTable<T>() where T : class

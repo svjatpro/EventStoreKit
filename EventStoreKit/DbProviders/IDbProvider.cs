@@ -22,13 +22,15 @@ namespace EventStoreKit.DbProviders
         int Delete<T>( Expression<Func<T, bool>> predicat ) where T : class;
 
         int Insert<T>( T entity ) where T : class;
-        int InsertOrReplace<T>( T entity ) where T : class;
-        long InsertBulk<T>( IEnumerable<T> entities ) where T : class;
-        long InsertBulk<T>( IEnumerable<T> entities, string connectionString ) where T : class;
-        int Insert<TSource, TDestination>( Expression<Func<TSource, bool>> predicat, Expression<Func<TSource, TDestination>> evaluator ) 
+        int Insert<TSource, TDestination>(Expression<Func<TSource, bool>> predicat, Expression<Func<TSource, TDestination>> evaluator)
             where TSource : class
             where TDestination : class;
 
+        int InsertOrReplace<T>( T entity ) where T : class;
+
+        long InsertBulk<T>( IEnumerable<T> entities ) where T : class;
+        long InsertBulk<T>( IEnumerable<T> entities, string connectionString ) where T : class;
+        
         int Update<T>( Expression<Func<T, bool>> predicat, Expression<Func<T, T>> evaluator ) where T : class;
       
         int ExecuteNonQuery(string query);
