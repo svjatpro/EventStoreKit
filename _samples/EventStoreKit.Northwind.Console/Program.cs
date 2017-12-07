@@ -54,9 +54,8 @@ namespace EventStoreKit.Northwind.Console
         static void Main( string[] args )
         {
             var service = new EventStoreKitService()
-
-                //.RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
-                .RegisterDbProviderFactory<Linq2DbProviderFactory>("b1")
+                .RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
+                //.RegisterDbProviderFactory<Linq2DbProviderFactory>("b1")
                 //.MapEventStoreDb(  )
 
                 .RegisterCommandHandler<CustomerHandler>()

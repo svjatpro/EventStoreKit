@@ -199,8 +199,8 @@ namespace EventStoreKit.Projections
             ILogger logger, 
             IScheduler scheduler,
             IEventStoreConfiguration config,
-            IDbProviderFactory dbProviderFactory ) : 
-            base( logger, scheduler, config, dbProviderFactory.Create<TModel> )
+            IDbProviderFactory dbProviderFactory ) :
+            base( logger, scheduler, config, dbProviderFactory.Create )
         {
             RegisterReadModel<TModel>();
 

@@ -44,11 +44,5 @@ namespace EventStoreKit.linq2db
         {
             return DefaultProvider();
         }
-
-        /// <inheritdoc />
-        public IDbProvider Create<TModel>() where TModel : class
-        {
-            return DefaultProvider();
-        }
     }
 }

@@ -13,6 +13,15 @@ namespace EventStoreKit.DbProviders
         /// <summary>
         /// Performs action/method with separate instance of DbProvider within Sql Transaction on demand
         /// </summary>
+        public static void RunLazy(
+            this IDbProviderFactory factory,
+            Action<IDbProvider> action,
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            Action<Exception> processException = null)
+        {
+            new Func<IDbProvider>( factory.Create )
+                .RunLazy( action, isolationLevel, processException );
+        }
         public static void RunLazy( 
             this Func<IDbProvider> persistanceManagerCreator, 
             Action<IDbProvider> action, 
@@ -39,6 +48,15 @@ namespace EventStoreKit.DbProviders
         /// <summary>
         /// Performs action/method with separate instance of DbProvider within Sql Transaction
         /// </summary>
+        public static void Run(
+            this IDbProviderFactory factory,
+            Action<IDbProvider> action,
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            Action<Exception> processException = null )
+        {
+            new Func<IDbProvider>( factory.Create )
+                .Run( action, isolationLevel, processException );
+        }
         public static void Run( 
             this Func<IDbProvider> persistanceManagerCreator, 
             Action<IDbProvider> action, 
@@ -61,11 +79,20 @@ namespace EventStoreKit.DbProviders
                 }
             }
         }
+
         /// <summary>
         /// Performs action/method with separate instance of DbProvider within Sql Transaction.
         ///   If the result is query result / list, then use ToList(). 
         ///   The reason is, than deffered materialization will be failed because of disposed connection ( and commited transaction )
         /// </summary>
+        public static TResult Run<TResult>(
+            this IDbProviderFactory factory,
+            Func<IDbProvider, TResult> action,
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            Action<Exception> processException = null )
+        {
+            return new Func<IDbProvider>( factory.Create ).Run( action, isolationLevel, processException );
+        }
         public static TResult Run<TResult>( 
             this Func<IDbProvider> persistanceManagerCreator, 
             Func<IDbProvider, TResult> action, 

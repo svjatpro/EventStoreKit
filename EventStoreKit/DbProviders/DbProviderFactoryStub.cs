@@ -14,10 +14,5 @@ namespace EventStoreKit.DbProviders
         {
             return new DbProviderStub( StorageMap );
         }
-
-        public IDbProvider Create<TModel>() where TModel : class
-        {
-            return Create();
-        }
     }
 }
