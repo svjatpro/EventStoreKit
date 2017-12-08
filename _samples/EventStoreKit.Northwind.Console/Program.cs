@@ -53,39 +53,48 @@ namespace EventStoreKit.Northwind.Console
 
         static void Main( string[] args )
         {
+            //var db1 = new DbProviderSqlLite( null, "data source=db1" );
+            //var db2 = new DbProviderSqlLite( null, "data source=db2" );
+
+            //db1.CreateTable<ProductModel>();
+            //db1.Insert( new ProductModel {Id = Guid.NewGuid(), ProductName = "p1", UnitPrice = 12} );
+            //db2.CreateTable<CustomerModel>();
+            //db2.Insert( new CustomerModel { Id = Guid.NewGuid(), Address = "", City = "", CompanyName = "", ContactName = "", ContactPhone = "", ContactTitle = "", Country = "", PostalCode = "", Region = "" } );
+
             var service = new EventStoreKitService()
-                .RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
-                //.RegisterDbProviderFactory<Linq2DbProviderFactory>("b1")
-                //.MapEventStoreDb(  )
+                //.RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
+                .MapEventStoreDb<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
+                .RegisterDbProviderFactory<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
+                
+                //.MapReadModelDb<ProductModel>( DbConnectionType.SqlLite, "data source=db3" )
 
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
-                
+
                 .RegisterEventSubscriber<CustomerProjection>()
                 .RegisterEventSubscriber<ProductProjection>();
-            
+
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
             var productProjection = service.ResolveSubscriber<ProductProjection>();
 
-            new Func<IDbProvider>( () => service.ResolveDbProviderFactory<ProductModel>().Create() )
-                .Run( db => db.Query<ProductModel>().ToList() )
-                .ForEach( p => System.Console.WriteLine( p.ProductName ) );
+            service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
+            service.CreateProduct( "product1", 12.3m );
+            service.CreateProduct( "product2", 23.4m );
+            service.CreateProduct( "product3", 34.5m );
 
-            var c = new Func<IDbProvider>( () => service.ResolveDbProviderFactory<Commits>().Create() )
-                .Run( db => db.Query<Commits>().ToList() );
-                //.ForEach( c => System.Console.WriteLine( c.CheckpointNumber ) );
-                
+            customerProjection.WaitMessages();
+            productProjection.WaitMessages();
 
-            //service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
-            //service.CreateProduct( "product1", 12.3m );
-            //service.CreateProduct( "product2", 23.4m );
-            //service.CreateProduct( "product3", 34.5m );
+            //new Func<IDbProvider>( () => service.ResolveDbProviderFactory<ProductModel>().Create() )
+            //    .Run( db => db.Query<ProductModel>().ToList() )
+            //    .ForEach( p => System.Console.WriteLine( p.ProductName ) );
 
-            //customerProjection.WaitMessages();
-            //productProjection.WaitMessages();
+            new Func<IDbProvider>( () => service.ResolveDbProviderFactory<Commits>().Create() )
+                .Run( db => db.Query<Commits>().ToList() )
+                .ForEach( c => System.Console.WriteLine( c.CheckpointNumber ) );
 
-            //customerProjection.GetCustomers( null ).ToList().ForEach( c => System.Console.WriteLine( c.CompanyName ) );
-            //productProjection.GetProducts( null ).ToList().ForEach( p => System.Console.WriteLine( p.ProductName ) );
+            customerProjection.GetCustomers( null ).ToList().ForEach( c => System.Console.WriteLine( c.CompanyName ) );
+            productProjection.GetProducts( null ).ToList().ForEach( p => System.Console.WriteLine( p.ProductName ) );
         }
     }
 }
