@@ -218,7 +218,7 @@ namespace EventStoreKit.Projections
             SummaryCache<TModel> summaryCache = null )  // required for summary caching
         {
             return DbProviderFactory.Run( db => db.PerformQuery(
-                options, 
+                options,
                 FilterMapping,
                 SorterMapping,
                 summaryAggregate: summaryAggregate,

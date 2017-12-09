@@ -71,6 +71,7 @@ namespace EventStoreKit.Northwind.Console
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
 
+                //.RegisterEventSubscriber<CustomerProjection>( DbConnectionType.SqlLite, "data source=db3" )
                 .RegisterEventSubscriber<CustomerProjection>()
                 .RegisterEventSubscriber<ProductProjection>();
 

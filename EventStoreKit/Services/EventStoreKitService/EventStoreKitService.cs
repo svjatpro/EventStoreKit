@@ -52,7 +52,8 @@ namespace EventStoreKit.Services
         private IDataBaseConfiguration DbConfigurationDefault = null;
         private IDataBaseConfiguration DbConfigurationEventStore = null;
         private IDbProviderFactory DbProviderFactoryDefault;
-        private Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
+        private readonly Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
+        private readonly Dictionary<int, IDbProviderFactory> DbProviderFactoryHash = new Dictionary<int, IDbProviderFactory>();
 
         #endregion
 
@@ -152,14 +153,54 @@ namespace EventStoreKit.Services
             Dispatcher.RegisterHandler( handleAction );
         }
 
-        private IEventStoreSubscriberContext CreateContext<TSubscriber>() where TSubscriber : class, IEventSubscriber
+        private IDbProviderFactory TryInitializeDbProvider( Type factoryType, Dictionary<Type, object> arguments )
+        {
+            var ctor = factoryType
+                .GetConstructors( BindingFlags.Public | BindingFlags.Instance )
+                .FirstOrDefault( c =>
+                {
+                    var args = c.GetParameters();
+                    if( args.Length != arguments.Count )
+                        return false;
+                    var types = arguments.Keys.ToList();
+                    for( var i = 0; i < types.Count; i++ )
+                    {
+                        if( args[i].ParameterType != types[i] )
+                            return false;
+                    }
+                    return true;
+                } );
+            return ctor.With( c => c.Invoke( arguments.Values.ToArray() ).OfType<IDbProviderFactory>() );
+        }
+        private IDbProviderFactory InitializeDbProviderFactory( Type factoryType, IDataBaseConfiguration config )
+        {
+            var factory =
+                TryInitializeDbProvider( factoryType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
+                TryInitializeDbProvider( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
+                TryInitializeDbProvider( factoryType, new Dictionary<Type, object> { { typeof( DbConnectionType ), config.DbConnectionType }, { typeof( string ), config.ConnectionString } } );
+            if( factory == null )
+                throw new InvalidOperationException( $"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor" );
+
+            return factory;
+        }
+
+        private IEventStoreSubscriberContext CreateContext<TSubscriber>( string configurationString ) where TSubscriber : class, IEventSubscriber
+        {
+
+            return CreateContext<TSubscriber>();
+        }
+        private IEventStoreSubscriberContext CreateContext<TSubscriber>( DbConnectionType connectionType, string connectionString ) where TSubscriber : class, IEventSubscriber
+        {
+            
+        }
+        private IEventStoreSubscriberContext CreateContext<TSubscriber>( IDbProviderFactory factory = null ) where TSubscriber : class, IEventSubscriber
         {
             return new EventStoreSubscriberContext
             {
                 Logger = ResolveLogger<TSubscriber>(),
                 Scheduler = Scheduler,
                 Configuration = Configuration,
-                DbProviderFactory = DbProviderFactoryDefault
+                DbProviderFactory = factory ?? DbProviderFactoryDefault
             };
         }
 
@@ -172,6 +213,51 @@ namespace EventStoreKit.Services
         protected virtual IRepository ResolveRepository()
         {
             return new EventStoreRepository(StoreEvents, ConstructAggregates, new ConflictDetector());
+        }
+
+        #endregion
+
+        #region Event Subscribers methods
+
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory )
+            where TSubscriber : class, IEventSubscriber
+        {
+            return RegisterEventSubscriber<TSubscriber>( subscriberFactory( CreateContext<TSubscriber>() ) );
+        }
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber = null )
+            where TSubscriber : class, IEventSubscriber
+        {
+            if( subscriber == null )
+            {
+                var stype = typeof( TSubscriber );
+
+                var ctor = stype
+                    .GetConstructors( BindingFlags.Public | BindingFlags.Instance )
+                    .FirstOrDefault( c =>
+                    {
+                        var args = c.GetParameters();
+                        return
+                            args.Length == 1 &&
+                            args[0].ParameterType == typeof( IEventStoreSubscriberContext );
+                    } );
+                if( ctor == null )
+                    throw new InvalidOperationException( $"Can't create {stype.Name} instance, because there is no public constructore" );
+
+                subscriber = (TSubscriber)ctor.Invoke( new object[] { CreateContext<TSubscriber>() } );
+            }
+
+            var dispatcherType = Dispatcher.GetType();
+            var subscriberType = typeof( IEventSubscriber );
+            foreach( var handledEventType in subscriber.HandledEventTypes )
+            {
+                var registerMethod = dispatcherType.GetMethod( "RegisterHandler" ).MakeGenericMethod( handledEventType );
+                var handleMethod = subscriberType.GetMethods().Single( m => m.Name == "Handle" );
+                var handleDelegate = Delegate.CreateDelegate( typeof( Action<Message> ), subscriber, handleMethod );
+                registerMethod.Invoke( Dispatcher, new object[] { handleDelegate } );
+            }
+
+            EventSubscribers.Add( typeof( TSubscriber ), subscriber );
+            return this;
         }
 
         #endregion
@@ -207,80 +293,7 @@ namespace EventStoreKit.Services
 
             return this;
         }
-
-
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory)
-            where TSubscriber : class, IEventSubscriber
-        {
-            return RegisterEventSubscriber<TSubscriber>( subscriberFactory( CreateContext<TSubscriber>() ) );
-        }
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber = null ) 
-            where TSubscriber : class, IEventSubscriber
-        {
-            if (subscriber == null)
-            {
-                var stype = typeof(TSubscriber);
-
-                var ctor = stype
-                    .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-                    .FirstOrDefault( c =>
-                    {
-                        var args = c.GetParameters();
-                        return 
-                            args.Length == 1 &&
-                            args[0].ParameterType == typeof(IEventStoreSubscriberContext);
-                    });
-                if (ctor == null)
-                    throw new  InvalidOperationException( $"Can't create {stype.Name} instance, because there is no public constructore" );
-                
-                subscriber = (TSubscriber)ctor.Invoke( new object[] { CreateContext<TSubscriber>() } );
-            }
-
-            var dispatcherType = Dispatcher.GetType();
-            var subscriberType = typeof(IEventSubscriber);
-            foreach (var handledEventType in subscriber.HandledEventTypes)
-            {
-                var registerMethod = dispatcherType.GetMethod("RegisterHandler").MakeGenericMethod(handledEventType);
-                var handleMethod = subscriberType.GetMethods().Single(m => m.Name == "Handle");
-                var handleDelegate = Delegate.CreateDelegate(typeof(Action<Message>), subscriber, handleMethod);
-                registerMethod.Invoke(Dispatcher, new object[] { handleDelegate });
-            }
-
-            EventSubscribers.Add( typeof(TSubscriber), subscriber );
-            return this;
-        }
         
-        private IDbProviderFactory TryInitializeDbProvider( Type factoryType, Dictionary<Type,object> arguments )
-        {
-            var ctor = factoryType
-                .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-                .FirstOrDefault(c =>
-                {
-                    var args = c.GetParameters();
-                    if( args.Length != arguments.Count )
-                        return false;
-                    var types = arguments.Keys.ToList();
-                    for ( var i = 0; i < types.Count; i++ )
-                    {
-                        if ( args[i].ParameterType != types[i] )
-                            return false;
-                    }
-                    return true;
-                });
-            return ctor.With( c => c.Invoke( arguments.Values.ToArray() ).OfType<IDbProviderFactory>() );
-        }
-        private IDbProviderFactory InitializeDbProviderFactory( Type factoryType, IDataBaseConfiguration config )
-        {
-            var factory =
-                TryInitializeDbProvider( factoryType, new Dictionary<Type, object>{ { typeof(IDataBaseConfiguration), config } } ) ??
-                TryInitializeDbProvider( factoryType, new Dictionary<Type, object>{ { typeof(string), config.ConfigurationString } } ) ??
-                TryInitializeDbProvider( factoryType, new Dictionary<Type, object>{ { typeof(DbConnectionType), config.DbConnectionType }, { typeof(string), config.ConnectionString } } );
-            if ( factory == null )
-                throw new InvalidOperationException( $"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor" );
-
-            return factory;
-        }
-
         public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( string configurationString )
             where TDbProviderFactory : IDbProviderFactory
         {
