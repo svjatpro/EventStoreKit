@@ -12,6 +12,7 @@ namespace EventStoreKit.Services
         public string ConnectionProviderName { get; set; }
         public string ConfigurationString { get; set; }
         public string ConnectionString { get; set; }
+        public Type DbProviderFactoryType { get; set; }
 
         #region Static members
 
@@ -41,7 +42,7 @@ namespace EventStoreKit.Services
                 }
             };
 
-        public static IDataBaseConfiguration Initialize( string configurationString )
+        public static IDataBaseConfiguration Initialize( Type factoryType, string configurationString )
         {
             var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
             var providerInfo = DbConnectionMap.SingleOrDefault( p => p.SqlProviderName == providerName );
@@ -50,13 +51,14 @@ namespace EventStoreKit.Services
 
             return new DataBaseConfiguration
             {
+                DbProviderFactoryType = factoryType,
                 DbConnectionType = providerInfo.DbConnectionType,
                 ConnectionProviderName = providerInfo.SqlProviderName,
                 ConfigurationString = configurationString
             };
         }
 
-        public static IDataBaseConfiguration Initialize( DbConnectionType connectionType, string connectionString )
+        public static IDataBaseConfiguration Initialize( Type factoryType, DbConnectionType connectionType, string connectionString )
         {
             var providerInfo = DbConnectionMap.SingleOrDefault( p => p.DbConnectionType == connectionType );
             if ( providerInfo == null )
@@ -64,6 +66,7 @@ namespace EventStoreKit.Services
 
             return new DataBaseConfiguration
             {
+                DbProviderFactoryType = factoryType,
                 DbConnectionType = providerInfo.DbConnectionType,
                 ConnectionProviderName = providerInfo.SqlProviderName,
                 ConnectionString = connectionString
@@ -72,5 +75,10 @@ namespace EventStoreKit.Services
 
         #endregion
 
+        public override int GetHashCode()
+        {
+            return $"{DbProviderFactoryType.Name}.{( !string.IsNullOrWhiteSpace( ConfigurationString ) ? ConfigurationString : DbConnectionType + "." + ConnectionString )}"
+                    .GetHashCode();
+        }
     }
 }

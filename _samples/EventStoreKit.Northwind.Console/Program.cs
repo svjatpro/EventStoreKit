@@ -63,7 +63,7 @@ namespace EventStoreKit.Northwind.Console
 
             var service = new EventStoreKitService()
                 //.RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
-                .MapEventStoreDb<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
+                //.MapEventStoreDb<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
                 .RegisterDbProviderFactory<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
                 
                 //.MapReadModelDb<ProductModel>( DbConnectionType.SqlLite, "data source=db3" )
@@ -71,8 +71,8 @@ namespace EventStoreKit.Northwind.Console
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
 
-                //.RegisterEventSubscriber<CustomerProjection>( DbConnectionType.SqlLite, "data source=db3" )
-                .RegisterEventSubscriber<CustomerProjection>()
+                .RegisterEventSubscriber<CustomerProjection>( DbConnectionType.SqlLite, "data source=db2" )
+                //.RegisterEventSubscriber<CustomerProjection>()
                 .RegisterEventSubscriber<ProductProjection>();
 
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();

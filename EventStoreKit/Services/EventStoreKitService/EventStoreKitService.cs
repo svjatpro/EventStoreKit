@@ -48,12 +48,10 @@ namespace EventStoreKit.Services
         
         private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
 
-        private Type DefaultDbProviderType;
         private IDataBaseConfiguration DbConfigurationDefault = null;
         private IDataBaseConfiguration DbConfigurationEventStore = null;
-        private IDbProviderFactory DbProviderFactoryDefault;
         private readonly Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
-        private readonly Dictionary<int, IDbProviderFactory> DbProviderFactoryHash = new Dictionary<int, IDbProviderFactory>();
+        private readonly Dictionary<IDataBaseConfiguration, IDbProviderFactory> DbProviderFactoryHash = new Dictionary<IDataBaseConfiguration, IDbProviderFactory>();
 
         #endregion
 
@@ -61,8 +59,9 @@ namespace EventStoreKit.Services
 
         private void InitizlizeCommon()
         {
-            DefaultDbProviderType = typeof(DbProviderFactoryStub);
-            DbProviderFactoryDefault = new DbProviderFactoryStub();
+            DbConfigurationDefault = DataBaseConfiguration.Initialize( typeof( DbProviderFactoryStub ), string.Empty );
+            DbConfigurationEventStore = DbConfigurationDefault;
+            DbProviderFactoryHash.Add( DbConfigurationDefault, new DbProviderFactoryStub() );
 
             IdGenerator = new SequentialIdgenerator();
             Scheduler = new NewThreadScheduler( action => new Thread(action) { IsBackground = true } ); // todo:
@@ -172,36 +171,122 @@ namespace EventStoreKit.Services
                 } );
             return ctor.With( c => c.Invoke( arguments.Values.ToArray() ).OfType<IDbProviderFactory>() );
         }
-        private IDbProviderFactory InitializeDbProviderFactory( Type factoryType, IDataBaseConfiguration config )
+        private IDbProviderFactory InitializeDbProviderFactory( IDataBaseConfiguration config )
         {
+            if ( DbProviderFactoryHash.ContainsKey( config ) )
+                return DbProviderFactoryHash[config];
+
             var factory =
-                TryInitializeDbProvider( factoryType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
-                TryInitializeDbProvider( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
-                TryInitializeDbProvider( factoryType, new Dictionary<Type, object> { { typeof( DbConnectionType ), config.DbConnectionType }, { typeof( string ), config.ConnectionString } } );
+                TryInitializeDbProvider( config.DbProviderFactoryType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
+                TryInitializeDbProvider( config.DbProviderFactoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
+                TryInitializeDbProvider( config.DbProviderFactoryType, new Dictionary<Type, object> { { typeof( DbConnectionType ), config.DbConnectionType }, { typeof( string ), config.ConnectionString } } );
             if( factory == null )
-                throw new InvalidOperationException( $"Can't create {DefaultDbProviderType.Name} instance, because there is no appropriate constructor" );
+                throw new InvalidOperationException( $"Can't create {config.DbProviderFactoryType.Name} instance, because there is no appropriate constructor" );
+
+            DbProviderFactoryHash.Add( config, factory );
+
+            if( DbConfigurationDefault == null )
+                DbConfigurationDefault = config;
+            if ( DbConfigurationEventStore == null )
+                DbConfigurationEventStore = config;
 
             return factory;
         }
 
-        private IEventStoreSubscriberContext CreateContext<TSubscriber>( string configurationString ) where TSubscriber : class, IEventSubscriber
+        private IDataBaseConfiguration CreateDbConfig<TDbProviderFactory>( string configurationString )
         {
+            return DataBaseConfiguration.Initialize( typeof(TDbProviderFactory), configurationString );
+        }
+        private IDataBaseConfiguration CreateDbConfig<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
+        {
+            return DataBaseConfiguration.Initialize( typeof( TDbProviderFactory ), dbConnection, connectionString );
+        }
+        private IDataBaseConfiguration CreateDbConfig( string configurationString )
+        {
+            return DataBaseConfiguration.Initialize( DbConfigurationDefault.DbProviderFactoryType, configurationString );
+        }
+        private IDataBaseConfiguration CreateDbConfig( DbConnectionType dbConnection, string connectionString )
+        {
+            return DataBaseConfiguration.Initialize( DbConfigurationDefault.DbProviderFactoryType, dbConnection, connectionString );
+        }
 
-            return CreateContext<TSubscriber>();
-        }
-        private IEventStoreSubscriberContext CreateContext<TSubscriber>( DbConnectionType connectionType, string connectionString ) where TSubscriber : class, IEventSubscriber
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( string configurationString ) 
+            where TSubscriber : class, IEventSubscriber
         {
-            
+            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( configurationString ) );
         }
-        private IEventStoreSubscriberContext CreateContext<TSubscriber>( IDbProviderFactory factory = null ) where TSubscriber : class, IEventSubscriber
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber,TDbProviderFactory>( string configurationString ) 
+            where TSubscriber : class, IEventSubscriber
+            where TDbProviderFactory : IDbProviderFactory
+        {
+            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig<TDbProviderFactory>( configurationString ) );
+        }
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( DbConnectionType connectionType, string connectionString ) 
+            where TSubscriber : class, IEventSubscriber
+        {
+            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( connectionType, connectionString ) );
+        }
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber, TDbProviderFactory>( DbConnectionType connectionType, string connectionString ) 
+            where TSubscriber : class, IEventSubscriber
+            where TDbProviderFactory : IDbProviderFactory
+        {
+            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig<TDbProviderFactory>( connectionType, connectionString ) );
+        }
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( IDataBaseConfiguration config = null ) where TSubscriber : class, IEventSubscriber
         {
             return new EventStoreSubscriberContext
             {
                 Logger = ResolveLogger<TSubscriber>(),
                 Scheduler = Scheduler,
                 Configuration = Configuration,
-                DbProviderFactory = factory ?? DbProviderFactoryDefault
+                DbProviderFactory = InitializeDbProviderFactory( config ?? DbConfigurationDefault )
             };
+        }
+
+        private TSubscriber InitializeEventSubscriber<TSubscriber>( IEventStoreSubscriberContext context ) where TSubscriber : class, IEventSubscriber
+        {
+            var stype = typeof( TSubscriber );
+
+            var ctor = stype
+                .GetConstructors( BindingFlags.Public | BindingFlags.Instance )
+                .FirstOrDefault( c =>
+                {
+                    var args = c.GetParameters();
+                    return
+                        args.Length == 1 &&
+                        args[0].ParameterType == typeof( IEventStoreSubscriberContext );
+                } );
+            if( ctor == null )
+                throw new InvalidOperationException( $"Can't create {stype.Name} instance, because there is no public constructore" );
+
+            return (TSubscriber)ctor.Invoke( new object[] { context } );
+        }
+
+        private void InitializeEventStoreDb( IDataBaseConfiguration config )
+        {
+            DbConfigurationEventStore = config;
+            var factory = InitializeDbProviderFactory( config );
+
+            MapReadModelToDbFactory<Commits>( factory, false );
+            //MapReadModelToDbFactory<Snapshots>( factory );
+
+            InitializeEventStore();
+        }
+
+        private void MapReadModelToDbFactory<TReadModel>( IDbProviderFactory factory, bool unique )
+        {
+            MapReadModelToDbFactory( typeof(TReadModel), factory, unique );
+        }
+        private void MapReadModelToDbFactory( Type readModelType, IDbProviderFactory factory, bool unique )
+        {
+            if ( unique || !DbProviderFactoryMap.ContainsKey( readModelType ) )
+            {
+                DbProviderFactoryMap.Add( readModelType, factory );
+            }
+            else
+            {
+                DbProviderFactoryMap[readModelType] = factory;
+            }
         }
 
         #endregion
@@ -218,34 +303,58 @@ namespace EventStoreKit.Services
         #endregion
 
         #region Event Subscribers methods
-
+        
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory )
             where TSubscriber : class, IEventSubscriber
         {
-            return RegisterEventSubscriber<TSubscriber>( subscriberFactory( CreateContext<TSubscriber>() ) );
+            var context = CreateEventSubscriberContext<TSubscriber>();
+            RegisterEventSubscriber<TSubscriber>( subscriberFactory( context ), context );
+            return this;
         }
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, string configurationString )
+            where TSubscriber : class, IEventSubscriber
+        {
+            var context = CreateEventSubscriberContext<TSubscriber>( configurationString );
+            RegisterEventSubscriber<TSubscriber>( subscriberFactory( context ), context );
+            return this;
+        }
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, DbConnectionType dbConnection, string connectionString )
+            where TSubscriber : class, IEventSubscriber
+        {
+            var context = CreateEventSubscriberContext<TSubscriber>( dbConnection, connectionString );
+            RegisterEventSubscriber<TSubscriber>( subscriberFactory( context ), context );
+            return this;
+        }
+
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( string configurationString ) where TSubscriber : class, IEventSubscriber
+        {
+            var context = CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( configurationString ) );
+            RegisterEventSubscriber<TSubscriber>( InitializeEventSubscriber<TSubscriber>( context ), context );
+            return this;
+        }
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( DbConnectionType dbConnection, string connectionString ) where TSubscriber : class, IEventSubscriber
+        {
+            var context = CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( dbConnection, connectionString ) );
+            RegisterEventSubscriber<TSubscriber>( InitializeEventSubscriber<TSubscriber>( context ), context );
+            return this;
+        }
+
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber = null )
             where TSubscriber : class, IEventSubscriber
         {
-            if( subscriber == null )
+            IEventStoreSubscriberContext context = null;
+            if ( subscriber == null )
             {
-                var stype = typeof( TSubscriber );
-
-                var ctor = stype
-                    .GetConstructors( BindingFlags.Public | BindingFlags.Instance )
-                    .FirstOrDefault( c =>
-                    {
-                        var args = c.GetParameters();
-                        return
-                            args.Length == 1 &&
-                            args[0].ParameterType == typeof( IEventStoreSubscriberContext );
-                    } );
-                if( ctor == null )
-                    throw new InvalidOperationException( $"Can't create {stype.Name} instance, because there is no public constructore" );
-
-                subscriber = (TSubscriber)ctor.Invoke( new object[] { CreateContext<TSubscriber>() } );
+                context = CreateEventSubscriberContext<TSubscriber>();
+                subscriber = InitializeEventSubscriber<TSubscriber>( context );
             }
 
+            RegisterEventSubscriber<TSubscriber>( subscriber, context );
+            return this;
+        }
+        private void RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber, IEventStoreSubscriberContext context = null )
+            where TSubscriber : class, IEventSubscriber
+        {
             var dispatcherType = Dispatcher.GetType();
             var subscriberType = typeof( IEventSubscriber );
             foreach( var handledEventType in subscriber.HandledEventTypes )
@@ -257,11 +366,77 @@ namespace EventStoreKit.Services
             }
 
             EventSubscribers.Add( typeof( TSubscriber ), subscriber );
+
+            if( context != null )
+            {
+                subscriber
+                    .OfType<IReadModelOwner>()
+                    .Do( s => s.GetReadModels
+                        .ForEach( model => MapReadModelToDbFactory( model, context.DbProviderFactory, true ) ) );
+            }
+        }
+
+        #endregion
+
+        #region Initialize default DbProviderFactory
+
+        /// <summary>
+        /// Register default DbProviderFactory
+        /// </summary>
+        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( string configurationString )
+            where TDbProviderFactory : IDbProviderFactory
+        {
+            DbConfigurationDefault = CreateDbConfig<TDbProviderFactory>( configurationString );
+            DbConfigurationEventStore = DbConfigurationDefault;
+
+            InitializeDbProviderFactory( DbConfigurationDefault );
+            InitializeEventStore();
+
+            return this;
+        }
+        
+        /// <summary>
+        /// Register default DbProviderFactory
+        /// </summary>
+        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
+            where TDbProviderFactory : IDbProviderFactory
+        {
+            DbConfigurationDefault = CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString );
+            DbConfigurationEventStore = DbConfigurationDefault;
+
+            InitializeDbProviderFactory( DbConfigurationDefault );
+            InitializeEventStore();
+
             return this;
         }
 
         #endregion
 
+        #region Initialize EventStore DataBase
+        
+        public EventStoreKitService MapEventStoreDb( string configurationString )
+        {
+            InitializeEventStoreDb( CreateDbConfig( configurationString ) );
+            return this;
+        }
+        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( string configurationString )
+        {
+            InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( configurationString ) );
+            return this;
+        }
+        public EventStoreKitService MapEventStoreDb( DbConnectionType dbConnection, string connectionString )
+        {
+            InitializeEventStoreDb( CreateDbConfig( dbConnection, connectionString ) );
+            return this;
+        }
+        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
+        {
+            InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString ) );
+            return this;
+        }
+
+        #endregion
+        
         public EventStoreKitService()
         {
             InitizlizeCommon();
@@ -293,88 +468,7 @@ namespace EventStoreKit.Services
 
             return this;
         }
-        
-        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( string configurationString )
-            where TDbProviderFactory : IDbProviderFactory
-        {
-            DbConfigurationDefault = DataBaseConfiguration.Initialize( configurationString );
-            DbConfigurationEventStore = DbConfigurationDefault;
-
-            DefaultDbProviderType = typeof(TDbProviderFactory);
-            DbProviderFactoryDefault = InitializeDbProviderFactory( DefaultDbProviderType, DbConfigurationDefault );
-
-            InitializeEventStore();
-
-            return this;
-        }
-        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
-            where TDbProviderFactory : IDbProviderFactory
-        {
-            DbConfigurationDefault = DataBaseConfiguration.Initialize( dbConnection, connectionString );
-            DbConfigurationEventStore = DbConfigurationDefault;
-
-            DefaultDbProviderType = typeof(TDbProviderFactory);
-            DbProviderFactoryDefault = InitializeDbProviderFactory(DefaultDbProviderType, DbConfigurationDefault);
-
-            InitializeEventStore();
-
-            return this;
-        }
-
-        private void MapReadModelToDbFactory<TReadModel>( IDbProviderFactory factory )
-        {
-            var key = typeof( TReadModel );
-            if( !DbProviderFactoryMap.ContainsKey( key ) )
-                DbProviderFactoryMap.Add( key, factory );
-            else
-                DbProviderFactoryMap[key] = factory;
-        }
-        private void InitDbProviderFactory( Type dbProviderFactoryType, IDataBaseConfiguration dbConfig )
-        {
-            DbConfigurationEventStore = dbConfig;
-            var factory = InitializeDbProviderFactory( dbProviderFactoryType, dbConfig );
-            MapReadModelToDbFactory<Commits>( factory );
-
-            InitializeEventStore();
-        }
-        public EventStoreKitService MapEventStoreDb( string configurationString )
-        {
-            InitDbProviderFactory( DefaultDbProviderType, DataBaseConfiguration.Initialize( configurationString ) );
-            return this;
-        }
-        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( string configurationString )
-        {
-            InitDbProviderFactory( typeof( TDbProviderFactory ), DataBaseConfiguration.Initialize( configurationString ) );
-            return this;
-        }
-        public EventStoreKitService MapEventStoreDb(DbConnectionType dbConnection, string connectionString)
-        {
-            InitDbProviderFactory( DefaultDbProviderType, DataBaseConfiguration.Initialize( dbConnection, connectionString ) );
-            return this;
-        }
-        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
-        {
-            InitDbProviderFactory( typeof( TDbProviderFactory ), DataBaseConfiguration.Initialize( dbConnection, connectionString ) );
-            return this;
-        }
-
-        public EventStoreKitService MapReadModelDb<TReadModel>( string configurationString )
-        {
-            var dbConfig = DataBaseConfiguration.Initialize( configurationString );
-            var factory = InitializeDbProviderFactory( DefaultDbProviderType, dbConfig );
-            MapReadModelToDbFactory<TReadModel>( factory );
-
-            return this;
-        }
-        public EventStoreKitService MapReadModelDb<TReadModel>( DbConnectionType dbConnection, string connectionString )
-        {
-            var dbConfig = DataBaseConfiguration.Initialize( dbConnection, connectionString );
-            var factory = InitializeDbProviderFactory( DefaultDbProviderType, dbConfig );
-            MapReadModelToDbFactory<TReadModel>( factory );
-
-            return this;
-        }
-
+       
         public TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
         {
             return (TSubscriber) EventSubscribers[typeof(TSubscriber)];
@@ -386,10 +480,10 @@ namespace EventStoreKit.Services
             if ( DbProviderFactoryMap.ContainsKey( key ) )
                 return DbProviderFactoryMap[key];
             else
-                return DbProviderFactoryDefault;
+                return DbProviderFactoryHash[DbConfigurationDefault];
         }
 
-        public void SendCommand(DomainCommand command)
+        public void SendCommand( DomainCommand command )
         {
             CommandBus.Send( command );
         }
