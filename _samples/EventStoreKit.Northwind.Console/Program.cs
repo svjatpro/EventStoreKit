@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using EventStoreKit.DbProviders;
 using EventStoreKit.linq2db;
 using EventStoreKit.Northwind.AggregatesHandlers;
@@ -71,9 +72,8 @@ namespace EventStoreKit.Northwind.Console
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
 
-                .RegisterEventSubscriber<CustomerProjection>( DbConnectionType.SqlLite, "data source=db2" )
-                //.RegisterEventSubscriber<CustomerProjection>()
-                .RegisterEventSubscriber<ProductProjection>();
+                .RegisterEventSubscriber( ctx => new CustomerProjection( ctx ), DbConnectionType.SqlLite, "data source=db2" )
+                .RegisterEventSubscriber( ctx => new ProductProjection( ctx ) );
 
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
             var productProjection = service.ResolveSubscriber<ProductProjection>();

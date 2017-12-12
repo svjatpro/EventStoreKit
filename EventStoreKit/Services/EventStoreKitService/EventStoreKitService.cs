@@ -23,15 +23,6 @@ using NEventStore.Persistence.Sql.SqlDialects;
 
 namespace EventStoreKit.Services
 {
-    public interface IEventStoreKitService
-    {
-        TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
-        IDbProviderFactory ResolveDbProviderFactory<TModel>();
-
-        void SendCommand( DomainCommand command );
-    }
-
-
     public class EventStoreKitService : IEventStoreKitService
     {
         #region Private fields
@@ -57,10 +48,9 @@ namespace EventStoreKit.Services
 
         #region Private methods
 
-        private void InitizlizeCommon()
+        private void InitializeCommon()
         {
-            DbConfigurationDefault = DataBaseConfiguration.Initialize( typeof( DbProviderFactoryStub ), string.Empty );
-            DbConfigurationEventStore = DbConfigurationDefault;
+            DbConfigurationDefault = new DataBaseConfiguration{ DbProviderFactoryType = typeof( DbProviderFactoryStub ), DbConnectionType = DbConnectionType.None, ConnectionString = "stub" };
             DbProviderFactoryHash.Add( DbConfigurationDefault, new DbProviderFactoryStub() );
 
             IdGenerator = new SequentialIdgenerator();
@@ -86,14 +76,13 @@ namespace EventStoreKit.Services
             ConstructAggregates = new EntityFactory();
             // todo: register also SagaFactory
         }
-
         private Wireup InitializeWireup()
         {
             var wireup = Wireup
                 .Init()
                 .LogTo( type => ResolveLogger<EventStoreAdapter>() );
 
-            if ( DbConfigurationEventStore == null )
+            if ( DbConfigurationEventStore == null || DbConfigurationEventStore.DbConnectionType == DbConnectionType.None )
             {
                 return wireup.UsingInMemoryPersistence();
             }
@@ -136,10 +125,7 @@ namespace EventStoreKit.Services
                     cmd.Created = DateTime.Now;
                 if ( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
                     cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
-                var context = new CommandHandlerContext<TEntity>
-                {
-                    Entity = repository.GetById<TEntity>( cmd.Id )
-                };
+                var context = new CommandHandlerContext<TEntity>{  Entity = repository.GetById<TEntity>( cmd.Id ) };
                 if ( cmd.CreatedBy != Guid.Empty )
                     context.Entity.IssuedBy = cmd.CreatedBy;
                 else
@@ -261,6 +247,29 @@ namespace EventStoreKit.Services
 
             return (TSubscriber)ctor.Invoke( new object[] { context } );
         }
+        private void RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber, IEventStoreSubscriberContext context )
+            where TSubscriber : class, IEventSubscriber
+        {
+            var dispatcherType = Dispatcher.GetType();
+            var subscriberType = typeof( IEventSubscriber );
+            foreach( var handledEventType in subscriber.HandledEventTypes )
+            {
+                var registerMethod = dispatcherType.GetMethod( "RegisterHandler" ).MakeGenericMethod( handledEventType );
+                var handleMethod = subscriberType.GetMethods().Single( m => m.Name == "Handle" );
+                var handleDelegate = Delegate.CreateDelegate( typeof( Action<Message> ), subscriber, handleMethod );
+                registerMethod.Invoke( Dispatcher, new object[] { handleDelegate } );
+            }
+
+            EventSubscribers.Add( typeof( TSubscriber ), subscriber );
+
+            if( context != null )
+            {
+                subscriber
+                    .OfType<IReadModelOwner>()
+                    .Do( s => s.GetReadModels
+                        .ForEach( model => MapReadModelToDbFactory( model, context.DbProviderFactory, true ) ) );
+            }
+        }
 
         private void InitializeEventStoreDb( IDataBaseConfiguration config )
         {
@@ -352,30 +361,7 @@ namespace EventStoreKit.Services
             RegisterEventSubscriber<TSubscriber>( subscriber, context );
             return this;
         }
-        private void RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber, IEventStoreSubscriberContext context = null )
-            where TSubscriber : class, IEventSubscriber
-        {
-            var dispatcherType = Dispatcher.GetType();
-            var subscriberType = typeof( IEventSubscriber );
-            foreach( var handledEventType in subscriber.HandledEventTypes )
-            {
-                var registerMethod = dispatcherType.GetMethod( "RegisterHandler" ).MakeGenericMethod( handledEventType );
-                var handleMethod = subscriberType.GetMethods().Single( m => m.Name == "Handle" );
-                var handleDelegate = Delegate.CreateDelegate( typeof( Action<Message> ), subscriber, handleMethod );
-                registerMethod.Invoke( Dispatcher, new object[] { handleDelegate } );
-            }
-
-            EventSubscribers.Add( typeof( TSubscriber ), subscriber );
-
-            if( context != null )
-            {
-                subscriber
-                    .OfType<IReadModelOwner>()
-                    .Do( s => s.GetReadModels
-                        .ForEach( model => MapReadModelToDbFactory( model, context.DbProviderFactory, true ) ) );
-            }
-        }
-
+        
         #endregion
 
         #region Initialize default DbProviderFactory
@@ -439,7 +425,7 @@ namespace EventStoreKit.Services
         
         public EventStoreKitService()
         {
-            InitizlizeCommon();
+            InitializeCommon();
             InitializeEventStore();
         }
 
