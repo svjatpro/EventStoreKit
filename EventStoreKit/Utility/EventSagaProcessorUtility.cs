@@ -2,8 +2,8 @@
 using System.Linq;
 using CommonDomain;
 using CommonDomain.Persistence;
-using EventStoreKit.CommandBus;
 using EventStoreKit.Messages;
+using EventStoreKit.Services;
 
 namespace EventStoreKit.Utility
 {

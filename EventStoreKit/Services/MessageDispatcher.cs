@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using EventStoreKit.CommandBus;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Utility;

@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using EventStoreKit.DbProviders;
 using EventStoreKit.linq2db;
 using EventStoreKit.Northwind.AggregatesHandlers;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Projections.Customer;
 using EventStoreKit.Services;
-using OSMD.Common.ReadModels;
 
 namespace EventStoreKit.Northwind.Console
 {
@@ -52,27 +50,19 @@ namespace EventStoreKit.Northwind.Console
 
         #endregion
 
-        static void Main( string[] args )
+        static void Main()
         {
-            //var db1 = new DbProviderSqlLite( null, "data source=db1" );
-            //var db2 = new DbProviderSqlLite( null, "data source=db2" );
 
-            //db1.CreateTable<ProductModel>();
-            //db1.Insert( new ProductModel {Id = Guid.NewGuid(), ProductName = "p1", UnitPrice = 12} );
-            //db2.CreateTable<CustomerModel>();
-            //db2.Insert( new CustomerModel { Id = Guid.NewGuid(), Address = "", City = "", CompanyName = "", ContactName = "", ContactPhone = "", ContactTitle = "", Country = "", PostalCode = "", Region = "" } );
 
             var service = new EventStoreKitService()
-                //.RegisterDbProviderFactory<Linq2DbProviderFactory>("NorthwindSqlLite")
-                //.MapEventStoreDb<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
-                .RegisterDbProviderFactory<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-                
-                //.MapReadModelDb<ProductModel>( DbConnectionType.SqlLite, "data source=db3" )
+
+                .RegisterDbProviderFactory<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" ) // "NorthwindSqlLite"
+                .MapEventStoreDb( DbConnectionType.SqlLite, "data source=db1" )
 
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
 
-                .RegisterEventSubscriber( ctx => new CustomerProjection( ctx ), DbConnectionType.SqlLite, "data source=db2" )
+                .RegisterEventSubscriber( ctx => new CustomerProjection( ctx ), DbConnectionType.SqlLite, "data source=db3" )
                 .RegisterEventSubscriber( ctx => new ProductProjection( ctx ) );
 
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
@@ -85,10 +75,6 @@ namespace EventStoreKit.Northwind.Console
 
             customerProjection.WaitMessages();
             productProjection.WaitMessages();
-
-            //new Func<IDbProvider>( () => service.ResolveDbProviderFactory<ProductModel>().Create() )
-            //    .Run( db => db.Query<ProductModel>().ToList() )
-            //    .ForEach( p => System.Console.WriteLine( p.ProductName ) );
 
             new Func<IDbProvider>( () => service.ResolveDbProviderFactory<Commits>().Create() )
                 .Run( db => db.Query<Commits>().ToList() )

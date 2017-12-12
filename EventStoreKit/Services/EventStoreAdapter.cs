@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using EventStoreKit.CommandBus;
 using EventStoreKit.Constants;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
@@ -20,7 +19,7 @@ namespace EventStoreKit.Services
         public const string IssuedByHeader = "IssuedBy";
         public const string TimestampHeader = "Timestamp";
 
-        private readonly IStoreEvents InternalStore;
+        private IStoreEvents InternalStore;
         private readonly IEventPublisher EventPublisher;
         private readonly object LockObject = new object();
 
@@ -49,6 +48,7 @@ namespace EventStoreKit.Services
             if ( InternalStore != null )
             {
                 InternalStore.Dispose();
+                InternalStore = null;
             }
         }
 

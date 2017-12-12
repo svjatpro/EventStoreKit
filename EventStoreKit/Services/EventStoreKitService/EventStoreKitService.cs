@@ -8,7 +8,6 @@ using CommonDomain.Core;
 using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Aggregates;
-using EventStoreKit.CommandBus;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -65,6 +64,8 @@ namespace EventStoreKit.Services
         }
         private void InitializeEventStore()
         {
+            StoreEvents?.Dispose();
+
             var dispatcher = new MessageDispatcher( ResolveLogger<MessageDispatcher>() );
             Dispatcher = dispatcher;
             EventPublisher = dispatcher;

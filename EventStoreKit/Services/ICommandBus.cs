@@ -1,7 +1,7 @@
 ﻿
 using EventStoreKit.Messages;
 
-namespace EventStoreKit.CommandBus
+namespace EventStoreKit.Services
 {
     public interface ICommandBus
     {
