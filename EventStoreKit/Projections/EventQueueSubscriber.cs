@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
@@ -254,18 +253,17 @@ namespace EventStoreKit.Projections
 
         public event EventHandler<SequenceEventArgs> SequenceFinished;
 
-        protected EventQueueSubscriber( IEventStoreSubscriberContext context ) : this( context.Logger, context.Scheduler, context.Configuration ){}
-        protected EventQueueSubscriber( ILogger logger, IScheduler scheduler, IEventStoreConfiguration config )
+        protected EventQueueSubscriber( IEventStoreSubscriberContext context )
         {
-            EventStoreConfig = config;
-            Log = logger.CheckNull( "logger" );
+            EventStoreConfig = context.Configuration;
+            Log = context.Logger.CheckNull( "logger" );
 
             Handlers = new Dictionary<Type, IMessageHandler>();
             DynamicHandlers = new List<IMessageHandler>();
 
             MessageQueue = new BlockingCollection<EventInfo>();
             MessageQueue.GetConsumingEnumerable()
-                .ToObservable( scheduler )
+                .ToObservable( context.Scheduler )
                 .Subscribe( ProcessMessages );
 
             var eventHandlerInterfaceType = typeof( IEventHandler<> );

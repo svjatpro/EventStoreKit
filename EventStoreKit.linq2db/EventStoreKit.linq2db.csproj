@@ -32,7 +32,6 @@
   </ItemGroup>
 
   <ItemGroup>    
-    <PackageReference Include="EventStoreKit" Version="2.0.0" />
     <PackageReference Include="linq2db" Version="1.10.1" />
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />

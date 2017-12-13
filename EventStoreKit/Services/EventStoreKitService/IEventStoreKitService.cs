@@ -10,5 +10,8 @@ namespace EventStoreKit.Services
         IDbProviderFactory ResolveDbProviderFactory<TModel>();
 
         void SendCommand( DomainCommand command );
+
+        void Raise( DomainEvent message );
+        void Publish( DomainEvent message );
     }
 }

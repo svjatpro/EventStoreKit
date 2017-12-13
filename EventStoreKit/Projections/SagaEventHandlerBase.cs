@@ -1,7 +1,5 @@
-﻿using System.Reactive.Concurrency;
-using CommonDomain.Persistence;
-using EventStoreKit.Logging;
-using EventStoreKit.Services.Configuration;
+﻿using CommonDomain.Persistence;
+using EventStoreKit.Services;
 
 namespace EventStoreKit.Projections
 {
@@ -10,11 +8,9 @@ namespace EventStoreKit.Projections
         protected readonly ISagaRepository Repository;
 
         protected SagaEventHandlerBase( 
-            ILogger logger, 
-            IScheduler scheduler,
-            IEventStoreConfiguration config,
+            IEventStoreSubscriberContext context,
             ISagaRepository repository )
-            : base( logger, scheduler, config )
+            : base( context )
         {
             Repository = repository;
         }

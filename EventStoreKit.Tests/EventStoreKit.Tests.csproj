@@ -15,6 +15,7 @@
 
   <ItemGroup>    
     <PackageReference Include="NEventStore" Version="5.2.0" />
+    <PackageReference Include="linq2db" Version="1.10.1" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
     <PackageReference Include="Rx-Linq" Version="2.2.5" />
@@ -22,10 +23,12 @@
     <PackageReference Include="FluentAssertions" Version="4.0.0" />
     <PackageReference Include="NSubstitute" Version="1.8.1.0" />
     <PackageReference Include="NUnit" Version="2.6.4" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.106" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EventStoreKit\EventStoreKit.csproj" />
+    <ProjectReference Include="..\EventStoreKit.linq2db\EventStoreKit.linq2db.csproj" />    
   </ItemGroup>
 
   <ItemGroup>

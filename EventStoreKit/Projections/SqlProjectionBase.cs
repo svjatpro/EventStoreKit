@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reactive.Concurrency;
 using System.Reflection;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
@@ -24,7 +23,7 @@ namespace EventStoreKit.Projections
         private readonly HashSet<Type> ReadModels = new HashSet<Type>();
         private readonly List<IProjectionTemplate> ProjectionTemplates = new List<IProjectionTemplate>();
 
-        protected readonly Func<IDbProvider> DbProviderFactory;
+        protected readonly IDbProviderFactory DbProviderFactory;
 
         #endregion
 
@@ -105,13 +104,13 @@ namespace EventStoreKit.Projections
         }
         protected TTemplate RegisterTemplate<TTemplate>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TTemplate : IProjectionTemplate
         {
-            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory, EventStoreConfig, Log, options );
+            var template = CreateTemplate<TTemplate>( Register, DbProviderFactory.Create, EventStoreConfig, Log, options );
             RegisterTemplate( template );
             return template;
         }
         protected ProjectionTemplate<TModel> RegisterGenericTemplate<TModel>( ProjectionTemplateOptions options = ProjectionTemplateOptions.None ) where TModel : class
         {
-            var template = CreateTemplate<ProjectionTemplate<TModel>>( Register, DbProviderFactory, EventStoreConfig, Log, options );
+            var template = CreateTemplate<ProjectionTemplate<TModel>>( Register, DbProviderFactory.Create, EventStoreConfig, Log, options );
             RegisterTemplate( template );
             return template;
         }
@@ -162,16 +161,10 @@ namespace EventStoreKit.Projections
 
         #endregion
 
-        protected SqlProjectionBase( IEventStoreSubscriberContext context ) : this( context.Logger, context.Scheduler, context.Configuration, () => context.DbProviderFactory.Create() ){ }
-        protected SqlProjectionBase(
-            ILogger logger, 
-            IScheduler scheduler,
-            IEventStoreConfiguration config,
-            Func<IDbProvider> dbProviderFactory )
-            : base( logger, scheduler, config )
+        protected SqlProjectionBase( IEventStoreSubscriberContext context ) : base( context )
         {
-            EventStoreConfig = config;
-            DbProviderFactory = dbProviderFactory.CheckNull( "dbProviderFactory" );
+            EventStoreConfig = context.Configuration;
+            DbProviderFactory = context.DbProviderFactory;
 
             Register<SystemCleanedUpEvent>( CleanUpProjection );
             Register<SequenceMarkerEvent>( m => Flush(), ActionMergeMethod.MultipleRunBefore );
@@ -194,13 +187,7 @@ namespace EventStoreKit.Projections
 
         #endregion
         
-        protected SqlProjectionBase(IEventStoreSubscriberContext context) : this(context.Logger, context.Scheduler, context.Configuration, context.DbProviderFactory ) { }
-        protected SqlProjectionBase(
-            ILogger logger, 
-            IScheduler scheduler,
-            IEventStoreConfiguration config,
-            IDbProviderFactory dbProviderFactory ) :
-            base( logger, scheduler, config, dbProviderFactory.Create )
+        protected SqlProjectionBase(IEventStoreSubscriberContext context) : base( context )
         {
             RegisterReadModel<TModel>();
 

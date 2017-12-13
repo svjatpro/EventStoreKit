@@ -7,6 +7,7 @@ using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Projections.MessageHandler;
+using EventStoreKit.Services;
 using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
 using FluentAssertions;
@@ -59,7 +60,7 @@ namespace EventStoreKit.Tests
                 } );
             }
 
-            public TestSubscriber1( ILogger logger, IScheduler scheduler, IEventStoreConfiguration config ) : base( logger, scheduler, config )
+            public TestSubscriber1( IEventStoreSubscriberContext context ) : base( context )
             {
                 Register<Message1>( ProcessTestMessage );
                 Register<Message2>( msg =>
@@ -82,7 +83,13 @@ namespace EventStoreKit.Tests
         {
             var logger = Substitute.For<ILogger>();
             var scheduler = new NewThreadScheduler();
-            Subscriber1 = new TestSubscriber1( logger, scheduler, new EventStoreConfiguration() );
+            Subscriber1 = new TestSubscriber1( 
+                new EventStoreSubscriberContext
+                {
+                    Logger = logger,
+                    Scheduler = scheduler,
+                    Configuration = new EventStoreConfiguration()
+                } );
         }
 
         #endregion

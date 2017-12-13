@@ -39,6 +39,7 @@ namespace EventStoreKit.Services
         private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
 
         private IDataBaseConfiguration DbConfigurationDefault = null;
+        private IDataBaseConfiguration DbConfigurationSubscribers = null;
         private IDataBaseConfiguration DbConfigurationEventStore = null;
         private readonly Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
         private readonly Dictionary<IDataBaseConfiguration, IDbProviderFactory> DbProviderFactoryHash = new Dictionary<IDataBaseConfiguration, IDbProviderFactory>();
@@ -49,8 +50,9 @@ namespace EventStoreKit.Services
 
         private void InitializeCommon()
         {
-            DbConfigurationDefault = new DataBaseConfiguration{ DbProviderFactoryType = typeof( DbProviderFactoryStub ), DbConnectionType = DbConnectionType.None, ConnectionString = "stub" };
-            DbProviderFactoryHash.Add( DbConfigurationDefault, new DbProviderFactoryStub() );
+            DbConfigurationSubscribers = new DataBaseConfiguration{ DbProviderFactoryType = typeof( DbProviderFactoryStub ), DbConnectionType = DbConnectionType.None, ConnectionString = "stub" };
+            DbConfigurationEventStore = DbConfigurationSubscribers;
+            DbProviderFactoryHash.Add( DbConfigurationSubscribers, new DbProviderFactoryStub() );
 
             IdGenerator = new SequentialIdgenerator();
             Scheduler = new NewThreadScheduler( action => new Thread(action) { IsBackground = true } ); // todo:
@@ -174,8 +176,6 @@ namespace EventStoreKit.Services
 
             if( DbConfigurationDefault == null )
                 DbConfigurationDefault = config;
-            if ( DbConfigurationEventStore == null )
-                DbConfigurationEventStore = config;
 
             return factory;
         }
@@ -226,7 +226,7 @@ namespace EventStoreKit.Services
                 Logger = ResolveLogger<TSubscriber>(),
                 Scheduler = Scheduler,
                 Configuration = Configuration,
-                DbProviderFactory = InitializeDbProviderFactory( config ?? DbConfigurationDefault )
+                DbProviderFactory = InitializeDbProviderFactory( config ?? DbConfigurationSubscribers )
             };
         }
 
@@ -281,6 +281,12 @@ namespace EventStoreKit.Services
             //MapReadModelToDbFactory<Snapshots>( factory );
 
             InitializeEventStore();
+        }
+
+        private void InitializeSubscribersDb( IDataBaseConfiguration config )
+        {
+            DbConfigurationSubscribers = config;
+            InitializeDbProviderFactory( DbConfigurationSubscribers );
         }
 
         private void MapReadModelToDbFactory<TReadModel>( IDbProviderFactory factory, bool unique )
@@ -365,58 +371,62 @@ namespace EventStoreKit.Services
         
         #endregion
 
-        #region Initialize default DbProviderFactory
+        #region Set Subscriber DataBase
 
         /// <summary>
-        /// Register default DbProviderFactory
+        /// Register Subscribers DataBase
         /// </summary>
-        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( string configurationString )
-            where TDbProviderFactory : IDbProviderFactory
+        public EventStoreKitService SetSubscriberDataBase( string configurationString )
         {
-            DbConfigurationDefault = CreateDbConfig<TDbProviderFactory>( configurationString );
-            DbConfigurationEventStore = DbConfigurationDefault;
-
-            InitializeDbProviderFactory( DbConfigurationDefault );
-            InitializeEventStore();
-
+            InitializeSubscribersDb( CreateDbConfig( configurationString ) );
             return this;
         }
-        
         /// <summary>
-        /// Register default DbProviderFactory
+        /// Register Subscribers DataBase
         /// </summary>
-        public EventStoreKitService RegisterDbProviderFactory<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
-            where TDbProviderFactory : IDbProviderFactory
+        public EventStoreKitService SetSubscriberDataBase<TDbProviderFactory>( string configurationString ) where TDbProviderFactory : IDbProviderFactory
         {
-            DbConfigurationDefault = CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString );
-            DbConfigurationEventStore = DbConfigurationDefault;
+            InitializeSubscribersDb( CreateDbConfig<TDbProviderFactory>( configurationString ) );
+            return this;
+        }
 
-            InitializeDbProviderFactory( DbConfigurationDefault );
-            InitializeEventStore();
-
+        /// <summary>
+        /// Register Subscribers DataBase
+        /// </summary>
+        public EventStoreKitService SetSubscriberDataBase( DbConnectionType dbConnection, string connectionString )
+        {
+            InitializeSubscribersDb( CreateDbConfig( dbConnection, connectionString ) );
+            return this;
+        }
+        /// <summary>
+        /// Register Subscribers DataBase
+        /// </summary>
+        public EventStoreKitService SetSubscriberDataBase<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) where TDbProviderFactory : IDbProviderFactory
+        {
+            InitializeSubscribersDb( CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString ) );
             return this;
         }
 
         #endregion
 
-        #region Initialize EventStore DataBase
-        
-        public EventStoreKitService MapEventStoreDb( string configurationString )
+        #region Set EventStore DataBase
+
+        public EventStoreKitService SetEventStoreDataBase( string configurationString )
         {
             InitializeEventStoreDb( CreateDbConfig( configurationString ) );
             return this;
         }
-        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( string configurationString )
+        public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( string configurationString )
         {
             InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( configurationString ) );
             return this;
         }
-        public EventStoreKitService MapEventStoreDb( DbConnectionType dbConnection, string connectionString )
+        public EventStoreKitService SetEventStoreDataBase( DbConnectionType dbConnection, string connectionString )
         {
             InitializeEventStoreDb( CreateDbConfig( dbConnection, connectionString ) );
             return this;
         }
-        public EventStoreKitService MapEventStoreDb<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
+        public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
         {
             InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString ) );
             return this;
@@ -467,12 +477,31 @@ namespace EventStoreKit.Services
             if ( DbProviderFactoryMap.ContainsKey( key ) )
                 return DbProviderFactoryMap[key];
             else
-                return DbProviderFactoryHash[DbConfigurationDefault];
+                return DbProviderFactoryHash[DbConfigurationSubscribers];
         }
 
         public void SendCommand( DomainCommand command )
         {
             CommandBus.Send( command );
+        }
+
+        public void Raise( DomainEvent message )
+        {
+            if ( message.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
+                message.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
+            if ( message.Created == default(DateTime) || message.Created <= DateTime.MinValue )
+                message.Created = DateTime.Now.TrimMilliseconds();
+
+            using ( var stream = StoreEvents.CreateStream( message.Id ) )
+            {
+                stream.Add( new EventMessage {Body = message} );
+                stream.CommitChanges( IdGenerator.NewGuid() );
+            }
+        }
+
+        public void Publish( DomainEvent message )
+        {
+            EventPublisher.Publish( message );
         }
     }
 }

@@ -10,7 +10,7 @@ namespace EventStoreKit.Aggregates
 
         protected new void RaiseEvent( object @event )
         {
-            var e = ( @event as DomainEvent );
+            var e = @event as DomainEvent;
             if ( e != null )
             {
                 if( e.Created == default( DateTime ))
