@@ -18,6 +18,7 @@ namespace EventStoreKit.DbProviders
         int Count<T>( Expression<Func<T, bool>> predicat ) where T : class;
 
         T Single<T>( Expression<Func<T, bool>> predicat ) where T : class;
+        T SingleOrDefault<T>( Expression<Func<T, bool>> predicat ) where T : class;
 
         int Delete<T>( Expression<Func<T, bool>> predicat ) where T : class;
 

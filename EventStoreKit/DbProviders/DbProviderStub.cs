@@ -79,6 +79,7 @@ namespace EventStoreKit.DbProviders
         public int Count<T>( Expression<Func<T, bool>> predicat ) where T : class { return QueryableStorage<T>().Count( predicat ); }
 
         public T Single<T>( Expression<Func<T, bool>> predicat ) where T : class { return QueryableStorage<T>().Single( predicat ); }
+        public T SingleOrDefault<T>( Expression<Func<T, bool>> predicat ) where T : class { return QueryableStorage<T>().SingleOrDefault( predicat ); }
 
         public int Delete<T>(Expression<Func<T, bool>> predicat) where T : class
         {

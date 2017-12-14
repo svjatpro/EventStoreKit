@@ -17,27 +17,27 @@ namespace EventStoreKit.Services
         {
             public readonly Guid Identity;
             public readonly bool Async;
-            public readonly Dictionary<IProjection,bool> Projections;
+            public readonly Dictionary<IEventSubscriber,bool> Projections;
             public readonly Action<Guid> FinishAllAction;
-            public readonly Action<IProjection,Guid> FinishProjectionAction;
+            public readonly Action<IEventSubscriber,Guid> FinishProjectionAction;
 
             public SessionInfo(
                 Guid identity,
-                IEnumerable<IProjection> projections,
+                IEnumerable<IEventSubscriber> subscribers,
                 bool @async = false,
                 Action<Guid> finishAllAction = null,
-                Action<IProjection, Guid> finishProjectionAction = null )
+                Action<IEventSubscriber, Guid> finishProjectionAction = null )
             {
                 Identity = identity;
                 FinishAllAction = finishAllAction;
                 FinishProjectionAction = finishProjectionAction;
                 Async = async;
-                Projections = projections.ToDictionary( p => p, p => true );
+                Projections = subscribers.ToDictionary( p => p, p => true );
             }
         }
 
         private readonly IEventPublisher EventPublisher;
-        private readonly List<IProjection> AllProjections;
+        private readonly List<IEventSubscriber> AllSubscribers;
 
         private readonly ConcurrentDictionary<Guid, SessionInfo> SessionCache = new ConcurrentDictionary<Guid, SessionInfo>();
 
@@ -47,7 +47,7 @@ namespace EventStoreKit.Services
 
         private void OnProjectionSequenceFinished( object sender, SequenceEventArgs e )
         {
-            var projection = sender as IProjection;
+            var projection = sender as IEventSubscriber;
             var identity = e.SequenceIdentity;
             SessionInfo session;
             SessionCache.TryGetValue( e.SequenceIdentity, out session );
@@ -74,18 +74,18 @@ namespace EventStoreKit.Services
 
         #endregion
 
-        public EventSequence( IEnumerable<IProjection> projections, IEventPublisher eventPublisher )
+        public EventSequence( IEnumerable<IEventSubscriber> projections, IEventPublisher eventPublisher )
         {
-            AllProjections = projections.ToList();
+            AllSubscribers = projections.ToList();
             EventPublisher = eventPublisher;
             
-            AllProjections.ForEach( p => p.SequenceFinished += OnProjectionSequenceFinished );
+            AllSubscribers.ForEach( p => p.SequenceFinished += OnProjectionSequenceFinished );
         }
 
-        public void Wait( List<IProjection> projections = null, Guid? identity = null )
+        public void Wait( List<IEventSubscriber> projections = null, Guid? identity = null )
         {
             var id = identity ?? Guid.NewGuid();
-            var projectionsToRebuild = projections ?? AllProjections;
+            var projectionsToRebuild = projections ?? AllSubscribers;
             var session = new SessionInfo( id, projectionsToRebuild, true );
             SessionCache.TryAdd( id, session );
 
@@ -97,24 +97,23 @@ namespace EventStoreKit.Services
             }
         }
 
-        public Guid OnFinish( Action<Guid> finishAll, Action<IProjection,Guid> finishProjection = null, List<IProjection> projections = null, Guid? identity = null )
+        public Guid OnFinish( Action<Guid> finishAll, Action<IEventSubscriber,Guid> finishProjection = null, List<IEventSubscriber> projections = null, Guid? identity = null )
         {
             var id = identity ?? Guid.NewGuid();
-            var projectionsToRebuild = projections ?? AllProjections;
+            var projectionsToWait = projections ?? AllSubscribers;
 
-            if ( SessionCache.TryAdd( id, new SessionInfo( id, projectionsToRebuild, finishAllAction: finishAll, finishProjectionAction: finishProjection ) ) )
+            if ( SessionCache.TryAdd( id, new SessionInfo( id, projectionsToWait, finishAllAction: finishAll, finishProjectionAction: finishProjection ) ) )
             {
                 //EventPublisher.Publish( new SequenceMarkerEvent{ Identity = id } );
-                projectionsToRebuild.ForEach( p => p.Handle( new SequenceMarkerEvent {Identity = id} ) );
+                projectionsToWait.ForEach( p => p.Handle( new SequenceMarkerEvent {Identity = id} ) );
             }
 
             return id;
         }
 
-        public IEnumerable<IProjection> GetActiveProjections( Guid identity )
+        public IEnumerable<IEventSubscriber> GetActiveProjections( Guid identity )
         {
-            SessionInfo session;
-            SessionCache.TryGetValue( identity, out session );
+            SessionCache.TryGetValue( identity, out var session );
             if( session == null )
                 return new IProjection[]{};
 

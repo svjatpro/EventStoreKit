@@ -5,11 +5,23 @@ using EventStoreKit.Messages;
 
 namespace EventStoreKit.Projections
 {
+    public class SequenceEventArgs : EventArgs
+    {
+        public readonly Guid SequenceIdentity;
+
+        public SequenceEventArgs( Guid sequenceIdentity )
+        {
+            SequenceIdentity = sequenceIdentity;
+        }
+    }
+
     public interface IEventSubscriber
     {
         void Handle( Message e );
         void Replay( Message e );
         IEnumerable<Type> HandledEventTypes { get; }
+
+        event EventHandler<SequenceEventArgs> SequenceFinished;
 
         #region Dynamic messages catching - it is required to get the exact moment when a subscriber definitely process some messages and client can use projection data
 

@@ -14,14 +14,14 @@ namespace EventStoreKit.Services
     public interface IReplaysHistory
     {
         void SetIterator( ICommitsIterator iterator );
-        void CleanHistory( List<IProjection> projections );
+        void CleanHistory( List<IEventSubscriber> subscribers );
         void Rebuild( 
-            List<IProjection> projections, 
+            List<IEventSubscriber> projections, 
             Action finishAllAction = null, 
             Action errorAction = null, 
-            Action<IProjection> finishProjectionAction = null,
-            Action<IProjection, ProjectionRebuildInfo> projectionProgressAction = null );
+            Action<IEventSubscriber> finishSubscriberAction = null,
+            Action<IEventSubscriber, ProjectionRebuildInfo> subscriberProgressAction = null );
         bool IsRebuilding();
-        Dictionary<IProjection, ProjectionRebuildInfo> GetProjectionsUnderRebuild();
+        Dictionary<IEventSubscriber, ProjectionRebuildInfo> GetSubscribersUnderRebuild();
     }
 }

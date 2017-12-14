@@ -149,9 +149,14 @@ namespace EventStoreKit.linq2db
 
         public T Single<T>( Expression<Func<T, bool>> predicat ) where T : class
         {
+            return DbManager.GetTable<T>().Single( predicat );
+        }
+
+        public T SingleOrDefault<T>( Expression<Func<T, bool>> predicat ) where T : class
+        {
             return DbManager.GetTable<T>().SingleOrDefault( predicat );
         }
-        
+
         public int Delete<T>( Expression<Func<T, bool>> predicat ) where T : class
         {
             return DbManager.GetTable<T>().Where( predicat ).Delete();

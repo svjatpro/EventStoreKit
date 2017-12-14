@@ -40,7 +40,7 @@ namespace EventStoreKit.ProjectionTemplates
 
         public TReadModel GetEntity( Guid id, Expression<Func<TReadModel, bool>> predicat )
         {
-            return DbProviderFactory.Run( db => db.Single( predicat ) );
+            return DbProviderFactory.Run( db => db.SingleOrDefault( predicat ) );
         }
     }
 
@@ -101,7 +101,7 @@ namespace EventStoreKit.ProjectionTemplates
             }
             else
             {
-                return DbProviderFactory.Run( db => db.Single( predicat ) );
+                return DbProviderFactory.Run( db => db.SingleOrDefault( predicat ) );
             }
         }
     }

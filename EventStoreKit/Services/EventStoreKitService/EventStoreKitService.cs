@@ -35,10 +35,9 @@ namespace EventStoreKit.Services
         private IIdGenerator IdGenerator;
         private IScheduler Scheduler;
         private IEventStoreConfiguration Configuration;
-        
+
         private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
 
-        private IDataBaseConfiguration DbConfigurationDefault = null;
         private IDataBaseConfiguration DbConfigurationSubscribers = null;
         private IDataBaseConfiguration DbConfigurationEventStore = null;
         private readonly Dictionary<Type, IDbProviderFactory> DbProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
@@ -66,6 +65,10 @@ namespace EventStoreKit.Services
         }
         private void InitializeEventStore()
         {
+            var factory = DbProviderFactoryHash[DbConfigurationEventStore];
+            MapReadModelToDbFactory<Commits>( factory, false );
+            //MapReadModelToDbFactory<Snapshots>( factory );
+
             StoreEvents?.Dispose();
 
             var dispatcher = new MessageDispatcher( ResolveLogger<MessageDispatcher>() );
@@ -174,9 +177,6 @@ namespace EventStoreKit.Services
 
             DbProviderFactoryHash.Add( config, factory );
 
-            if( DbConfigurationDefault == null )
-                DbConfigurationDefault = config;
-
             return factory;
         }
 
@@ -188,19 +188,19 @@ namespace EventStoreKit.Services
         {
             return DataBaseConfiguration.Initialize( typeof( TDbProviderFactory ), dbConnection, connectionString );
         }
-        private IDataBaseConfiguration CreateDbConfig( string configurationString )
+        private IDataBaseConfiguration CreateDbConfig( Type dbProviderFactoryType, string configurationString )
         {
-            return DataBaseConfiguration.Initialize( DbConfigurationDefault.DbProviderFactoryType, configurationString );
+            return DataBaseConfiguration.Initialize( dbProviderFactoryType, configurationString );
         }
-        private IDataBaseConfiguration CreateDbConfig( DbConnectionType dbConnection, string connectionString )
+        private IDataBaseConfiguration CreateDbConfig( Type dbProviderFactoryType, DbConnectionType dbConnection, string connectionString )
         {
-            return DataBaseConfiguration.Initialize( DbConfigurationDefault.DbProviderFactoryType, dbConnection, connectionString );
+            return DataBaseConfiguration.Initialize( dbProviderFactoryType, dbConnection, connectionString );
         }
 
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( string configurationString ) 
             where TSubscriber : class, IEventSubscriber
         {
-            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( configurationString ) );
+            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( DbConfigurationSubscribers.DbProviderFactoryType, configurationString ) );
         }
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber,TDbProviderFactory>( string configurationString ) 
             where TSubscriber : class, IEventSubscriber
@@ -211,7 +211,7 @@ namespace EventStoreKit.Services
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( DbConnectionType connectionType, string connectionString ) 
             where TSubscriber : class, IEventSubscriber
         {
-            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( connectionType, connectionString ) );
+            return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( DbConfigurationSubscribers.DbProviderFactoryType, connectionType, connectionString ) );
         }
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber, TDbProviderFactory>( DbConnectionType connectionType, string connectionString ) 
             where TSubscriber : class, IEventSubscriber
@@ -275,11 +275,8 @@ namespace EventStoreKit.Services
         private void InitializeEventStoreDb( IDataBaseConfiguration config )
         {
             DbConfigurationEventStore = config;
-            var factory = InitializeDbProviderFactory( config );
-
-            MapReadModelToDbFactory<Commits>( factory, false );
-            //MapReadModelToDbFactory<Snapshots>( factory );
-
+            InitializeDbProviderFactory( config );
+            
             InitializeEventStore();
         }
 
@@ -344,13 +341,13 @@ namespace EventStoreKit.Services
 
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( string configurationString ) where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( configurationString ) );
+            var context = CreateEventSubscriberContext<TSubscriber>( configurationString );
             RegisterEventSubscriber<TSubscriber>( InitializeEventSubscriber<TSubscriber>( context ), context );
             return this;
         }
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( DbConnectionType dbConnection, string connectionString ) where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( dbConnection, connectionString ) );
+            var context = CreateEventSubscriberContext<TSubscriber>( dbConnection, connectionString );
             RegisterEventSubscriber<TSubscriber>( InitializeEventSubscriber<TSubscriber>( context ), context );
             return this;
         }
@@ -378,7 +375,7 @@ namespace EventStoreKit.Services
         /// </summary>
         public EventStoreKitService SetSubscriberDataBase( string configurationString )
         {
-            InitializeSubscribersDb( CreateDbConfig( configurationString ) );
+            InitializeSubscribersDb( CreateDbConfig( DbConfigurationSubscribers.DbProviderFactoryType, configurationString ) );
             return this;
         }
         /// <summary>
@@ -395,7 +392,7 @@ namespace EventStoreKit.Services
         /// </summary>
         public EventStoreKitService SetSubscriberDataBase( DbConnectionType dbConnection, string connectionString )
         {
-            InitializeSubscribersDb( CreateDbConfig( dbConnection, connectionString ) );
+            InitializeSubscribersDb( CreateDbConfig( DbConfigurationSubscribers.DbProviderFactoryType, dbConnection, connectionString ) );
             return this;
         }
         /// <summary>
@@ -413,7 +410,7 @@ namespace EventStoreKit.Services
 
         public EventStoreKitService SetEventStoreDataBase( string configurationString )
         {
-            InitializeEventStoreDb( CreateDbConfig( configurationString ) );
+            InitializeEventStoreDb( CreateDbConfig( DbConfigurationEventStore.DbProviderFactoryType, configurationString ) );
             return this;
         }
         public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( string configurationString )
@@ -423,7 +420,7 @@ namespace EventStoreKit.Services
         }
         public EventStoreKitService SetEventStoreDataBase( DbConnectionType dbConnection, string connectionString )
         {
-            InitializeEventStoreDb( CreateDbConfig( dbConnection, connectionString ) );
+            InitializeEventStoreDb( CreateDbConfig( DbConfigurationEventStore.DbProviderFactoryType, dbConnection, connectionString ) );
             return this;
         }
         public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
@@ -502,6 +499,16 @@ namespace EventStoreKit.Services
         public void Publish( DomainEvent message )
         {
             EventPublisher.Publish( message );
+        }
+
+        public void Wait( params IEventSubscriber[] subscribers )
+        {
+            var targets =
+                subscribers.Any() ?
+                subscribers.ToList() :
+                EventSubscribers.Values.ToList();
+            var sequence = new EventSequence( targets, EventPublisher );
+            sequence.Wait();
         }
     }
 }

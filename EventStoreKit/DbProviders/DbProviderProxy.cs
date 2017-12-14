@@ -83,6 +83,8 @@ namespace EventStoreKit.DbProviders
 
         public T Single<T>( Expression<Func<T, bool>> predicat ) where T : class { return Instance.Single( predicat ); }
 
+        public T SingleOrDefault<T>( Expression<Func<T, bool>> predicat ) where T : class { return Instance.SingleOrDefault( predicat ); }
+
         public int Delete<T>( Expression<Func<T, bool>> predicat ) where T : class { return Instance.Delete( predicat ); }
 
         public int Insert<T>( T entity ) where T : class { return Instance.Insert( entity ); }
