@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Threading;
+using System.Threading.Tasks;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.linq2db;
@@ -93,13 +94,11 @@ namespace EventStoreKit.Tests
         [SetUp]
         protected void Setup()
         {
-            Thread.Sleep( 100 );
             Service = new EventStoreKitService();
         }
 
         private void InitializeService()
         {
-            Thread.Sleep(100);
             Projection1 = Service.ResolveSubscriber<Subscriber1>();
             Projection2 = Service.ResolveSubscriber<Subscriber2>();
 
@@ -129,7 +128,7 @@ namespace EventStoreKit.Tests
             clean( ConnectionStringDb1 );
             clean( ConnectionStringDb2 );
             clean( ConnectionStringDb3 );
-            Thread.Sleep(100);
+            //Thread.Sleep(200);
         }
 
         private TestEvent1 RaiseEvent()
@@ -141,6 +140,9 @@ namespace EventStoreKit.Tests
             };
             Service.Raise( msg );
             Service.Wait();
+            //Task.WaitAll( Projection1.WaitMessagesAsync(), Projection2.WaitMessagesAsync() );
+            //Projection1.WaitMessagesAsync();
+            //Projection2.WaitMessages();
             return msg;
         }
        
@@ -223,7 +225,7 @@ namespace EventStoreKit.Tests
             InitializeService();
 
             var msg = RaiseEvent();
-
+            
             EventStoreDb.Should().ContainsCommit(msg.Id);
             EventStoreDb.Should().ContainsReadModel<TestReadModel1>(r => r.Id == msg.Id);
             EventStoreDb.Should().ContainsReadModel<TestReadModel2>(r => r.Id == msg.Id);

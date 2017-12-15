@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using CommonDomain.Core;
 using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
@@ -507,8 +508,9 @@ namespace EventStoreKit.Services
                 subscribers.Any() ?
                 subscribers.ToList() :
                 EventSubscribers.Values.ToList();
-            var sequence = new EventSequence( targets, EventPublisher );
-            sequence.Wait();
+
+            var tasks = targets.Select( s => s.WaitMessagesAsync() ).ToArray();
+            Task.WaitAll( tasks );
         }
     }
 }
