@@ -415,6 +415,7 @@ namespace EventStoreKit.Services
             return this;
         }
         public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( string configurationString )
+            where TDbProviderFactory : IDbProviderFactory
         {
             InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( configurationString ) );
             return this;
@@ -424,7 +425,8 @@ namespace EventStoreKit.Services
             InitializeEventStoreDb( CreateDbConfig( DbConfigurationEventStore.DbProviderFactoryType, dbConnection, connectionString ) );
             return this;
         }
-        public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
+        public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) 
+            where TDbProviderFactory : IDbProviderFactory
         {
             InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString ) );
             return this;

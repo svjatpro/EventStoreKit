@@ -27,6 +27,11 @@ namespace EventStoreKit.Services
             {
                 new DbConnectionInfo
                 {
+                    DbConnectionType = DbConnectionType.None,
+                    SqlProviderName = string.Empty
+                },
+                new DbConnectionInfo
+                {
                     DbConnectionType = DbConnectionType.MsSql,
                     SqlProviderName = "System.Data.SqlClient"
                 },

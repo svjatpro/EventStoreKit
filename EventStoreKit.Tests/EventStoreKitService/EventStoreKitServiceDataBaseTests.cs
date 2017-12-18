@@ -94,19 +94,6 @@ namespace EventStoreKit.Tests
         [SetUp]
         protected void Setup()
         {
-            Service = new EventStoreKitService();
-        }
-
-        private void InitializeService()
-        {
-            Projection1 = Service.ResolveSubscriber<Subscriber1>();
-            Projection2 = Service.ResolveSubscriber<Subscriber2>();
-
-            EventStoreDb = Service.ResolveDbProviderFactory<Commits>();
-            ReadModel1Db = Service.ResolveDbProviderFactory<TestReadModel1>();
-            ReadModel2Db = Service.ResolveDbProviderFactory<TestReadModel2>();
-            ReadModel3Db = Service.ResolveDbProviderFactory<TestReadModel3>();
-
             // clean all data
             var clean = new Action<string>( connectionString =>
             {
@@ -125,10 +112,28 @@ namespace EventStoreKit.Tests
                     } );
             } );
 
-            clean( ConnectionStringDb1 );
-            clean( ConnectionStringDb2 );
-            clean( ConnectionStringDb3 );
-            //Thread.Sleep(200);
+            //clean( ConnectionStringDb1 );
+            //clean( ConnectionStringDb2 );
+            //clean( ConnectionStringDb3 );
+            Thread.Sleep( 200 );
+
+            Service = new EventStoreKitService();
+        }
+
+        private void InitializeService()
+        {
+            Thread.Sleep( 200 );
+
+            Projection1 = Service.ResolveSubscriber<Subscriber1>();
+            Projection2 = Service.ResolveSubscriber<Subscriber2>();
+
+            EventStoreDb = Service.ResolveDbProviderFactory<Commits>();
+            ReadModel1Db = Service.ResolveDbProviderFactory<TestReadModel1>();
+            ReadModel2Db = Service.ResolveDbProviderFactory<TestReadModel2>();
+            ReadModel3Db = Service.ResolveDbProviderFactory<TestReadModel3>();
+
+            Projection1.Handle( new SystemCleanedUpEvent() );
+            Projection2.Handle( new SystemCleanedUpEvent() );
         }
 
         private TestEvent1 RaiseEvent()
@@ -140,9 +145,6 @@ namespace EventStoreKit.Tests
             };
             Service.Raise( msg );
             Service.Wait();
-            //Task.WaitAll( Projection1.WaitMessagesAsync(), Projection2.WaitMessagesAsync() );
-            //Projection1.WaitMessagesAsync();
-            //Projection2.WaitMessages();
             return msg;
         }
        
@@ -218,8 +220,8 @@ namespace EventStoreKit.Tests
         public void SubscribersAndEventStoreShouldBeMappedToSingeDb()
         {
             Service
-                .SetSubscriberDataBase<Linq2DbProviderFactory>(DbConnectionType.SqlLite, ConnectionStringDb1)
-                .SetEventStoreDataBase<Linq2DbProviderFactory>(DbConnectionType.SqlLite, ConnectionStringDb1)
+                .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, ConnectionStringDb1 )
+                .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, ConnectionStringDb1 )
                 .RegisterEventSubscriber<Subscriber1>()
                 .RegisterEventSubscriber<Subscriber2>();
             InitializeService();
