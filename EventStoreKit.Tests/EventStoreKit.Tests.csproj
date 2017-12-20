@@ -22,7 +22,7 @@
     <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
     <PackageReference Include="FluentAssertions" Version="4.0.0" />
     <PackageReference Include="NSubstitute" Version="1.8.1.0" />
-    <PackageReference Include="NUnit" Version="2.6.4" />
+    <PackageReference Include="NUnit" Version="3.9.0" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.106" />
   </ItemGroup>
 
