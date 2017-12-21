@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Threading;
-using System.Threading.Tasks;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.linq2db;
@@ -57,12 +56,14 @@ namespace EventStoreKit.Tests
         private const string ConnectionStringDb3 = "data source=db3";
 
         private EventStoreKitService Service;
+// ReSharper disable NotAccessedField.Local
         private Subscriber1 Projection1;
         private Subscriber2 Projection2;
         private IDbProviderFactory EventStoreDb;
         private IDbProviderFactory ReadModel1Db;
         private IDbProviderFactory ReadModel2Db;
         private IDbProviderFactory ReadModel3Db;
+// ReSharper restore NotAccessedField.Local
 
         private class TestReadModel1 { public Guid Id { get; set; } public string Name { get; set; } }
         private class TestReadModel2 { public Guid Id { get; set; } public string Name { get; set; } }
@@ -104,10 +105,10 @@ namespace EventStoreKit.Tests
                     } )
                     .Run( db =>
                     {
-                        db.CreateTable<Commits>( overwrite: false );
-                        db.CreateTable<TestReadModel1>( overwrite: false );
-                        db.CreateTable<TestReadModel2>( overwrite: false );
-                        db.CreateTable<TestReadModel3>( overwrite: false );
+                        db.CreateTable<Commits>();
+                        db.CreateTable<TestReadModel1>();
+                        db.CreateTable<TestReadModel2>();
+                        db.CreateTable<TestReadModel3>();
                     } );
             } );
 
@@ -146,6 +147,7 @@ namespace EventStoreKit.Tests
             };
             Service.Raise( msg );
             Service.Wait();
+            Thread.Sleep( 200 );
             return msg;
         }
        
@@ -241,7 +243,7 @@ namespace EventStoreKit.Tests
         }
 
         [Test]
-        public void SubscribersStoreShouldBeMappedToDifferentDbs()
+        public void SubscribersAndEventStoreShouldBeMappedToDifferentDbs()
         {
             Service
                 .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, ConnectionStringDb1 )
@@ -266,6 +268,44 @@ namespace EventStoreKit.Tests
             ReadModel2Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
             ReadModel2Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
             ReadModel2Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+
+            ReadModel3Db.Should().NotContainsCommit( msg.Id );
+            ReadModel3Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            ReadModel3Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            ReadModel3Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+        }
+
+        [Test]
+        public void EventStoreAndSubscribersShouldBeMappedToDifferentDbs()
+        {
+            Service
+                .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, ConnectionStringDb2 )
+                .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, ConnectionStringDb1 )
+                .RegisterEventSubscriber<Subscriber1>()
+                .RegisterEventSubscriber<Subscriber2>( DbConnectionType.SqlLite, ConnectionStringDb3 );
+            InitializeService();
+
+            var msg = RaiseEvent();
+
+            EventStoreDb.Should().ContainsCommit( msg.Id );
+            EventStoreDb.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            EventStoreDb.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            EventStoreDb.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+
+            ReadModel1Db.Should().NotContainsCommit( msg.Id );
+            ReadModel1Db.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            ReadModel1Db.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            ReadModel1Db.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+
+            ReadModel2Db.Should().NotContainsCommit( msg.Id );
+            ReadModel2Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            ReadModel2Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            ReadModel2Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+
+            ReadModel3Db.Should().NotContainsCommit( msg.Id );
+            ReadModel3Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            ReadModel3Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            ReadModel3Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
         }
     }
 }
