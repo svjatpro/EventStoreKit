@@ -7,13 +7,13 @@ namespace EventStoreKit.linq2db
 {
     public class DbProviderMsSql : DbProvider
     {
-        public DbProviderMsSql( string configurationString = null, string connectionString = null )
-            : base(
-                  configurationString != null ? 
-                  new DataConnection( configurationString ) :
-// ReSharper disable AssignNullToNotNullAttribute
-                  new DataConnection( new SqlServerDataProvider( ProviderName.SqlServer, SqlServerVersion.v2008 ), connectionString ) )
-// ReSharper restore AssignNullToNotNullAttribute
+        public DbProviderMsSql( string configurationString )
+            : base( new DataConnection( configurationString ) )
+        {
+        }
+
+        public DbProviderMsSql( SqlServerVersion version, string connectionString )
+            : base( new DataConnection( new SqlServerDataProvider( ProviderName.SqlServer, version ), connectionString ) )
         {
         }
 

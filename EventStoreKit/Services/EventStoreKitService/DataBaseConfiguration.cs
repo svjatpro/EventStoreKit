@@ -25,26 +25,13 @@ namespace EventStoreKit.Services
         private static readonly List<DbConnectionInfo> DbConnectionMap =
             new List<DbConnectionInfo>
             {
-                new DbConnectionInfo
-                {
-                    DbConnectionType = DbConnectionType.None,
-                    SqlProviderName = string.Empty
-                },
-                new DbConnectionInfo
-                {
-                    DbConnectionType = DbConnectionType.MsSql,
-                    SqlProviderName = "System.Data.SqlClient"
-                },
-                new DbConnectionInfo
-                {
-                    DbConnectionType = DbConnectionType.MySql,
-                    SqlProviderName = "MySql.Data.MySqlClient"
-                },
-                new DbConnectionInfo
-                {
-                    DbConnectionType = DbConnectionType.SqlLite,
-                    SqlProviderName = "System.Data.SQLite"
-                }
+                new DbConnectionInfo { DbConnectionType = DbConnectionType.None, SqlProviderName = string.Empty },
+                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2000, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2005, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2008, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2012, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DbConnectionType = DbConnectionType.MySql, SqlProviderName = "MySql.Data.MySqlClient" },
+                new DbConnectionInfo { DbConnectionType = DbConnectionType.SqlLite, SqlProviderName = "System.Data.SQLite" }
             };
 
         public static IDataBaseConfiguration Initialize( Type factoryType, string configurationString )

@@ -103,7 +103,10 @@ namespace EventStoreKit.Services
                 // todo: move NEventStore related stuff to separate module
                 var dialectTypeMap = new Dictionary< DbConnectionType, Type>
                 {
-                    { DbConnectionType.MsSql, typeof( MsSqlDialect ) },
+                    { DbConnectionType.MsSql2000, typeof( MsSqlDialect ) },
+                    { DbConnectionType.MsSql2005, typeof( MsSqlDialect ) },
+                    { DbConnectionType.MsSql2008, typeof( MsSqlDialect ) },
+                    { DbConnectionType.MsSql2012, typeof( MsSqlDialect ) },
                     { DbConnectionType.MySql, typeof( MySqlDialect ) },
                     { DbConnectionType.SqlLite, typeof( SqliteDialect ) }
                 };

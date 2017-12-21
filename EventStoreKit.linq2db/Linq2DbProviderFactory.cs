@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Services;
-using EventStoreKit.Utility;
+using LinqToDB.DataProvider.SqlServer;
 
 namespace EventStoreKit.linq2db
 {
@@ -10,11 +10,61 @@ namespace EventStoreKit.linq2db
     {
         #region private fields
 
-        private readonly Dictionary<DbConnectionType, Type> ProvidersMap = new Dictionary<DbConnectionType, Type>
+        private class DbProviderBuilderInfo
         {
-            {DbConnectionType.MsSql, typeof(DbProviderMsSql)},
-            {DbConnectionType.MySql, typeof(DbProviderMySql)},
-            {DbConnectionType.SqlLite, typeof(DbProviderSqlLite)}
+            public Func<string,IDbProvider> CreateByConfigString { get; set; }
+            public Func<string,IDbProvider> CreateByConnectionString { get; set; }
+        }
+        private readonly Dictionary<DbConnectionType, DbProviderBuilderInfo> ProvidersMap = new Dictionary<DbConnectionType, DbProviderBuilderInfo>
+        {
+            {
+                DbConnectionType.MsSql2000,
+                new DbProviderBuilderInfo
+                {
+                    CreateByConfigString = config => new DbProviderMsSql( config ),
+                    CreateByConnectionString = connection => new DbProviderMsSql( SqlServerVersion.v2000, connection ) 
+                } 
+            },
+            {
+                DbConnectionType.MsSql2005,
+                new DbProviderBuilderInfo
+                {
+                    CreateByConfigString = config => new DbProviderMsSql( config ),
+                    CreateByConnectionString = connection => new DbProviderMsSql( SqlServerVersion.v2005, connection ) 
+                }
+            },
+            {
+                DbConnectionType.MsSql2008,
+                new DbProviderBuilderInfo
+                {
+                    CreateByConfigString = config => new DbProviderMsSql( config ),
+                    CreateByConnectionString = connection => new DbProviderMsSql( SqlServerVersion.v2008, connection ) 
+                } 
+            },
+            {
+                DbConnectionType.MsSql2012,
+                new DbProviderBuilderInfo
+                {
+                    CreateByConfigString = config => new DbProviderMsSql( config ),
+                    CreateByConnectionString = connection => new DbProviderMsSql( SqlServerVersion.v2012, connection ) 
+                } 
+            },
+            {
+                DbConnectionType.MySql,
+                new DbProviderBuilderInfo
+                {
+                    CreateByConfigString = config => new DbProviderMySql( config ),
+                    CreateByConnectionString = connection => new DbProviderMySql( null, connection )
+                } 
+            },
+            {
+                DbConnectionType.SqlLite,
+                new DbProviderBuilderInfo
+                {
+                    CreateByConfigString = config => new DbProviderSqlLite( config ),
+                    CreateByConnectionString = connection => new DbProviderSqlLite( null, connection )
+                } 
+            }
         };
         private readonly Func<IDbProvider> DefaultProvider;
         
@@ -22,20 +72,14 @@ namespace EventStoreKit.linq2db
 
         public Linq2DbProviderFactory( IDataBaseConfiguration configuration )
         {
-            var providerType = ProvidersMap[configuration.DbConnectionType];
+            var providerInitializer = ProvidersMap[configuration.DbConnectionType];
             if (!string.IsNullOrWhiteSpace(configuration.ConfigurationString))
             {
-                var ctor = providerType.GetConstructor(new[] {typeof(string), typeof(string)});
-                if( ctor == null )
-                    throw new InvalidOperationException( "There is no appropriate constructor to create DbProvider" );
-                DefaultProvider = () => ctor.Invoke(new object[] {configuration.ConfigurationString, null}).OfType<IDbProvider>();
+                DefaultProvider = () => providerInitializer.CreateByConfigString( configuration.ConfigurationString );
             }
             else
             {
-                var ctor = providerType.GetConstructor(new[] {typeof(string), typeof(string)});
-                if (ctor == null)
-                    throw new InvalidOperationException("There is no appropriate constructor to create DbProvider");
-                DefaultProvider = () => ctor.Invoke(new object[] {null, configuration.ConnectionString}).OfType<IDbProvider>();
+                DefaultProvider = () => providerInitializer.CreateByConnectionString( configuration.ConnectionString );
             }
         }
 

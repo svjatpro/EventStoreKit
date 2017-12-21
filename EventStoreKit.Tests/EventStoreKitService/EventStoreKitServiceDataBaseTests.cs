@@ -134,7 +134,7 @@ namespace EventStoreKit.Tests
             ReadModel2Db = Service.ResolveDbProviderFactory<TestReadModel2>();
             ReadModel3Db = Service.ResolveDbProviderFactory<TestReadModel3>();
 
-            Thread.Sleep( 100 );
+            Thread.Sleep( 200 );
         }
 
         private TestEvent1 RaiseEvent()
