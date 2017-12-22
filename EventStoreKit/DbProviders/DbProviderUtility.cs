@@ -81,6 +81,37 @@ namespace EventStoreKit.DbProviders
         }
 
         /// <summary>
+        /// Performs action/method with separate instance of DbProvider without transaction
+        ///   Use
+        /// </summary>
+        public static TResult Read<TResult>(
+            this IDbProviderFactory factory,
+            Func<IDbProvider, TResult> action,
+            Action<Exception> processException = null )
+        {
+            return new Func<IDbProvider>( factory.Create ).Read( action, processException );
+        }
+        public static TResult Read<TResult>(
+            this Func<IDbProvider> persistanceManagerCreator,
+            Func<IDbProvider, TResult> action,
+            Action<Exception> processException = null )
+        {
+            using( var persistanceManager = persistanceManagerCreator() )
+            {
+                try
+                {
+                    var result = action( persistanceManager );
+                    return result;
+                }
+                catch( Exception exc )
+                {
+                    processException.Do( a => a( exc ) );
+                    throw;
+                }
+            }
+        }
+
+        /// <summary>
         /// Performs action/method with separate instance of DbProvider within Sql Transaction.
         ///   If the result is query result / list, then use ToList(). 
         ///   The reason is, than deffered materialization will be failed because of disposed connection ( and commited transaction )
