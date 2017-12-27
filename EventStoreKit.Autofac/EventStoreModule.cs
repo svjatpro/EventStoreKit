@@ -11,7 +11,6 @@ using CommonDomain.Core;
 using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Aggregates;
-using EventStoreKit.CommandBus;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -29,6 +28,14 @@ using Module = Autofac.Module;
 
 namespace EventStoreKit.Autofac
 {
+    public static class EventStoreKitExtension
+    {
+        public static EventStoreKitService InitializeWith( this ContainerBuilder builder, EventStoreKitService service )
+        {
+            
+        }
+    }
+
     public class EventStoreModule : Module
     {
         #region Private fields

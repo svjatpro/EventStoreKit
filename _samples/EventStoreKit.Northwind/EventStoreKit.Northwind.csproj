@@ -23,7 +23,10 @@
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
     <PackageReference Include="Rx-Linq" Version="2.2.5" />
     <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
-    <PackageReference Include="EventStoreKit" Version="2.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\EventStoreKit\EventStoreKit.csproj" />
   </ItemGroup>
 
   <ItemGroup>
