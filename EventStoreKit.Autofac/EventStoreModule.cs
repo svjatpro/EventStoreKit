@@ -32,7 +32,22 @@ namespace EventStoreKit.Autofac
     {
         public static EventStoreKitService InitializeWith( this ContainerBuilder builder, EventStoreKitService service )
         {
+            var container = builder.Build();
+
+            // register command handlers
+            //var commandHandler = container.Resolve<IEnumerable<>>(  )
+
+            // register event subscribers
+            var eventSubscribers = container.Resolve<IEnumerable<IEventSubscriber>>();
+            eventSubscribers
+                .ToList()
+                .ForEach( 
+                    subscriber =>
+                    {
+                        service.RegisterEventSubscriber( subscriber );
+                    } );
             
+            return service;
         }
     }
 

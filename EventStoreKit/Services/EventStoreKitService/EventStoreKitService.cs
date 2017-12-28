@@ -356,7 +356,7 @@ namespace EventStoreKit.Services
             return this;
         }
 
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber = null )
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( TSubscriber subscriber = null )
             where TSubscriber : class, IEventSubscriber
         {
             IEventStoreSubscriberContext context = null;

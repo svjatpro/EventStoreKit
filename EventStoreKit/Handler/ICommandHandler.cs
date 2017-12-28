@@ -6,9 +6,7 @@ namespace EventStoreKit.Handler
     public interface ICommandHandler
     {
     }
-
-
-
+    
     public interface ICommandHandler<TCommand, TEntity> : ICommandHandler
         where TCommand : DomainCommand
         where TEntity : ITrackableAggregate
