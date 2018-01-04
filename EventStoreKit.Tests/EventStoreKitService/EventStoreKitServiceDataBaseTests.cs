@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using EventStoreKit.DbProviders;
@@ -10,6 +12,9 @@ using EventStoreKit.Services;
 using EventStoreKit.Utility;
 using FluentAssertions;
 using FluentAssertions.Primitives;
+using NEventStore;
+using NEventStore.Persistence.Sql;
+using NEventStore.Persistence.Sql.SqlDialects;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -93,7 +98,7 @@ namespace EventStoreKit.Tests
         }
 
         [OneTimeSetUp]
-        protected void FixtureSetup()
+        protected void ResetDataBases()
         {
             // clean all data
             var clean = new Action<string>( connectionString =>
@@ -105,16 +110,26 @@ namespace EventStoreKit.Tests
                     } )
                     .Run( db =>
                     {
-                        db.CreateTable<Commits>();
                         db.CreateTable<TestReadModel1>();
                         db.CreateTable<TestReadModel2>();
                         db.CreateTable<TestReadModel3>();
                     } );
+
+                using( var wireup = Wireup
+                    .Init()
+                    .UsingSqlPersistence( connectionString, DataBaseConfiguration.ResolveSqlProviderName( DbConnectionType.SqlLite ), connectionString )
+                    .WithDialect( new SqliteDialect() )
+                    .InitializeStorageEngine()
+                    .UsingJsonSerialization()
+                    .Build() )
+                {
+                }
             } );
 
             clean( ConnectionStringDb1 );
             clean( ConnectionStringDb2 );
             clean( ConnectionStringDb3 );
+
             Thread.Sleep( 100 );
         }
 
@@ -134,7 +149,7 @@ namespace EventStoreKit.Tests
             ReadModel2Db = Service.ResolveDbProviderFactory<TestReadModel2>();
             ReadModel3Db = Service.ResolveDbProviderFactory<TestReadModel3>();
 
-            Thread.Sleep( 200 );
+            Thread.Sleep( 100 );
         }
 
         private TestEvent1 RaiseEvent()
@@ -147,7 +162,7 @@ namespace EventStoreKit.Tests
             };
             Service.Raise( msg );
             Service.Wait();
-            Thread.Sleep( 200 );
+            Thread.Sleep( 300 );
             return msg;
         }
        

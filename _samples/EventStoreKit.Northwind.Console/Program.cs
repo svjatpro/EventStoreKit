@@ -53,30 +53,11 @@ namespace EventStoreKit.Northwind.Console
         static void Main()
         {
             var service = new EventStoreKitService()
-                .test()
-
-                .SetDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-
-                .SetDefaultDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-                .SetProjectionsDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
-
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-                .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db2" )
-
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
-                
                 .RegisterEventSubscriber<ProductProjection>()
-                .RegisterEventSubscriber( ctx => new ProductProjection( ctx ) )
-                .RegisterEventSubscriber( ctx => new CustomerProjection( ctx ), DbConnectionType.SqlLite, "data source=db3" )
-                .RegisterEventSubscriber<CustomerProjection, Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db3" )
-                .RegisterEventSubscriber<CustomerProjection, Linq2DbProviderFactory>( ctx => new CustomerProjection( ctx ), DbConnectionType.SqlLite, "data source=db3" );
-
-
+                .RegisterEventSubscriber( ctx => new CustomerProjection( ctx ), DbConnectionType.SqlLite, "data source=db3" );
+            
             var customerProjection = service.ResolveSubscriber<CustomerProjection>();
             var productProjection = service.ResolveSubscriber<ProductProjection>();
 

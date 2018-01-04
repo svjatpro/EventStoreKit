@@ -34,6 +34,10 @@ namespace EventStoreKit.Services
                 new DbConnectionInfo { DbConnectionType = DbConnectionType.SqlLite, SqlProviderName = "System.Data.SQLite" }
             };
 
+        public static string ResolveSqlProviderName( DbConnectionType connectionType )
+        {
+            return DbConnectionMap.Single( p => p.DbConnectionType == connectionType ).SqlProviderName;
+        }
         public static IDataBaseConfiguration Initialize( Type factoryType, string configurationString )
         {
             var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;

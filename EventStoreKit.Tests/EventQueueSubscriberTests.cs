@@ -265,7 +265,7 @@ namespace EventStoreKit.Tests
             Thread.Sleep( 100 );
             Subscriber1.Handle( new Message2 { Id = "3" } );
             Subscriber1.Handle( new Message1 { Id = "4" } );
-            Thread.Sleep( 1200 );
+            Thread.Sleep( 1300 );
 
             Subscriber1.OnIddleCounter.Should().BeGreaterOrEqualTo( 1 );
         }
