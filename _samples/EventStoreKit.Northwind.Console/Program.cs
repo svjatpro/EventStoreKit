@@ -56,6 +56,7 @@ namespace EventStoreKit.Northwind.Console
                 .RegisterCommandHandler<CustomerHandler>()
                 .RegisterCommandHandler<ProductHandler>()
                 .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
+                .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
                 .RegisterEventSubscriber<ProductProjection>()
                 .RegisterEventSubscriber<CustomerProjection>();
             
