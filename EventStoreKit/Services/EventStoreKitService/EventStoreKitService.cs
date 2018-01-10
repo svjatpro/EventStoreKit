@@ -63,6 +63,11 @@ namespace EventStoreKit.Services
             };
 
             CurrentUserProvider = new CurrentUserProviderStub { CurrentUserId = Guid.NewGuid() };
+
+            var dispatcher = new MessageDispatcher( ResolveLogger<MessageDispatcher>() );
+            Dispatcher = dispatcher;
+            EventPublisher = dispatcher;
+            CommandBus = dispatcher;
         }
         private void InitializeEventStore()
         {
@@ -71,12 +76,7 @@ namespace EventStoreKit.Services
             //MapReadModelToDbFactory<Snapshots>( factory );
 
             StoreEvents?.Dispose();
-
-            var dispatcher = new MessageDispatcher( ResolveLogger<MessageDispatcher>() );
-            Dispatcher = dispatcher;
-            EventPublisher = dispatcher;
-            CommandBus = dispatcher;
-
+            
             var wireup = InitializeWireup();
 
             StoreEvents = new EventStoreAdapter( wireup, ResolveLogger<EventStoreAdapter>(), EventPublisher, CommandBus );
@@ -488,7 +488,7 @@ namespace EventStoreKit.Services
             CommandBus.Send( command );
         }
 
-        public void Raise( DomainEvent message )
+        public void RaiseEvent( DomainEvent message )
         {
             if ( message.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
                 message.CreatedBy = CurrentUserProvider.CurrentUserId.Value;

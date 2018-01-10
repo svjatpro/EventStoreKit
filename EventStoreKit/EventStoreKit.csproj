@@ -19,7 +19,7 @@
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
 
     <BuildNumber>$([System.DateTime]::Now.ToString(MMddHHmm))</BuildNumber>
-    <Version>2.0.0.0(BuildNumber)</Version>
+    <Version>2.0.0.0</Version>
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
     <FileVersion>2.0.0.0</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>

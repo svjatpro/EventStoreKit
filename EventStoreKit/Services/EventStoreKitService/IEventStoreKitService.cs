@@ -11,7 +11,7 @@ namespace EventStoreKit.Services
 
         void SendCommand( DomainCommand command );
 
-        void Raise( DomainEvent message );
+        void RaiseEvent( DomainEvent message );
         void Publish( DomainEvent message );
         void Wait( params IEventSubscriber[] subscribers );
     }
