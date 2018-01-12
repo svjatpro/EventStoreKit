@@ -9,10 +9,10 @@ namespace EventStoreKit.Northwind.Aggregates
     {
         #region Private fields
 
-        private string CustomerId;
+        private Guid CustomerId;
         private DateTime OrderDate;
         private DateTime RequiredDate;
-        private DateTime ShippedDate;
+        private DateTime? ShippedDate;
 
         #endregion
 
