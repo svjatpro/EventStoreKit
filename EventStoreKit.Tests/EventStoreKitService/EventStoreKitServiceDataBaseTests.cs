@@ -160,7 +160,7 @@ namespace EventStoreKit.Tests
                 Id = id,
                 Name = "name_" + id
             };
-            Service.Raise( msg );
+            Service.RaiseEvent( msg );
             Service.Wait();
             Thread.Sleep( 300 );
             return msg;

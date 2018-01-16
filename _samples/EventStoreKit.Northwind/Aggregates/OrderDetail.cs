@@ -1,5 +1,8 @@
 ﻿using System;
 using EventStoreKit.Aggregates;
+using EventStoreKit.Northwind.Messages.Commands;
+using EventStoreKit.Northwind.Messages.Events;
+using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
 {
@@ -13,8 +16,44 @@ namespace EventStoreKit.Northwind.Aggregates
         private decimal Quantity;
         private decimal Discount;
 
+        private bool Removed;
+
         #endregion
 
+        #region Event handlers
 
+        private void Apply( OrderDetailCreatedEvent msg )
+        {
+            OrderId = msg.OrderId;
+            ProductId = msg.ProductId;
+            UnitPrice = msg.UnitPrice;
+            Quantity = msg.Quantity;
+            Discount = msg.Discount;
+        }
+
+        private void Apply( OrderDetailRemovedEvent msg )
+        {
+            Removed = true;
+        }
+
+        #endregion
+
+        public OrderDetail( Guid id )
+        {
+            Id = id;
+
+            Register<OrderDetailCreatedEvent>( Apply );
+            Register<OrderDetailRemovedEvent>( Apply );
+        }
+
+        public OrderDetail( CreateOrderDetailCommand cmd ) : this( cmd.Id )
+        {
+            RaiseEvent( cmd.CopyTo( c => new OrderDetailCreatedEvent() ) );
+        }
+
+        public void Remove( RemoveOrderDetailCommand cmd )
+        {
+            RaiseEvent( cmd.CopyTo( c => new OrderDetailCreatedEvent() ) );
+        }
     }
 }

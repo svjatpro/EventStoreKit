@@ -442,15 +442,14 @@ namespace EventStoreKit.Services
             InitializeCommon();
             InitializeEventStore();
         }
-
-        public EventStoreKitService RegisterCommandHandler<THandler>( THandler handler = null ) where THandler : class, ICommandHandler, new()
+        
+        public EventStoreKitService RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new()
         {
-            // todo: remove constraints for class and new(), try to create by reflectin, otherwise throw exception
-            // but user is able to register subscriber instance, which has no parameterless constructor
-            if ( handler == null )
-                handler = new THandler();
-
-            var handlerType = typeof(THandler);
+            return RegisterCommandHandler( new THandler() );
+        }
+        public EventStoreKitService RegisterCommandHandler( ICommandHandler handler )
+        {
+            var handlerType = handler.GetType();
             var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
             var registerCommandMehod = GetType().GetMethod( "RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
 

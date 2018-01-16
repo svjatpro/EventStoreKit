@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2002
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Northwind", "EventStoreKit.Northwind\EventStoreKit.Northwind.csproj", "{3C2F459F-28EA-4B63-BFC5-ABEE5BF43F5D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Northwind", "..\EventStoreKit.Northwind\EventStoreKit.Northwind.csproj", "{3C2F459F-28EA-4B63-BFC5-ABEE5BF43F5D}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Northwind.Console", "EventStoreKit.Northwind.Console\EventStoreKit.Northwind.Console.csproj", "{0663F3AD-22A3-4578-8140-96DDB96B4632}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Northwind.Console", "EventStoreKit.Northwind.Console.csproj", "{0663F3AD-22A3-4578-8140-96DDB96B4632}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

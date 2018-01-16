@@ -32,9 +32,9 @@ namespace EventStoreKit.Northwind.Projections.Customer
 
         public string Name => "Products Projection";
 
-        public CustomerModel GetById( Guid id )
+        public ProductModel GetById( Guid id )
         {
-            return DbProviderFactory.Run( db => db.Single<CustomerModel>( c => c.Id == id ) );
+            return DbProviderFactory.Run( db => db.Single<ProductModel>( c => c.Id == id ) );
         }
         public QueryResult<ProductModel> GetProducts( SearchOptions.SearchOptions options )
         {
