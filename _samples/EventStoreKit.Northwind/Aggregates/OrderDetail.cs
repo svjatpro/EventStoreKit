@@ -53,7 +53,7 @@ namespace EventStoreKit.Northwind.Aggregates
 
         public void Remove( RemoveOrderDetailCommand cmd )
         {
-            RaiseEvent( cmd.CopyTo( c => new OrderDetailCreatedEvent() ) );
+            RaiseEvent( cmd.CopyTo( c => new OrderDetailRemovedEvent() ) );
         }
     }
 }

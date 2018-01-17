@@ -1,7 +1,7 @@
 ﻿using System;
 using LinqToDB.Mapping;
 
-namespace OSMD.Common.ReadModels
+namespace EventStoreKit.Northwind.Projections.OrderDetail
 {
     [Table( "OrderDetailsProducts", IsColumnAttributeRequired = false )]
     public class OrderDetailModelProduct

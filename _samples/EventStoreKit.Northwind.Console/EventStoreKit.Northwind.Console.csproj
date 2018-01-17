@@ -26,7 +26,6 @@
     <PackageReference Include="Rx-Linq" Version="2.2.5" />
     <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
     <PackageReference Include="linq2db" Version="1.10.1" />
-    <PackageReference Include="MySql.Data" Version="6.10.4" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.106" />
   </ItemGroup>
 

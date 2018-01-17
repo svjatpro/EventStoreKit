@@ -1,7 +1,7 @@
 ﻿using System;
 using LinqToDB.Mapping;
 
-namespace OSMD.Common.ReadModels
+namespace EventStoreKit.Northwind.Projections.Customer
 {
     [Table( "Customers", IsColumnAttributeRequired = false )]
     public class CustomerModel

@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Linq;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Messages.Events;
+using EventStoreKit.Northwind.Projections.Order;
 using EventStoreKit.Projections;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
-using OSMD.Common.ReadModels;
 
 namespace EventStoreKit.Northwind.Projections.Customer
 {

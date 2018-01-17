@@ -516,5 +516,21 @@ namespace EventStoreKit.Services
             var tasks = targets.Select( s => s.WaitMessagesAsync() ).ToArray();
             Task.WaitAll( tasks );
         }
+
+        public void CleanData()
+        {
+            StoreEvents.Advanced.Purge();
+
+            var msg = new SystemCleanedUpEvent();
+            var tasks = EventSubscribers
+                .Values.ToList()
+                .Select( subscriber =>
+                {
+                    subscriber.Handle( msg );
+                    return subscriber.WaitMessagesAsync();
+                } )
+                .ToArray();
+            Task.WaitAll( tasks );
+        }
     }
 }

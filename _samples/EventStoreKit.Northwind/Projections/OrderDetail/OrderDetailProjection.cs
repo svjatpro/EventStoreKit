@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Northwind.Messages.Commands;
@@ -7,9 +6,9 @@ using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Projections;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
-using OSMD.Common.ReadModels;
+using EventStoreKit.Utility;
 
-namespace EventStoreKit.Northwind.Projections.Customer
+namespace EventStoreKit.Northwind.Projections.OrderDetail
 {
     public class OrderDetailProjection : SqlProjectionBase<OrderDetailModel>,
         IEventHandler<OrderDetailCreatedEvent>,
@@ -21,6 +20,7 @@ namespace EventStoreKit.Northwind.Projections.Customer
 
         public void Handle(OrderDetailCreatedEvent msg)
         {
+            var prod = DbProviderFactory.Run( db => db.SingleOrDefault<OrderDetailModelProduct>( c => c.Id == msg.ProductId ).With( p => p.ProductName ) );
             DbProviderFactory.Run( db =>
             {
                 db.Insert( new OrderDetailModel
@@ -28,7 +28,8 @@ namespace EventStoreKit.Northwind.Projections.Customer
                     Id = msg.Id,
                     OrderId = msg.OrderId,
                     ProductId = msg.ProductId,
-                    ProductName = db.Single<OrderDetailModelProduct>( c => c.Id == msg.ProductId ).ProductName,
+                    //ProductName = db.Single<OrderDetailModelProduct>( c => c.Id == msg.ProductId ).ProductName,
+                    ProductName = prod ?? string.Empty,
                     UnitPrice = msg.UnitPrice,
                     Quantity = msg.Quantity,
                     Discount = msg.Discount

@@ -5,7 +5,6 @@ using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Projections;
 using EventStoreKit.SearchOptions;
 using EventStoreKit.Services;
-using OSMD.Common.ReadModels;
 
 namespace EventStoreKit.Northwind.Projections.Customer
 {
