@@ -3,7 +3,7 @@ using EventStoreKit.Messages;
 
 namespace EventStoreKit.Northwind.Messages.Events
 {
-    public class OrderDetailCreatedEvent : DomainCommand
+    public class OrderDetailCreatedEvent : DomainEvent
     {
         public Guid OrderId { get; set; }
         public Guid ProductId { get; set; }

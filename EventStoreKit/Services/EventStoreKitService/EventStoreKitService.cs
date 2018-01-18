@@ -118,18 +118,19 @@ namespace EventStoreKit.Services
             }
         }
 
-        private void RegisterCommandHandler<TCommand, TEntity>( ICommandHandler<TCommand, TEntity> handlerFactory )
+        private void RegisterCommandHandler<TCommand, TEntity>( ICommandHandler<TCommand, TEntity> handler )
             where TCommand : DomainCommand
             where TEntity : class, ITrackableAggregate
         {
             // register Action as handler to dispatcher
-            var logger = ResolveLogger<EventStoreKitService>();
+            var loggerFactory = new Func<ILogger>( ResolveLogger<EventStoreKitService> );
             var repositoryFactory = new Func<IRepository>( ResolveRepository );
 
             var handleAction = new Action<TCommand>( cmd =>
             {
                 var repository = repositoryFactory();
-                var handler = handlerFactory;
+                //var handler = handlerFactory();
+                var logger = loggerFactory();
 
                 if ( cmd.Created == default( DateTime ) )
                     cmd.Created = DateTime.Now;

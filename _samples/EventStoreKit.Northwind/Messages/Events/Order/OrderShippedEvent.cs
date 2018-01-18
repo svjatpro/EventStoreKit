@@ -1,7 +1,7 @@
 ﻿using System;
 using EventStoreKit.Messages;
 
-namespace EventStoreKit.Northwind.Messages.Commands
+namespace EventStoreKit.Northwind.Messages.Events
 {
     public class OrderShippedEvent : DomainEvent
     {

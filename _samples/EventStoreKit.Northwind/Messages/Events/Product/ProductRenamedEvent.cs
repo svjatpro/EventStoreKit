@@ -1,8 +1,8 @@
 ﻿using EventStoreKit.Messages;
 
-namespace EventStoreKit.Northwind.Messages.Commands
+namespace EventStoreKit.Northwind.Messages.Events
 {
-    public class ProductRenamedEvent : DomainCommand
+    public class ProductRenamedEvent : DomainEvent
     {
         public string ProductName { get; set; }
     }

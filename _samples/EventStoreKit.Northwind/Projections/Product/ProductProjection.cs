@@ -1,7 +1,7 @@
 ﻿using System;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
-using EventStoreKit.Northwind.Messages.Commands;
+using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Northwind.Projections.Product;
 using EventStoreKit.Projections;
 using EventStoreKit.SearchOptions;

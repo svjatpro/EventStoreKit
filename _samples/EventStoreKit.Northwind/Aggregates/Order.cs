@@ -1,6 +1,7 @@
 ﻿using System;
 using EventStoreKit.Aggregates;
 using EventStoreKit.Northwind.Messages.Commands;
+using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates

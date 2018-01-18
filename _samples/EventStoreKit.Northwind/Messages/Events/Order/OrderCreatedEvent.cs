@@ -1,9 +1,9 @@
 ﻿using System;
 using EventStoreKit.Messages;
 
-namespace EventStoreKit.Northwind.Messages.Commands
+namespace EventStoreKit.Northwind.Messages.Events
 {
-    public class OrderCreatedEvent : DomainCommand
+    public class OrderCreatedEvent : DomainEvent
     {
         public Guid CustomerId { get; set; }
         public DateTime OrderDate { get; set; }
