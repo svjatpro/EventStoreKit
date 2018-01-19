@@ -19,5 +19,20 @@ namespace EventStoreKit.Services
                 sourceParameter );
             return result.Compile();
         }
+        
+        public static Func<TDerived> CastArgumentToDerived<TBase, TDerived>( Func<TBase> source ) where TDerived : TBase
+        {
+            if( typeof( TDerived ) == typeof( TBase ) )
+            {
+                return (Func<TDerived>)((Delegate)source);
+            }
+            var sourceParameter = Expression.Parameter( typeof( TDerived ), "source" );
+            var result = Expression.Lambda<Func<TDerived>>(
+                Expression.Invoke(
+                    Expression.Call( source.Method ),
+                    Expression.Convert( sourceParameter, typeof( TBase ) ) ),
+                sourceParameter );
+            return result.Compile();
+        }
     }
 }

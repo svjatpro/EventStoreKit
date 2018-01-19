@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reactive.Concurrency;
 using System.Reflection;
 using System.Threading;
@@ -118,7 +119,7 @@ namespace EventStoreKit.Services
             }
         }
 
-        private void RegisterCommandHandler<TCommand, TEntity>( ICommandHandler<TCommand, TEntity> handler )
+        private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
             where TCommand : DomainCommand
             where TEntity : class, ITrackableAggregate
         {
@@ -129,7 +130,7 @@ namespace EventStoreKit.Services
             var handleAction = new Action<TCommand>( cmd =>
             {
                 var repository = repositoryFactory();
-                //var handler = handlerFactory();
+                var handler = handlerFactory();
                 var logger = loggerFactory();
 
                 if ( cmd.Created == default( DateTime ) )
@@ -446,14 +447,28 @@ namespace EventStoreKit.Services
         
         public EventStoreKitService RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new()
         {
-            return RegisterCommandHandler( new THandler() );
+            return RegisterCommandHandler<THandler>( () => new THandler() );
         }
-        public EventStoreKitService RegisterCommandHandler( ICommandHandler handler )
+
+        private Func<TDerived> CastArgumentToDerived<TBase, TDerived>( Func<TBase> source ) where TDerived : TBase
         {
-            var handlerType = handler.GetType();
+            var sourceParameter = Expression.Parameter( typeof( TDerived ), "source" );
+            var result = Expression.Lambda<Func<TDerived>>(
+                Expression.Invoke(
+                    Expression.Call( source.Method ),
+                    Expression.Convert( sourceParameter, typeof( TBase ) ) ),
+                sourceParameter );
+            return result.Compile();
+        }
+
+        public EventStoreKitService RegisterCommandHandler<THandler>( Func<ICommandHandler> handlerFactory ) where THandler : ICommandHandler
+        {
+            //var handlerType = handler.GetType();
+            var handlerType = typeof( THandler);
             var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
             var registerCommandMehod = GetType().GetMethod( "RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
-
+            var adjustTypeMehod = GetType().GetMethod( "CastArgumentToDerived", BindingFlags.NonPublic | BindingFlags.Instance );
+            
             handlerType
                 .GetInterfaces()
                 .Where(h => h.Name == commandHandlerInterfaceType.Name)
@@ -461,9 +476,18 @@ namespace EventStoreKit.Services
                 .ForEach(h =>
                 {
                     var genericArgs = h.GetGenericArguments();
+                    //var funcType = typeof(Func<>).MakeGenericType( h );
+                    //var factory = DelegateAdjuster.CastArgumentToDerived<>( castargument);
+
+                    var factory = adjustTypeMehod
+                        .MakeGenericMethod( typeof(ICommandHandler), h )
+                        .Invoke( this, new object[] {handlerFactory} );
+
+                    //var factory = new Func<ICommandHandler<,>>
+
                     registerCommandMehod
                         .MakeGenericMethod(genericArgs[0], genericArgs[1])
-                        .Invoke(this, new object[] { handler });
+                        .Invoke(this, new object[] { factory } );
                 });
 
             return this;
