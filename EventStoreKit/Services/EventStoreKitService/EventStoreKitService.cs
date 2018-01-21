@@ -452,12 +452,30 @@ namespace EventStoreKit.Services
 
         private Func<TDerived> CastArgumentToDerived<TBase, TDerived>( Func<TBase> source ) where TDerived : TBase
         {
-            var sourceParameter = Expression.Parameter( typeof( TDerived ), "source" );
-            var result = Expression.Lambda<Func<TDerived>>(
-                Expression.Invoke(
-                    Expression.Call( source.Method ),
-                    Expression.Convert( sourceParameter, typeof( TBase ) ) ),
-                sourceParameter );
+            //var sourceParameter = Expression.Parameter( typeof( TDerived ), "source" );
+            //var result = Expression.Lambda<Func<TDerived>>(
+            //    Expression.Invoke(
+            //        Expression.Call( source.Method ),
+            //        Expression.Convert( sourceParameter, typeof( TBase ) ) ),
+            //    sourceParameter );
+
+            //var target = Expression.Constant( source.Target );
+            //var call = Expression.Call( target, source.Method );
+            //var lambdaBase = Expression.Lambda<Func<TBase>>( call );
+            //var invoke = Expression.Invoke( lambdaBase );
+            //var r = Expression.Convert( invoke, typeof(TDerived) );
+
+            var result = Expression.Lambda<Func<TDerived>>( Expression.Convert( Expression.Call( Expression.Constant( source.Target ), source.Method ), typeof( TDerived ) ) );
+            //var r1 = r.Compile()();
+
+
+            //var result = Expression.Lambda<Func<TDerived>>(
+            //    Expression.Convert( Expression.Invoke( Expression.Call( Expression.Constant( source.Target ), source.Method ) ),
+            //        typeof( TDerived ) ) );
+            //var result = Expression.Lambda<Func<TDerived>>( 
+            //    Expression.Convert( Expression.Invoke( Expression.Call( Expression.Constant( source.Target ), source.Method ) ),
+            //    typeof(TDerived) ) );
+
             return result.Compile();
         }
 
@@ -478,10 +496,9 @@ namespace EventStoreKit.Services
                     var genericArgs = h.GetGenericArguments();
                     //var funcType = typeof(Func<>).MakeGenericType( h );
                     //var factory = DelegateAdjuster.CastArgumentToDerived<>( castargument);
-
                     var factory = adjustTypeMehod
-                        .MakeGenericMethod( typeof(ICommandHandler), h )
-                        .Invoke( this, new object[] {handlerFactory} );
+                        .MakeGenericMethod( typeof( ICommandHandler ), h )
+                        .Invoke( this, new object[] { handlerFactory } );
 
                     //var factory = new Func<ICommandHandler<,>>
 
