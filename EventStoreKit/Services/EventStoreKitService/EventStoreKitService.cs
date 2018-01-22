@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reactive.Concurrency;
 using System.Reflection;
 using System.Threading;
@@ -447,45 +446,15 @@ namespace EventStoreKit.Services
         
         public EventStoreKitService RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new()
         {
-            return RegisterCommandHandler<THandler>( () => new THandler() );
+            return RegisterCommandHandler( () => new THandler() );
         }
 
-        private Func<TDerived> CastArgumentToDerived<TBase, TDerived>( Func<TBase> source ) where TDerived : TBase
+        public EventStoreKitService RegisterCommandHandler( Func<ICommandHandler> handlerFactory )
         {
-            //var sourceParameter = Expression.Parameter( typeof( TDerived ), "source" );
-            //var result = Expression.Lambda<Func<TDerived>>(
-            //    Expression.Invoke(
-            //        Expression.Call( source.Method ),
-            //        Expression.Convert( sourceParameter, typeof( TBase ) ) ),
-            //    sourceParameter );
-
-            //var target = Expression.Constant( source.Target );
-            //var call = Expression.Call( target, source.Method );
-            //var lambdaBase = Expression.Lambda<Func<TBase>>( call );
-            //var invoke = Expression.Invoke( lambdaBase );
-            //var r = Expression.Convert( invoke, typeof(TDerived) );
-
-            var result = Expression.Lambda<Func<TDerived>>( Expression.Convert( Expression.Call( Expression.Constant( source.Target ), source.Method ), typeof( TDerived ) ) );
-            //var r1 = r.Compile()();
-
-
-            //var result = Expression.Lambda<Func<TDerived>>(
-            //    Expression.Convert( Expression.Invoke( Expression.Call( Expression.Constant( source.Target ), source.Method ) ),
-            //        typeof( TDerived ) ) );
-            //var result = Expression.Lambda<Func<TDerived>>( 
-            //    Expression.Convert( Expression.Invoke( Expression.Call( Expression.Constant( source.Target ), source.Method ) ),
-            //    typeof(TDerived) ) );
-
-            return result.Compile();
-        }
-
-        public EventStoreKitService RegisterCommandHandler<THandler>( Func<ICommandHandler> handlerFactory ) where THandler : ICommandHandler
-        {
-            //var handlerType = handler.GetType();
-            var handlerType = typeof( THandler);
+            var handlerType = handlerFactory().GetType();
             var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
             var registerCommandMehod = GetType().GetMethod( "RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
-            var adjustTypeMehod = GetType().GetMethod( "CastArgumentToDerived", BindingFlags.NonPublic | BindingFlags.Instance );
+            var adjustFactoryTypeMehod = typeof( DelegateAdjuster ).GetMethod( "CastResultToDerived", BindingFlags.Public | BindingFlags.Static );
             
             handlerType
                 .GetInterfaces()
@@ -493,19 +462,16 @@ namespace EventStoreKit.Services
                 .ToList()
                 .ForEach(h =>
                 {
+// ReSharper disable PossibleNullReferenceException
                     var genericArgs = h.GetGenericArguments();
-                    //var funcType = typeof(Func<>).MakeGenericType( h );
-                    //var factory = DelegateAdjuster.CastArgumentToDerived<>( castargument);
-                    var factory = adjustTypeMehod
+                    var factory = adjustFactoryTypeMehod
                         .MakeGenericMethod( typeof( ICommandHandler ), h )
                         .Invoke( this, new object[] { handlerFactory } );
-
-                    //var factory = new Func<ICommandHandler<,>>
-
                     registerCommandMehod
                         .MakeGenericMethod(genericArgs[0], genericArgs[1])
-                        .Invoke(this, new object[] { factory } );
-                });
+                        .Invoke(this, new[] { factory } );
+// ReSharper restore PossibleNullReferenceException
+                } );
 
             return this;
         }

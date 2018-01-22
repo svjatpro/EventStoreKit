@@ -1,23 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
-using System.Linq.Expressions;
-using System.Threading;
+using System.Linq;
 using EventStoreKit.Aggregates;
-using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
-using EventStoreKit.linq2db;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
-using EventStoreKit.Utility;
 using FluentAssertions;
-using FluentAssertions.Primitives;
-using NEventStore;
-using NEventStore.Persistence.Sql;
-using NEventStore.Persistence.Sql.SqlDialects;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -28,9 +18,7 @@ namespace EventStoreKit.Tests
         #region Private members
 
         private EventStoreKitService Service;
-// ReSharper disable NotAccessedField.Local
         private Subscriber1 Projection1;
-// ReSharper restore NotAccessedField.Local
 
         private class TestEvent1 : DomainEvent { public string Name { get; set; } }
         private class Subscriber1 : EventQueueSubscriber,
@@ -38,7 +26,7 @@ namespace EventStoreKit.Tests
         {
             public Subscriber1( IEventStoreSubscriberContext context ) : base( context ){}
 
-            public readonly ConcurrentBag<DomainEvent> ProcessedEvents = new ConcurrentBag<DomainEvent>();
+            public readonly ConcurrentBag<TestEvent1> ProcessedEvents = new ConcurrentBag<TestEvent1>();
             public void Handle( TestEvent1 msg )
             {
                 ProcessedEvents.Add( msg );
@@ -49,12 +37,13 @@ namespace EventStoreKit.Tests
 
         private class Aggregate1 : TrackableAggregateBase
         {
-            public Aggregate1()
+            public Aggregate1( Guid id )
             {
+                Id = id;
                 Register<TestEvent1>( Apply );
             }
             private void Apply( TestEvent1 msg ) { }
-            public void Test( Guid id, string name ) {  RaiseEvent( new TestEvent1{ Id = id, Name = name } ); }
+            public void Test( Guid id, string name ) { RaiseEvent( new TestEvent1{ Id = id, Name = name } ); }
         }
 
         private class CommandHandler1 :
@@ -80,19 +69,49 @@ namespace EventStoreKit.Tests
         #endregion
 
         [Test]
-        public void EventStoreShouldBeMappedToSingleDb()
+        public void CommandHandlerCanBeRegisterByType()
         {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
             Service
                 .RegisterCommandHandler<CommandHandler1>()
                 .RegisterEventSubscriber<Subscriber1>();
             var subscriber = Service.ResolveSubscriber<Subscriber1>();
 
-            Service.SendCommand( new Command1() );
-            Service.SendCommand( new Command2() );
+            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1,bool>>{ msg => msg.Id == id1, msg => msg.Id == id2 } );
+            Service.SendCommand( new Command1{ Id = id1 } );
+            Service.SendCommand( new Command2{ Id = id2 } );
+            wait.Wait( 1000 );
 
-            subscriber.WaitMessages();
+            var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
+            processed.Count.Should().Be( 2 );
+            processed[0].Id.Should().Be( id1 );
+            processed[0].Name.Should().Be( typeof( Command1 ).Name );
+            processed[1].Id.Should().Be( id2 );
+            processed[1].Name.Should().Be( typeof( Command2 ).Name );
+        }
 
-            subscriber.ProcessedEvents.Count.Should().Be( 2 );
+        [Test]
+        public void CommandHandlerCanBeRegisterByFactory()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            Service
+                .RegisterCommandHandler( () => new CommandHandler1() )
+                .RegisterEventSubscriber<Subscriber1>();
+            var subscriber = Service.ResolveSubscriber<Subscriber1>();
+
+            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            Service.SendCommand( new Command1 { Id = id1 } );
+            Service.SendCommand( new Command2 { Id = id2 } );
+            wait.Wait( 1000 );
+
+            var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
+            processed.Count.Should().Be( 2 );
+            processed[0].Id.Should().Be( id1 );
+            processed[0].Name.Should().Be( typeof( Command1 ).Name );
+            processed[1].Id.Should().Be( id2 );
+            processed[1].Name.Should().Be( typeof( Command2 ).Name );
         }
 
     }

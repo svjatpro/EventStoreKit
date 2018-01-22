@@ -5,33 +5,33 @@ namespace EventStoreKit.Services
 {
     public class DelegateAdjuster
     {
-        public static Action<TBase> CastArgument<TBase, TDerived>( Expression<Action<TDerived>> source ) where TDerived : TBase
+        public static Action<TBase> CastArgument<TBase, TDerived>( Action<TDerived> source ) where TDerived : TBase
         {
-            if ( typeof( TDerived ) == typeof( TBase ) )
+            if( typeof( TDerived ) == typeof( TBase ) )
             {
-                return (Action<TBase>)( (Delegate)source.Compile() );
+                return (Action<TBase>)( (Delegate)source );
             }
             var sourceParameter = Expression.Parameter( typeof( TBase ), "source" );
             var result = Expression.Lambda<Action<TBase>>(
-                Expression.Invoke(
-                    source,
+                Expression.Call(
+                    Expression.Constant( source.Target ),
+                    source.Method,
                     Expression.Convert( sourceParameter, typeof( TDerived ) ) ),
                 sourceParameter );
             return result.Compile();
         }
-        
-        public static Func<TDerived> CastArgumentToDerived<TBase, TDerived>( Func<TBase> source ) where TDerived : TBase
+
+        public static Func<TDerived> CastResultToDerived<TBase, TDerived>( Func<TBase> source ) where TDerived : TBase
         {
             if( typeof( TDerived ) == typeof( TBase ) )
             {
-                return (Func<TDerived>)((Delegate)source);
+                return (Func<TDerived>)( (Delegate)source );
             }
-            var sourceParameter = Expression.Parameter( typeof( TDerived ), "source" );
-            var result = Expression.Lambda<Func<TDerived>>(
-                Expression.Invoke(
-                    Expression.Call( source.Method ),
-                    Expression.Convert( sourceParameter, typeof( TBase ) ) ),
-                sourceParameter );
+            var result = Expression
+                .Lambda<Func<TDerived>>( Expression
+                    .Convert(
+                        Expression.Call( Expression.Constant( source.Target ), source.Method ),
+                        typeof( TDerived ) ) );
             return result.Compile();
         }
     }

@@ -28,7 +28,7 @@ namespace EventStoreKit.Services
                 handlers = new List<Action<Message>>();
                 Routes.Add( typeof (T), handlers );
             }
-            handlers.Add( DelegateAdjuster.CastArgument<Message, T>( x => handler( x ) ) );
+            handlers.Add( DelegateAdjuster.CastArgument<Message, T>( handler ) );
             Logger.Debug( "Handler registered: {0}", typeof (T).Name );
         }
         

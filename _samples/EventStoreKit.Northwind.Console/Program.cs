@@ -2,6 +2,8 @@
 using System;
 using System.Linq;
 using System.Threading;
+using Autofac.Core;
+using Autofac.Features.GeneratedFactories;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.linq2db;
@@ -45,18 +47,49 @@ namespace EventStoreKit.Northwind.Console
                     var service = initializer.With( initialize => initialize( ctx ) );
 
                     // Register event handlers
+
+                    //var cmdHandlers = ctx
+                    //    .ComponentRegistry
+                    //    .Registrations
+                    //    .Where( r => r.Activator.LimitType.IsAssignableTo<ICommandHandler>() )
+                    //    .ToList();
+
+                    ///var factory = new FactoryGenerator( typeof(Func<ICommandHandler>), cmdHandlers[1].Services.First(), ParameterMapping.ByType );
+                    //var factory = new FactoryGenerator( typeof(Func<ICommandHandler>), cmdHandlers[1], ParameterMapping.ByType );
+                    //var h1 = (Func<ICommandHandler>)(factory.GenerateFactory( ctx, new Parameter[]{} ));
+                    //var h2 = h1();
+
+                    // todo: check parameters - handler with single param in ctor, registered properly, but invoked through the factory generator with empty params
                     var cmdHandlers = ctx
                         .ComponentRegistry
                         .Registrations
                         .Where( r => r.Activator.LimitType.IsAssignableTo<ICommandHandler>() )
                         .Select( r =>
-                            ctx.IsRegistered( r.Activator.LimitType ) ?
-                            ctx.Resolve( r.Activator.LimitType ) :
-                            r.Services.FirstOrDefault().With( ctx.ResolveService ) )
-                        .Select( h => h.OfType<ICommandHandler>() )
+                            {
+                                //var factory = new FactoryGenerator( typeof( Func<ICommandHandler> ), r, ParameterMapping.ByType );
+                                var factory = new FactoryGenerator( typeof( Func<ICommandHandler> ), r.Services.FirstOrDefault(), ParameterMapping.ByType );
+                                return factory.GenerateFactory( ctx, new Parameter[] { } );
+                            } )
+                        //.Select( h => h.OfType<ICommandHandler>() )
+                        .Select( h => h.OfType<Func<ICommandHandler>>() )
                         .Where( h => h != null )
                         .ToList();
                     cmdHandlers.ForEach( handler => service.RegisterCommandHandler( handler ) );
+
+                    //var cmdHandlers = ctx
+                    //    .ComponentRegistry
+                    //    .Registrations
+                    //    .Where( r => r.Activator.LimitType.IsAssignableTo<ICommandHandler>() )
+                    //    .Select( r =>
+                    //        //ctx.IsRegistered( r.Activator.LimitType ) ?
+                    //        ctx.Resolve( typeof( Func<> ).MakeGenericType( r.Activator.LimitType ) ) // :
+                    //        //r.Services.FirstOrDefault().With( s => ctx.ResolveService( s ) ) 
+                    //        )
+                    //    //.Select( h => h.OfType<ICommandHandler>() )
+                    //    .Select( h => h.OfType<ICommandHandler>() )
+                    //    .Where( h => h != null )
+                    //    .ToList();
+                    //cmdHandlers.ForEach( handler => service.RegisterCommandHandler( handler ) );
 
                     // Register event subscribers
                     var subscribers = ctx

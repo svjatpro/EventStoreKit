@@ -65,7 +65,7 @@ namespace EventStoreKit.ProjectionTemplates
 
         protected void Register<TEvent>( Action<TEvent> action ) where TEvent : Message
         {
-            EventRegister( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( x => action( x ) ), ActionMergeMethod.SingleDontReplace );
+            EventRegister( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( action ), ActionMergeMethod.SingleDontReplace );
         }
 
         protected static PropertyInfo GetProperty<T>( params string[] properties )

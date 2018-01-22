@@ -64,7 +64,7 @@ namespace EventStoreKit.Projections
             this.OfType<IEventHandler<TMessage>>()
                 .Do( handler => Register( 
                     typeof( TMessage ), 
-                    DelegateAdjuster.CastArgument<Message, TMessage>( message => handler.Handle( message ) ) ) );
+                    DelegateAdjuster.CastArgument<Message, TMessage>( handler.Handle ) ) );
         }
         
         private void ProcessMessages( EventInfo i )
@@ -156,7 +156,7 @@ namespace EventStoreKit.Projections
         protected void Register<TEvent>( Action<TEvent> action ) where TEvent : Message { Register( action, ActionMergeMethod.SingleDontReplace ); }
         protected void Register<TEvent>( Action<TEvent> action, ActionMergeMethod mergeMethod ) where TEvent : Message
         {
-            Register( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( x => action( x ) ), mergeMethod );
+            Register( typeof( TEvent ), DelegateAdjuster.CastArgument<Message, TEvent>( action ), mergeMethod );
         }
 
         protected void Register( Type eventType, Action<Message> action ) { Register( eventType, action, ActionMergeMethod.SingleDontReplace ); }
@@ -333,7 +333,7 @@ namespace EventStoreKit.Projections
         /// <returns>The list of matched messages</returns>
         public Task<List<TMessage>> CatchMessagesAsync<TMessage>(
             IEnumerable<Func<TMessage, bool>> mandatory,
-            IEnumerable<Func<TMessage, bool>> optional,
+            IEnumerable<Func<TMessage, bool>> optional = null,
             int timeout = DefaultWaitMessageTimeout,
             bool sequence = false,
             bool waitUnprocessed = false )
