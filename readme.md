@@ -16,7 +16,7 @@ From **NuGet**:
 NeventStoreKit.Autofac extention module allow to initialize event store infrastructure through the autofac container as a whole project components initialization,
 so you can not use EventStoreService directly.
 
-## First, lets initialize simple northwind example
+## First, lets initialize simple northwind autofac module
 
 ```cs
 public class NorthwindModule : Module
@@ -40,6 +40,21 @@ public class NorthwindModule : Module
             ctx.Resolve<CustomArg>(), ... ) );
     }
 }
+```
+
+Then, during creating ContainerBuilder there should be additional method called: builder.InitializeEventStoreKitService()
+```cs
+var builder = new ContainerBuilder();
+builder.RegisterModule<NorthwindModule>();
+builder.InitializeEventStoreKitService();
+var container = builder.Build();
+```
+This method
+
+
+```cs
+
+var service = container.Resolve<IEventStoreKitService>();
 ```
 
 ## Lifetime for command handlers and event subscribers
