@@ -36,6 +36,11 @@ namespace EventStoreKit.Northwind.Console
             builder.RegisterType<ProductHandler>().AsImplementedInterfaces();
             builder.RegisterType<OrderHandler>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<OrderDetailHandler>().AsImplementedInterfaces();
+
+            // register DbProviderFactory
+            // builder.RegisterType<Linq2DbProviderFactory>().As<IDbProviderFactory>(); // can be used with .Create( configuration ) only
+            // builder.Register( ctx => return new Linq2DbProviderFactory( defaultConfiguration ) ).As<IDbProviderFactory>();
+            builder.RegisterType<Linq2DbProviderFactory>().As<IDbProviderFactory>();
         }
     }
     
@@ -46,6 +51,7 @@ namespace EventStoreKit.Northwind.Console
             this ContainerBuilder builder,
             Func<IComponentContext, EventStoreKitService> initializer = null )
         {
+            //builder.Register ... .As<IDataBaseFactory>()
             builder
                 .Register( ctx =>
                 {

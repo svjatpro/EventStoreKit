@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using EventStoreKit.DbProviders;
+﻿using EventStoreKit.DbProviders;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 

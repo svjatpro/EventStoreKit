@@ -67,7 +67,7 @@ namespace EventStoreKit.linq2db
             }
         };
         private readonly Func<IDbProvider> DefaultProvider;
-        
+
         #endregion
 
         public Linq2DbProviderFactory( IDataBaseConfiguration configuration )
@@ -87,6 +87,20 @@ namespace EventStoreKit.linq2db
         public IDbProvider Create()
         {
             return DefaultProvider();
+        }
+        
+        /// <inheritdoc />
+        public IDbProvider Create( IDataBaseConfiguration configuration )
+        {
+            var providerInitializer = ProvidersMap[configuration.DbConnectionType];
+            if( !string.IsNullOrWhiteSpace( configuration.ConfigurationString ) )
+            {
+                return providerInitializer.CreateByConfigString( configuration.ConfigurationString );
+            }
+            else
+            {
+                return providerInitializer.CreateByConnectionString( configuration.ConnectionString );
+            }
         }
     }
 }
