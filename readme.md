@@ -18,6 +18,7 @@ so you can not use EventStoreService directly.
 
 ## First, lets initialize simple northwind example
 
+```cs
 public class NorthwindModule : Module
 {
     protected override void Load( ContainerBuilder builder )
@@ -39,6 +40,7 @@ public class NorthwindModule : Module
             ctx.Resolve<CustomArg>(), ... ) );
     }
 }
+```
 
 ## Lifetime for command handlers and event subscribers
 
