@@ -49,13 +49,10 @@ builder.RegisterModule<NorthwindModule>();
 builder.InitializeEventStoreKitService();
 var container = builder.Build();
 ```
-This method
-
-
-```cs
-
-var service = container.Resolve<IEventStoreKitService>();
-```
+This method receive all required components, register in container, initialize the service and register additional stuff in container, such as: 
+### IEventStoreKitService itself
+```cs var service = container.Resolve<IEventStoreKitService>();```
+### ... 
 
 ## Lifetime for command handlers and event subscribers
 
