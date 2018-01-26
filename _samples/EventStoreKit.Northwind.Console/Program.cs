@@ -41,6 +41,8 @@ namespace EventStoreKit.Northwind.Console
             // builder.RegisterType<Linq2DbProviderFactory>().As<IDbProviderFactory>(); // can be used with .Create( configuration ) only
             // builder.Register( ctx => return new Linq2DbProviderFactory( defaultConfiguration ) ).As<IDbProviderFactory>();
             builder.RegisterType<Linq2DbProviderFactory>().As<IDbProviderFactory>();
+
+
         }
     }
     

@@ -357,20 +357,25 @@ namespace EventStoreKit.Services
             return this;
         }
 
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( TSubscriber subscriber = null )
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>()
             where TSubscriber : class, IEventSubscriber
         {
             IEventStoreSubscriberContext context = null;
-            if ( subscriber == null )
-            {
-                context = CreateEventSubscriberContext<TSubscriber>();
-                subscriber = InitializeEventSubscriber<TSubscriber>( context );
-            }
+            context = CreateEventSubscriberContext<TSubscriber>();
+            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
 
             RegisterEventSubscriber<TSubscriber>( subscriber, context );
             return this;
         }
-        
+
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<TSubscriber> subscriberFactory )
+            where TSubscriber : class, IEventSubscriber
+        {
+            RegisterEventSubscriber<TSubscriber>( subscriber, context );
+            return this;
+        }
+
+
         #endregion
 
         #region Set Subscriber DataBase
