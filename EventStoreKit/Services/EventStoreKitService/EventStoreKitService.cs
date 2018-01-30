@@ -253,11 +253,12 @@ namespace EventStoreKit.Services
 
             return (TSubscriber)ctor.Invoke( new object[] { context } );
         }
-        private void RegisterEventSubscriber<TSubscriber>( IEventSubscriber subscriber, IEventStoreSubscriberContext context )
+        private void RegisterEventSubscriber<TSubscriber>( Func<IEventSubscriber> subscriberFactory, IEventStoreSubscriberContext context )
             where TSubscriber : class, IEventSubscriber
         {
             var dispatcherType = Dispatcher.GetType();
             var subscriberType = typeof( IEventSubscriber );
+            var subscriber = subscriberFactory();
             foreach( var handledEventType in subscriber.HandledEventTypes )
             {
                 var registerMethod = dispatcherType.GetMethod( "RegisterHandler" ).MakeGenericMethod( handledEventType );
@@ -368,10 +369,9 @@ namespace EventStoreKit.Services
             return this;
         }
 
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<TSubscriber> subscriberFactory )
-            where TSubscriber : class, IEventSubscriber
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<TSubscriber> subscriberFactory ) where TSubscriber : class, IEventSubscriber
         {
-            RegisterEventSubscriber<TSubscriber>( subscriber, context );
+            //RegisterEventSubscriber<TSubscriber>( subscriber, context );
             return this;
         }
 
@@ -454,7 +454,7 @@ namespace EventStoreKit.Services
             return RegisterCommandHandler( () => new THandler() );
         }
 
-        public EventStoreKitService RegisterCommandHandler( Func<ICommandHandler> handlerFactory )
+        public EventStoreKitService RegisterCommandHandler<THandler>( Func<THandler> handlerFactory ) where THandler : ICommandHandler
         {
             var handlerType = handlerFactory().GetType();
             var commandHandlerInterfaceType = typeof(ICommandHandler<,>);
