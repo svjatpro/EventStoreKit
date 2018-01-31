@@ -7,6 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading;
 using Autofac.Core;
+using Autofac.Core.Lifetime;
 using Autofac.Features.GeneratedFactories;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
@@ -20,6 +21,7 @@ using EventStoreKit.Northwind.Projections.Customer;
 using EventStoreKit.Northwind.Projections.OrderDetail;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
+using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
 using Module = Autofac.Module;
 
@@ -53,11 +55,24 @@ namespace EventStoreKit.Northwind.Console
             this ContainerBuilder builder,
             Func<IComponentContext, EventStoreKitService> initializer = null )
         {
-            //builder.Register ... .As<IDataBaseFactory>()
+            // register default EventStoreConfiguration
+            builder
+                .RegisterInstance(
+                    new EventStoreConfiguration
+                    {
+                        InsertBufferSize = 10000,
+                        OnIddleInterval = 500
+                    } )
+                .As<IEventStoreConfiguration>()
+                .IfNotRegistered( typeof(IEventStoreConfiguration) );
+
+            // register service
             builder
                 .Register( ctx =>
                 {
-                    var service = initializer.With( initialize => initialize( ctx ) );
+                    var service = initializer.With( initialize => initialize( ctx ) ) ?? new EventStoreKitService();
+
+                    ctx.ResolveOptional<IEventStoreConfiguration>().Do( config => service.SetConfiguration( config ) );
 
                     // Register event handlers
                     var cmdHandlers = ctx
@@ -94,7 +109,7 @@ namespace EventStoreKit.Northwind.Console
                 .SingleInstance();
         }
     }
-
+    
     static class Program
     {
         #region Private methods
@@ -103,7 +118,7 @@ namespace EventStoreKit.Northwind.Console
             where TSubscriber: IEventSubscriber
             where TEvent : DomainEvent
         {
-            var subscriber = service.ResolveSubscriber<TSubscriber>();
+            var subscriber = service.GetSubscriber<TSubscriber>();
             var messageHandled = subscriber.CatchMessagesAsync<TEvent>( msg => msg.Id == cmd.Id );
             service.SendCommand( cmd );
             messageHandled.Wait( 1000 );
@@ -182,7 +197,6 @@ namespace EventStoreKit.Northwind.Console
         {
             var builder = new ContainerBuilder();
             builder.RegisterModule<NorthwindModule>();
-
             builder.InitializeEventStoreKitService( ( ctx ) =>
             {
                 return new EventStoreKitService()
@@ -193,23 +207,16 @@ namespace EventStoreKit.Northwind.Console
                     .RegisterEventSubscriber<OrderProjection>()
                     .RegisterEventSubscriber<OrderDetailProjection>();
             } );
+
             var container = builder.Build();
 
             var service = container.Resolve<IEventStoreKitService>();
             service.CleanData();
             // ----------------------------------------------
 
-            //var service = new EventStoreKitService()
-            //    .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-            //    .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-            //    .RegisterEventSubscriber<ProductProjection>()
-            //    .RegisterEventSubscriber<CustomerProjection>()
-            //    .RegisterEventSubscriber<OrderProjection>()
-            //    .RegisterEventSubscriber<OrderDetailProjection>();
-            
             // create customer
             var customerId1 = service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
-            service.ResolveSubscriber<CustomerProjection>()
+            service.GetSubscriber<CustomerProjection>()
                 .GetCustomers( null ).ToList()
                 .ForEach( c => System.Console.WriteLine( c.CompanyName ) );
 
@@ -217,20 +224,20 @@ namespace EventStoreKit.Northwind.Console
             var prod1 = service.CreateProduct( "product1", 12.3m );
             var prod2 = service.CreateProduct( "product2", 23.4m );
             var prod3 = service.CreateProduct( "product3", 34.5m );
-            service.ResolveSubscriber<ProductProjection>()
+            service.GetSubscriber<ProductProjection>()
                 .GetProducts( null ).ToList()
                 .ForEach( p => System.Console.WriteLine( p.ProductName ) );
 
             // create order
             var orderId1 = service.CreateOrder( customerId1, DateTime.Now, DateTime.Now.AddDays( 1 ) );
-            service.ResolveSubscriber<OrderProjection>()
+            service.GetSubscriber<OrderProjection>()
                 .GetOrders( null ).ToList()
                 .ForEach( o => System.Console.WriteLine( "order: date = {0}; customer = {1}", o.RequiredDate.ToShortDateString(), o.CustomerName ) );
 
             // create order details
             service.CreateOrderDetail( orderId1, prod1, 123, 2 );
             service.CreateOrderDetail( orderId1, prod2, 234, 3 );
-            service.ResolveSubscriber<OrderDetailProjection>()
+            service.GetSubscriber<OrderDetailProjection>()
                 .GetOrderDetails( orderId1 ).ToList()
                 .ForEach( o => System.Console.WriteLine( "detail: product = {0}; price = {1}", o.ProductName, o.UnitPrice ) );
         }

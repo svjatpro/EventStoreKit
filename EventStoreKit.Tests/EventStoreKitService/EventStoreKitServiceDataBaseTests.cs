@@ -141,13 +141,13 @@ namespace EventStoreKit.Tests
 
         private void InitializeService()
         {
-            Projection1 = Service.ResolveSubscriber<Subscriber1>();
-            Projection2 = Service.ResolveSubscriber<Subscriber2>();
+            Projection1 = Service.GetSubscriber<Subscriber1>();
+            Projection2 = Service.GetSubscriber<Subscriber2>();
 
-            EventStoreDb = Service.ResolveDbProviderFactory<Commits>();
-            ReadModel1Db = Service.ResolveDbProviderFactory<TestReadModel1>();
-            ReadModel2Db = Service.ResolveDbProviderFactory<TestReadModel2>();
-            ReadModel3Db = Service.ResolveDbProviderFactory<TestReadModel3>();
+            EventStoreDb = Service.GetDataBaseProviderFactory<Commits>();
+            ReadModel1Db = Service.GetDataBaseProviderFactory<TestReadModel1>();
+            ReadModel2Db = Service.GetDataBaseProviderFactory<TestReadModel2>();
+            ReadModel3Db = Service.GetDataBaseProviderFactory<TestReadModel3>();
 
             Thread.Sleep( 100 );
         }

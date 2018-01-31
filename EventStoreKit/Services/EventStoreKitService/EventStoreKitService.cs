@@ -37,7 +37,7 @@ namespace EventStoreKit.Services
         private IScheduler Scheduler;
         private IEventStoreConfiguration Configuration;
 
-        private readonly Dictionary<Type, IEventSubscriber> EventSubscribers = new Dictionary<Type, IEventSubscriber>();
+        private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
 
         private IDataBaseConfiguration DbConfigurationSubscribers = null;
         private IDataBaseConfiguration DbConfigurationEventStore = null;
@@ -253,25 +253,28 @@ namespace EventStoreKit.Services
 
             return (TSubscriber)ctor.Invoke( new object[] { context } );
         }
-        private void RegisterEventSubscriber<TSubscriber>( Func<IEventSubscriber> subscriberFactory, IEventStoreSubscriberContext context )
-            where TSubscriber : class, IEventSubscriber
+        private void RegisterEventSubscriber( Func<IEventSubscriber> subscriberFactory, IEventStoreSubscriberContext context )
         {
             var dispatcherType = Dispatcher.GetType();
-            var subscriberType = typeof( IEventSubscriber );
-            var subscriber = subscriberFactory();
-            foreach( var handledEventType in subscriber.HandledEventTypes )
+            var subscriberInstance = subscriberFactory();
+            var subscriberType = subscriberInstance.GetType();
+            foreach( var handledEventType in subscriberInstance.HandledEventTypes )
             {
                 var registerMethod = dispatcherType.GetMethod( "RegisterHandler" ).MakeGenericMethod( handledEventType );
-                var handleMethod = subscriberType.GetMethods().Single( m => m.Name == "Handle" );
-                var handleDelegate = Delegate.CreateDelegate( typeof( Action<Message> ), subscriber, handleMethod );
+                var handleDelegate = new Action<Message>( message =>
+                {
+                    var subscriber = subscriberFactory();
+                    subscriber.Handle( message );
+                } );
                 registerMethod.Invoke( Dispatcher, new object[] { handleDelegate } );
             }
 
-            EventSubscribers.Add( typeof( TSubscriber ), subscriber );
+            EventSubscribers.Add( subscriberType, subscriberFactory );
 
+            // 3. register readModels
             if( context != null )
             {
-                subscriber
+                subscriberInstance
                     .OfType<IReadModelOwner>()
                     .Do( s => s.GetReadModels
                         .ForEach( model => MapReadModelToDbFactory( model, context.DbProviderFactory, true ) ) );
@@ -327,34 +330,36 @@ namespace EventStoreKit.Services
             where TSubscriber : class, IEventSubscriber
         {
             var context = CreateEventSubscriberContext<TSubscriber>();
-            RegisterEventSubscriber<TSubscriber>( subscriberFactory( context ), context );
+            RegisterEventSubscriber( () => subscriberFactory( context ), context );
             return this;
         }
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, string configurationString )
             where TSubscriber : class, IEventSubscriber
         {
             var context = CreateEventSubscriberContext<TSubscriber>( configurationString );
-            RegisterEventSubscriber<TSubscriber>( subscriberFactory( context ), context );
+            RegisterEventSubscriber( () => subscriberFactory( context ), context );
             return this;
         }
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, DbConnectionType dbConnection, string connectionString )
             where TSubscriber : class, IEventSubscriber
         {
             var context = CreateEventSubscriberContext<TSubscriber>( dbConnection, connectionString );
-            RegisterEventSubscriber<TSubscriber>( subscriberFactory( context ), context );
+            RegisterEventSubscriber( () => subscriberFactory( context ), context );
             return this;
         }
 
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( string configurationString ) where TSubscriber : class, IEventSubscriber
         {
             var context = CreateEventSubscriberContext<TSubscriber>( configurationString );
-            RegisterEventSubscriber<TSubscriber>( InitializeEventSubscriber<TSubscriber>( context ), context );
+            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
+            RegisterEventSubscriber( () => subscriber, context );
             return this;
         }
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( DbConnectionType dbConnection, string connectionString ) where TSubscriber : class, IEventSubscriber
         {
             var context = CreateEventSubscriberContext<TSubscriber>( dbConnection, connectionString );
-            RegisterEventSubscriber<TSubscriber>( InitializeEventSubscriber<TSubscriber>( context ), context );
+            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
+            RegisterEventSubscriber( () => subscriber, context );
             return this;
         }
 
@@ -365,13 +370,13 @@ namespace EventStoreKit.Services
             context = CreateEventSubscriberContext<TSubscriber>();
             var subscriber = InitializeEventSubscriber<TSubscriber>( context );
 
-            RegisterEventSubscriber<TSubscriber>( subscriber, context );
+            RegisterEventSubscriber( () => subscriber, context );
             return this;
         }
 
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<TSubscriber> subscriberFactory ) where TSubscriber : class, IEventSubscriber
+        public EventStoreKitService RegisterEventSubscriber( Func<IEventSubscriber> subscriberFactory )
         {
-            //RegisterEventSubscriber<TSubscriber>( subscriber, context );
+            RegisterEventSubscriber( subscriberFactory, null );
             return this;
         }
 
@@ -448,7 +453,13 @@ namespace EventStoreKit.Services
             InitializeCommon();
             InitializeEventStore();
         }
-        
+
+        public EventStoreKitService SetConfiguration( IEventStoreConfiguration configuration )
+        {
+            Configuration = configuration;
+            return this;
+        }
+
         public EventStoreKitService RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new()
         {
             return RegisterCommandHandler( () => new THandler() );
@@ -480,13 +491,20 @@ namespace EventStoreKit.Services
 
             return this;
         }
-       
-        public TSubscriber ResolveSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
+
+        #region IEventStoreKitService implementation
+
+        public IEventStoreConfiguration GetConfiguration()
         {
-            return (TSubscriber) EventSubscribers[typeof(TSubscriber)];
+            return Configuration;
         }
 
-        public IDbProviderFactory ResolveDbProviderFactory<TModel>()
+        public TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
+        {
+            return (TSubscriber) EventSubscribers[typeof(TSubscriber)]();
+        }
+
+        public IDbProviderFactory GetDataBaseProviderFactory<TModel>()
         {
             var key = typeof(TModel);
             if ( DbProviderFactoryMap.ContainsKey( key ) )
@@ -524,7 +542,7 @@ namespace EventStoreKit.Services
             var targets =
                 subscribers.Any() ?
                 subscribers.ToList() :
-                EventSubscribers.Values.ToList();
+                EventSubscribers.Values.Select( factory => factory() ).ToList();
 
             var tasks = targets.Select( s => s.WaitMessagesAsync() ).ToArray();
             Task.WaitAll( tasks );
@@ -537,13 +555,16 @@ namespace EventStoreKit.Services
             var msg = new SystemCleanedUpEvent();
             var tasks = EventSubscribers
                 .Values.ToList()
-                .Select( subscriber =>
+                .Select( subscriberFactory =>
                 {
+                    var subscriber = subscriberFactory();
                     subscriber.Handle( msg );
                     return subscriber.WaitMessagesAsync();
                 } )
                 .ToArray();
             Task.WaitAll( tasks );
         }
+
+        #endregion
     }
 }

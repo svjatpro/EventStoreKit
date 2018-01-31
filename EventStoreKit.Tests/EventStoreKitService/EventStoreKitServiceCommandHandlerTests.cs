@@ -76,7 +76,7 @@ namespace EventStoreKit.Tests
             Service
                 .RegisterCommandHandler<CommandHandler1>()
                 .RegisterEventSubscriber<Subscriber1>();
-            var subscriber = Service.ResolveSubscriber<Subscriber1>();
+            var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1,bool>>{ msg => msg.Id == id1, msg => msg.Id == id2 } );
             Service.SendCommand( new Command1{ Id = id1 } );
@@ -99,7 +99,7 @@ namespace EventStoreKit.Tests
             Service
                 .RegisterCommandHandler( () => new CommandHandler1() )
                 .RegisterEventSubscriber<Subscriber1>();
-            var subscriber = Service.ResolveSubscriber<Subscriber1>();
+            var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
             Service.SendCommand( new Command1 { Id = id1 } );
