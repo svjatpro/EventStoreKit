@@ -5,10 +5,10 @@ namespace EventStoreKit.Services
 {
     public interface IDataBaseConfiguration
     {
-        DbConnectionType DbConnectionType { get; }
+        DataBaseConnectionType DataBaseConnectionType { get; }
         string ConnectionProviderName { get; }
         string ConfigurationString { get; }
         string ConnectionString { get; }
-        Type DbProviderFactoryType { get; }
+        //Type DbProviderFactoryType { get; }
     }
 }

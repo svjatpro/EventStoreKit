@@ -15,10 +15,10 @@ namespace EventStoreKit.linq2db
             public Func<string,IDbProvider> CreateByConfigString { get; set; }
             public Func<string,IDbProvider> CreateByConnectionString { get; set; }
         }
-        private readonly Dictionary<DbConnectionType, DbProviderBuilderInfo> ProvidersMap = new Dictionary<DbConnectionType, DbProviderBuilderInfo>
+        private readonly Dictionary<DataBaseConnectionType, DbProviderBuilderInfo> ProvidersMap = new Dictionary<DataBaseConnectionType, DbProviderBuilderInfo>
         {
             {
-                DbConnectionType.MsSql2000,
+                DataBaseConnectionType.MsSql2000,
                 new DbProviderBuilderInfo
                 {
                     CreateByConfigString = config => new DbProviderMsSql( config ),
@@ -26,7 +26,7 @@ namespace EventStoreKit.linq2db
                 } 
             },
             {
-                DbConnectionType.MsSql2005,
+                DataBaseConnectionType.MsSql2005,
                 new DbProviderBuilderInfo
                 {
                     CreateByConfigString = config => new DbProviderMsSql( config ),
@@ -34,7 +34,7 @@ namespace EventStoreKit.linq2db
                 }
             },
             {
-                DbConnectionType.MsSql2008,
+                DataBaseConnectionType.MsSql2008,
                 new DbProviderBuilderInfo
                 {
                     CreateByConfigString = config => new DbProviderMsSql( config ),
@@ -42,7 +42,7 @@ namespace EventStoreKit.linq2db
                 } 
             },
             {
-                DbConnectionType.MsSql2012,
+                DataBaseConnectionType.MsSql2012,
                 new DbProviderBuilderInfo
                 {
                     CreateByConfigString = config => new DbProviderMsSql( config ),
@@ -50,7 +50,7 @@ namespace EventStoreKit.linq2db
                 } 
             },
             {
-                DbConnectionType.MySql,
+                DataBaseConnectionType.MySql,
                 new DbProviderBuilderInfo
                 {
                     CreateByConfigString = config => new DbProviderMySql( config ),
@@ -58,7 +58,7 @@ namespace EventStoreKit.linq2db
                 } 
             },
             {
-                DbConnectionType.SqlLite,
+                DataBaseConnectionType.SqlLite,
                 new DbProviderBuilderInfo
                 {
                     CreateByConfigString = config => new DbProviderSqlLite( config ),
@@ -72,7 +72,7 @@ namespace EventStoreKit.linq2db
 
         public Linq2DbProviderFactory( IDataBaseConfiguration configuration )
         {
-            var providerInitializer = ProvidersMap[configuration.DbConnectionType];
+            var providerInitializer = ProvidersMap[configuration.DataBaseConnectionType];
             if (!string.IsNullOrWhiteSpace(configuration.ConfigurationString))
             {
                 DefaultProvider = () => providerInitializer.CreateByConfigString( configuration.ConfigurationString );
@@ -92,7 +92,7 @@ namespace EventStoreKit.linq2db
         /// <inheritdoc />
         public IDbProvider Create( IDataBaseConfiguration configuration )
         {
-            var providerInitializer = ProvidersMap[configuration.DbConnectionType];
+            var providerInitializer = ProvidersMap[configuration.DataBaseConnectionType];
             if( !string.IsNullOrWhiteSpace( configuration.ConfigurationString ) )
             {
                 return providerInitializer.CreateByConfigString( configuration.ConfigurationString );

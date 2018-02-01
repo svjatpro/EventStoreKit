@@ -8,72 +8,66 @@ namespace EventStoreKit.Services
 {
     public class DataBaseConfiguration : IDataBaseConfiguration
     {
-        public DbConnectionType DbConnectionType { get; set; }
+        public DataBaseConnectionType DataBaseConnectionType { get; set; }
         public string ConnectionProviderName { get; set; }
         public string ConfigurationString { get; set; }
         public string ConnectionString { get; set; }
-        public Type DbProviderFactoryType { get; set; }
+        //public Type DbProviderFactoryType { get; set; }
 
         #region Static members
 
         private class DbConnectionInfo
         {
-            public DbConnectionType DbConnectionType { get; set; }
+            public DataBaseConnectionType DataBaseConnectionType { get; set; }
             public string SqlProviderName { get; set; }
         }
 
         private static readonly List<DbConnectionInfo> DbConnectionMap =
             new List<DbConnectionInfo>
             {
-                new DbConnectionInfo { DbConnectionType = DbConnectionType.None, SqlProviderName = string.Empty },
-                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2000, SqlProviderName = "System.Data.SqlClient" },
-                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2005, SqlProviderName = "System.Data.SqlClient" },
-                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2008, SqlProviderName = "System.Data.SqlClient" },
-                new DbConnectionInfo { DbConnectionType = DbConnectionType.MsSql2012, SqlProviderName = "System.Data.SqlClient" },
-                new DbConnectionInfo { DbConnectionType = DbConnectionType.MySql, SqlProviderName = "MySql.Data.MySqlClient" },
-                new DbConnectionInfo { DbConnectionType = DbConnectionType.SqlLite, SqlProviderName = "System.Data.SQLite" }
+                new DbConnectionInfo { DataBaseConnectionType = DataBaseConnectionType.None, SqlProviderName = string.Empty },
+                new DbConnectionInfo { DataBaseConnectionType = DataBaseConnectionType.MsSql2000, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DataBaseConnectionType = DataBaseConnectionType.MsSql2005, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DataBaseConnectionType = DataBaseConnectionType.MsSql2008, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DataBaseConnectionType = DataBaseConnectionType.MsSql2012, SqlProviderName = "System.Data.SqlClient" },
+                new DbConnectionInfo { DataBaseConnectionType = DataBaseConnectionType.MySql, SqlProviderName = "MySql.Data.MySqlClient" },
+                new DbConnectionInfo { DataBaseConnectionType = DataBaseConnectionType.SqlLite, SqlProviderName = "System.Data.SQLite" }
             };
 
-        public static string ResolveSqlProviderName( DbConnectionType connectionType )
+        public static string ResolveSqlProviderName( DataBaseConnectionType connectionType )
         {
-            return DbConnectionMap.Single( p => p.DbConnectionType == connectionType ).SqlProviderName;
+            return DbConnectionMap.Single( p => p.DataBaseConnectionType == connectionType ).SqlProviderName;
         }
-        public static IDataBaseConfiguration Initialize( Type factoryType, string configurationString )
+
+        #endregion
+
+        public DataBaseConfiguration( /*Type factoryType, */string configurationString )
         {
             var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
             var providerInfo = DbConnectionMap.SingleOrDefault( p => p.SqlProviderName == providerName );
             if ( providerInfo == null )
                 throw new ArgumentException( "Client is not supported" );
 
-            return new DataBaseConfiguration
-            {
-                DbProviderFactoryType = factoryType,
-                DbConnectionType = providerInfo.DbConnectionType,
-                ConnectionProviderName = providerInfo.SqlProviderName,
-                ConfigurationString = configurationString
-            };
+            DataBaseConnectionType = providerInfo.DataBaseConnectionType;
+            ConnectionProviderName = providerInfo.SqlProviderName;
+            ConfigurationString = configurationString;
         }
 
-        public static IDataBaseConfiguration Initialize( Type factoryType, DbConnectionType connectionType, string connectionString )
+        public DataBaseConfiguration( /*Type factoryType, */DataBaseConnectionType connectionType, string connectionString )
         {
-            var providerInfo = DbConnectionMap.SingleOrDefault( p => p.DbConnectionType == connectionType );
+            var providerInfo = DbConnectionMap.SingleOrDefault( p => p.DataBaseConnectionType == connectionType );
             if ( providerInfo == null )
                 throw new ArgumentException( "Client is not supported" );
 
-            return new DataBaseConfiguration
-            {
-                DbProviderFactoryType = factoryType,
-                DbConnectionType = providerInfo.DbConnectionType,
-                ConnectionProviderName = providerInfo.SqlProviderName,
-                ConnectionString = connectionString
-            };
+            DataBaseConnectionType = providerInfo.DataBaseConnectionType;
+            ConnectionProviderName = providerInfo.SqlProviderName;
+            ConnectionString = connectionString;
         }
-
-        #endregion
-
+        
         public override int GetHashCode()
         {
-            return $"{DbProviderFactoryType.Name}.{( !string.IsNullOrWhiteSpace( ConfigurationString ) ? ConfigurationString : DbConnectionType + "." + ConnectionString )}"
+            //return $"{DbProviderFactoryType.Name}.{( !string.IsNullOrWhiteSpace( ConfigurationString ) ? ConfigurationString : DataBaseConnectionType + "." + ConnectionString )}"
+            return $"{( !string.IsNullOrWhiteSpace( ConfigurationString ) ? ConfigurationString : DataBaseConnectionType + "." + ConnectionString )}"
                     .GetHashCode();
         }
     }

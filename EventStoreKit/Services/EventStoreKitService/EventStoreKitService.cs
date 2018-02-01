@@ -50,7 +50,7 @@ namespace EventStoreKit.Services
 
         private void InitializeCommon()
         {
-            DbConfigurationSubscribers = new DataBaseConfiguration{ DbProviderFactoryType = typeof( DbProviderFactoryStub ), DbConnectionType = DbConnectionType.None, ConnectionString = "stub" };
+            DbConfigurationSubscribers = new DataBaseConfiguration{ DbProviderFactoryType = typeof( DbProviderFactoryStub ), DataBaseConnectionType = DataBaseConnectionType.None, ConnectionString = "stub" };
             DbConfigurationEventStore = DbConfigurationSubscribers;
             DbProviderFactoryHash.Add( DbConfigurationSubscribers, new DbProviderFactoryStub() );
 
@@ -89,7 +89,7 @@ namespace EventStoreKit.Services
                 .Init()
                 .LogTo( type => ResolveLogger<EventStoreAdapter>() );
 
-            if ( DbConfigurationEventStore == null || DbConfigurationEventStore.DbConnectionType == DbConnectionType.None )
+            if ( DbConfigurationEventStore == null || DbConfigurationEventStore.DataBaseConnectionType == DataBaseConnectionType.None )
             {
                 return wireup.UsingInMemoryPersistence();
             }
@@ -101,17 +101,17 @@ namespace EventStoreKit.Services
                     wireup.UsingSqlPersistence( null, DbConfigurationEventStore.ConnectionProviderName, DbConfigurationEventStore.ConnectionString );
 
                 // todo: move NEventStore related stuff to separate module
-                var dialectTypeMap = new Dictionary< DbConnectionType, Type>
+                var dialectTypeMap = new Dictionary< DataBaseConnectionType, Type>
                 {
-                    { DbConnectionType.MsSql2000, typeof( MsSqlDialect ) },
-                    { DbConnectionType.MsSql2005, typeof( MsSqlDialect ) },
-                    { DbConnectionType.MsSql2008, typeof( MsSqlDialect ) },
-                    { DbConnectionType.MsSql2012, typeof( MsSqlDialect ) },
-                    { DbConnectionType.MySql, typeof( MySqlDialect ) },
-                    { DbConnectionType.SqlLite, typeof( SqliteDialect ) }
+                    { DataBaseConnectionType.MsSql2000, typeof( MsSqlDialect ) },
+                    { DataBaseConnectionType.MsSql2005, typeof( MsSqlDialect ) },
+                    { DataBaseConnectionType.MsSql2008, typeof( MsSqlDialect ) },
+                    { DataBaseConnectionType.MsSql2012, typeof( MsSqlDialect ) },
+                    { DataBaseConnectionType.MySql, typeof( MySqlDialect ) },
+                    { DataBaseConnectionType.SqlLite, typeof( SqliteDialect ) }
                 };
                 return persistanceWireup
-                    .WithDialect( (ISqlDialect)Activator.CreateInstance( dialectTypeMap[DbConfigurationEventStore.DbConnectionType] ) )
+                    .WithDialect( (ISqlDialect)Activator.CreateInstance( dialectTypeMap[DbConfigurationEventStore.DataBaseConnectionType] ) )
                     .PageEvery( 1024 )
                     .InitializeStorageEngine()
                     .UsingJsonSerialization();
@@ -176,7 +176,7 @@ namespace EventStoreKit.Services
             var factory =
                 TryInitializeDbProvider( config.DbProviderFactoryType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
                 TryInitializeDbProvider( config.DbProviderFactoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
-                TryInitializeDbProvider( config.DbProviderFactoryType, new Dictionary<Type, object> { { typeof( DbConnectionType ), config.DbConnectionType }, { typeof( string ), config.ConnectionString } } );
+                TryInitializeDbProvider( config.DbProviderFactoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } );
             if( factory == null )
                 throw new InvalidOperationException( $"Can't create {config.DbProviderFactoryType.Name} instance, because there is no appropriate constructor" );
 
@@ -189,17 +189,17 @@ namespace EventStoreKit.Services
         {
             return DataBaseConfiguration.Initialize( typeof(TDbProviderFactory), configurationString );
         }
-        private IDataBaseConfiguration CreateDbConfig<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString )
+        private IDataBaseConfiguration CreateDbConfig<TDbProviderFactory>( DataBaseConnectionType dataBaseConnection, string connectionString )
         {
-            return DataBaseConfiguration.Initialize( typeof( TDbProviderFactory ), dbConnection, connectionString );
+            return DataBaseConfiguration.Initialize( typeof( TDbProviderFactory ), dataBaseConnection, connectionString );
         }
         private IDataBaseConfiguration CreateDbConfig( Type dbProviderFactoryType, string configurationString )
         {
             return DataBaseConfiguration.Initialize( dbProviderFactoryType, configurationString );
         }
-        private IDataBaseConfiguration CreateDbConfig( Type dbProviderFactoryType, DbConnectionType dbConnection, string connectionString )
+        private IDataBaseConfiguration CreateDbConfig( Type dbProviderFactoryType, DataBaseConnectionType dataBaseConnection, string connectionString )
         {
-            return DataBaseConfiguration.Initialize( dbProviderFactoryType, dbConnection, connectionString );
+            return DataBaseConfiguration.Initialize( dbProviderFactoryType, dataBaseConnection, connectionString );
         }
 
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( string configurationString ) 
@@ -213,12 +213,12 @@ namespace EventStoreKit.Services
         {
             return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig<TDbProviderFactory>( configurationString ) );
         }
-        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( DbConnectionType connectionType, string connectionString ) 
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( DataBaseConnectionType connectionType, string connectionString ) 
             where TSubscriber : class, IEventSubscriber
         {
             return CreateEventSubscriberContext<TSubscriber>( CreateDbConfig( DbConfigurationSubscribers.DbProviderFactoryType, connectionType, connectionString ) );
         }
-        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber, TDbProviderFactory>( DbConnectionType connectionType, string connectionString ) 
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber, TDbProviderFactory>( DataBaseConnectionType connectionType, string connectionString ) 
             where TSubscriber : class, IEventSubscriber
             where TDbProviderFactory : IDbProviderFactory
         {
@@ -340,10 +340,10 @@ namespace EventStoreKit.Services
             RegisterEventSubscriber( () => subscriberFactory( context ), context );
             return this;
         }
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, DbConnectionType dbConnection, string connectionString )
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, DataBaseConnectionType dataBaseConnection, string connectionString )
             where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( dbConnection, connectionString );
+            var context = CreateEventSubscriberContext<TSubscriber>( dataBaseConnection, connectionString );
             RegisterEventSubscriber( () => subscriberFactory( context ), context );
             return this;
         }
@@ -355,9 +355,9 @@ namespace EventStoreKit.Services
             RegisterEventSubscriber( () => subscriber, context );
             return this;
         }
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( DbConnectionType dbConnection, string connectionString ) where TSubscriber : class, IEventSubscriber
+        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( DataBaseConnectionType dataBaseConnection, string connectionString ) where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( dbConnection, connectionString );
+            var context = CreateEventSubscriberContext<TSubscriber>( dataBaseConnection, connectionString );
             var subscriber = InitializeEventSubscriber<TSubscriber>( context );
             RegisterEventSubscriber( () => subscriber, context );
             return this;
@@ -405,17 +405,17 @@ namespace EventStoreKit.Services
         /// <summary>
         /// Register Subscribers DataBase
         /// </summary>
-        public EventStoreKitService SetSubscriberDataBase( DbConnectionType dbConnection, string connectionString )
+        public EventStoreKitService SetSubscriberDataBase( DataBaseConnectionType dataBaseConnection, string connectionString )
         {
-            InitializeSubscribersDb( CreateDbConfig( DbConfigurationSubscribers.DbProviderFactoryType, dbConnection, connectionString ) );
+            InitializeSubscribersDb( CreateDbConfig( DbConfigurationSubscribers.DbProviderFactoryType, dataBaseConnection, connectionString ) );
             return this;
         }
         /// <summary>
         /// Register Subscribers DataBase
         /// </summary>
-        public EventStoreKitService SetSubscriberDataBase<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) where TDbProviderFactory : IDbProviderFactory
+        public EventStoreKitService SetSubscriberDataBase<TDbProviderFactory>( DataBaseConnectionType dataBaseConnection, string connectionString ) where TDbProviderFactory : IDbProviderFactory
         {
-            InitializeSubscribersDb( CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString ) );
+            InitializeSubscribersDb( CreateDbConfig<TDbProviderFactory>( dataBaseConnection, connectionString ) );
             return this;
         }
 
@@ -434,15 +434,15 @@ namespace EventStoreKit.Services
             InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( configurationString ) );
             return this;
         }
-        public EventStoreKitService SetEventStoreDataBase( DbConnectionType dbConnection, string connectionString )
+        public EventStoreKitService SetEventStoreDataBase( DataBaseConnectionType dataBaseConnection, string connectionString )
         {
-            InitializeEventStoreDb( CreateDbConfig( DbConfigurationEventStore.DbProviderFactoryType, dbConnection, connectionString ) );
+            InitializeEventStoreDb( CreateDbConfig( DbConfigurationEventStore.DbProviderFactoryType, dataBaseConnection, connectionString ) );
             return this;
         }
-        public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( DbConnectionType dbConnection, string connectionString ) 
+        public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( DataBaseConnectionType dataBaseConnection, string connectionString ) 
             where TDbProviderFactory : IDbProviderFactory
         {
-            InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( dbConnection, connectionString ) );
+            InitializeEventStoreDb( CreateDbConfig<TDbProviderFactory>( dataBaseConnection, connectionString ) );
             return this;
         }
 

@@ -3,7 +3,7 @@
     /// <summary>
     /// Supported Data Bases
     /// </summary>
-    public enum DbConnectionType
+    public enum DataBaseConnectionType
     {
         None = 0x00,
 

@@ -23,6 +23,7 @@ using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
+using LinqToDB.DataProvider;
 using Module = Autofac.Module;
 
 namespace EventStoreKit.Northwind.Console
@@ -73,6 +74,8 @@ namespace EventStoreKit.Northwind.Console
                     var service = initializer.With( initialize => initialize( ctx ) ) ?? new EventStoreKitService();
 
                     ctx.ResolveOptional<IEventStoreConfiguration>().Do( config => service.SetConfiguration( config ) );
+
+                    // ctx.ResolveKeyed<IDbProviderFactory>( new DataBaseConfiguration( connectionString ) );
 
                     // Register event handlers
                     var cmdHandlers = ctx
@@ -213,6 +216,15 @@ namespace EventStoreKit.Northwind.Console
             var service = container.Resolve<IEventStoreKitService>();
             service.CleanData();
             // ----------------------------------------------
+
+            //var service = new EventStoreKitService()
+            //    .RegisterCommandHandler()...
+            //    .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
+            //    .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
+            //    .RegisterEventSubscriber<ProductProjection>()
+            //    .RegisterEventSubscriber<CustomerProjection>()
+            //    .RegisterEventSubscriber<OrderProjection>()
+            //    .RegisterEventSubscriber<OrderDetailProjection>();
 
             // create customer
             var customerId1 = service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );
