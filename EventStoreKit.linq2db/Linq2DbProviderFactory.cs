@@ -72,6 +72,8 @@ namespace EventStoreKit.linq2db
 
         public Linq2DbProviderFactory( IDataBaseConfiguration configuration )
         {
+            DefaultDataBaseConfiguration = configuration;
+
             var providerInitializer = ProvidersMap[configuration.DataBaseConnectionType];
             if (!string.IsNullOrWhiteSpace(configuration.ConfigurationString))
             {
@@ -82,6 +84,9 @@ namespace EventStoreKit.linq2db
                 DefaultProvider = () => providerInitializer.CreateByConnectionString( configuration.ConnectionString );
             }
         }
+
+        /// <inheritdoc />
+        public IDataBaseConfiguration DefaultDataBaseConfiguration { get; }
 
         /// <inheritdoc />
         public IDbProvider Create()

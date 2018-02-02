@@ -11,11 +11,16 @@ namespace EventStoreKit.DbProviders
         //  do not use the same ReadModel in more than one projection - it is not thread safe!
         private volatile ConcurrentDictionary<Type, IList> StorageMap = new ConcurrentDictionary<Type, IList>();
 
+        /// <inheritdoc />
+        public IDataBaseConfiguration DefaultDataBaseConfiguration => new DataBaseConfiguration( DataBaseConnectionType.None, string.Empty );
+
+        /// <inheritdoc />
         public IDbProvider Create()
         {
             return new DbProviderStub( StorageMap );
         }
 
+        /// <inheritdoc />
         public IDbProvider Create( IDataBaseConfiguration configuration )
         {
             return new DbProviderStub( StorageMap );
