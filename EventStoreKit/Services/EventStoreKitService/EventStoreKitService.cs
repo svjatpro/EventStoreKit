@@ -40,7 +40,6 @@ namespace EventStoreKit.Services
         private IDbProviderFactory DbProviderFactorySubscribers = null;
         private IDbProviderFactory DbProviderFactoryEventStore = null;
 
-        //private readonly Dictionary<Type, IDbProviderFactory> DataBaseProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
 
         #endregion
@@ -69,14 +68,9 @@ namespace EventStoreKit.Services
         }
         private void InitializeEventStore()
         {
-            //var factory = DbProviderFactoryHash[DbProviderFactoryEventStore];
-            //MapReadModelToDbFactory<Commits>( factory, false );
-            //MapReadModelToDbFactory<Snapshots>( factory );
-
             StoreEvents?.Dispose();
             
             var wireup = InitializeWireup();
-
             StoreEvents = new EventStoreAdapter( wireup, ResolveLogger<EventStoreAdapter>(), EventPublisher, CommandBus );
             ConstructAggregates = new EntityFactory();
             // todo: register also SagaFactory
@@ -228,33 +222,7 @@ namespace EventStoreKit.Services
             }
 
             EventSubscribers.Add( subscriberType, subscriberFactory );
-            //DataBaseProviderFactoryMap.Add( subscriberType,  );
-
-            // 3. register readModels
-            //if( context != null )
-            //{
-            //    subscriberInstance
-            //        .OfType<IReadModelOwner>()
-            //        .Do( s => s.GetReadModels
-            //            .ForEach( model => MapReadModelToDbFactory( model, context.DbProviderFactory, true ) ) );
-            //}
         }
-
-        //private void MapReadModelToDbFactory<TReadModel>( IDbProviderFactory factory, bool unique )
-        //{
-        //    MapReadModelToDbFactory( typeof(TReadModel), factory, unique );
-        //}
-        //private void MapReadModelToDbFactory( Type readModelType, IDbProviderFactory factory, bool unique )
-        //{
-        //    if ( unique || !DbProviderFactoryMap.ContainsKey( readModelType ) )
-        //    {
-        //        DbProviderFactoryMap.Add( readModelType, factory );
-        //    }
-        //    else
-        //    {
-        //        DbProviderFactoryMap[readModelType] = factory;
-        //    }
-        //}
 
         #endregion
 

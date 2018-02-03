@@ -12,7 +12,6 @@ namespace EventStoreKit.Services
         public string ConnectionProviderName { get; set; }
         public string ConfigurationString { get; set; }
         public string ConnectionString { get; set; }
-        //public Type DbProviderFactoryType { get; set; }
 
         #region Static members
 
@@ -41,7 +40,7 @@ namespace EventStoreKit.Services
 
         #endregion
 
-        public DataBaseConfiguration( /*Type factoryType, */string configurationString )
+        public DataBaseConfiguration( string configurationString )
         {
             var providerName = ConfigurationManager.ConnectionStrings[configurationString].ProviderName;
             var providerInfo = DbConnectionMap.SingleOrDefault( p => p.SqlProviderName == providerName );
@@ -53,7 +52,7 @@ namespace EventStoreKit.Services
             ConfigurationString = configurationString;
         }
 
-        public DataBaseConfiguration( /*Type factoryType, */DataBaseConnectionType connectionType, string connectionString )
+        public DataBaseConfiguration( DataBaseConnectionType connectionType, string connectionString )
         {
             var providerInfo = DbConnectionMap.SingleOrDefault( p => p.DataBaseConnectionType == connectionType );
             if ( providerInfo == null )
@@ -66,7 +65,6 @@ namespace EventStoreKit.Services
         
         public override int GetHashCode()
         {
-            //return $"{DbProviderFactoryType.Name}.{( !string.IsNullOrWhiteSpace( ConfigurationString ) ? ConfigurationString : DataBaseConnectionType + "." + ConnectionString )}"
             return $"{( !string.IsNullOrWhiteSpace( ConfigurationString ) ? ConfigurationString : DataBaseConnectionType + "." + ConnectionString )}"
                     .GetHashCode();
         }

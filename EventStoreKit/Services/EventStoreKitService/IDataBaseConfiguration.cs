@@ -1,4 +1,3 @@
-using System;
 using EventStoreKit.DbProviders;
 
 namespace EventStoreKit.Services
@@ -9,6 +8,5 @@ namespace EventStoreKit.Services
         string ConnectionProviderName { get; }
         string ConfigurationString { get; }
         string ConnectionString { get; }
-        //Type DbProviderFactoryType { get; }
     }
 }

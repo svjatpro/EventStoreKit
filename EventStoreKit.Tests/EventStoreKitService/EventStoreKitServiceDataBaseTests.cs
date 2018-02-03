@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Data;
 using System.Linq.Expressions;
 using System.Threading;
 using EventStoreKit.DbProviders;
@@ -13,7 +11,6 @@ using EventStoreKit.Utility;
 using FluentAssertions;
 using FluentAssertions.Primitives;
 using NEventStore;
-using NEventStore.Persistence.Sql;
 using NEventStore.Persistence.Sql.SqlDialects;
 using NUnit.Framework;
 
@@ -103,11 +100,7 @@ namespace EventStoreKit.Tests
             // clean all data
             var clean = new Action<string>( connectionString =>
             {
-                new Linq2DbProviderFactory( new DataBaseConfiguration
-                    {
-                        DataBaseConnectionType = DataBaseConnectionType.SqlLite,
-                        ConnectionString = connectionString
-                    } )
+                new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, connectionString ) )
                     .Run( db =>
                     {
                         db.CreateTable<TestReadModel1>();
