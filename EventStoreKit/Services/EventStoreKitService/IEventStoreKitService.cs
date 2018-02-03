@@ -1,5 +1,4 @@
-﻿using EventStoreKit.DbProviders;
-using EventStoreKit.Messages;
+﻿using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services.Configuration;
 
@@ -9,7 +8,6 @@ namespace EventStoreKit.Services
     {
         IEventStoreConfiguration GetConfiguration();
         TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
-        IDbProviderFactory GetDataBaseProviderFactory<TModel>();
 
         void SendCommand( DomainCommand command );
 

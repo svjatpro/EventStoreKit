@@ -40,7 +40,7 @@ namespace EventStoreKit.Services
         private IDbProviderFactory DbProviderFactorySubscribers = null;
         private IDbProviderFactory DbProviderFactoryEventStore = null;
 
-        private readonly Dictionary<Type, IDbProviderFactory> DataBaseProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
+        //private readonly Dictionary<Type, IDbProviderFactory> DataBaseProviderFactoryMap = new Dictionary<Type, IDbProviderFactory>();
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
 
         #endregion
@@ -70,7 +70,7 @@ namespace EventStoreKit.Services
         private void InitializeEventStore()
         {
             //var factory = DbProviderFactoryHash[DbProviderFactoryEventStore];
-            MapReadModelToDbFactory<Commits>( factory, false );
+            //MapReadModelToDbFactory<Commits>( factory, false );
             //MapReadModelToDbFactory<Snapshots>( factory );
 
             StoreEvents?.Dispose();
@@ -87,16 +87,17 @@ namespace EventStoreKit.Services
                 .Init()
                 .LogTo( type => ResolveLogger<EventStoreAdapter>() );
 
-            if ( DbProviderFactoryEventStore == null || DbProviderFactoryEventStore.DataBaseConnectionType == DataBaseConnectionType.None )
+            if ( DbProviderFactoryEventStore == null || DbProviderFactoryEventStore.DefaultDataBaseConfiguration.DataBaseConnectionType == DataBaseConnectionType.None )
             {
                 return wireup.UsingInMemoryPersistence();
             }
             else
             {
+                var configuration = DbProviderFactoryEventStore.DefaultDataBaseConfiguration;
                 var persistanceWireup =
-                    DbProviderFactoryEventStore.ConfigurationString != null ?
-                    wireup.UsingSqlPersistence( DbProviderFactoryEventStore.ConfigurationString ) :
-                    wireup.UsingSqlPersistence( null, DbProviderFactoryEventStore.ConnectionProviderName, DbProviderFactoryEventStore.ConnectionString );
+                    configuration.ConfigurationString != null ?
+                    wireup.UsingSqlPersistence(configuration.ConfigurationString ) :
+                    wireup.UsingSqlPersistence( null, configuration.ConnectionProviderName, configuration.ConnectionString );
 
                 // todo: move NEventStore related stuff to separate module
                 var dialectTypeMap = new Dictionary< DataBaseConnectionType, Type>
@@ -109,7 +110,7 @@ namespace EventStoreKit.Services
                     { DataBaseConnectionType.SqlLite, typeof( SqliteDialect ) }
                 };
                 return persistanceWireup
-                    .WithDialect( (ISqlDialect)Activator.CreateInstance( dialectTypeMap[DbProviderFactoryEventStore.DataBaseConnectionType] ) )
+                    .WithDialect( (ISqlDialect)Activator.CreateInstance( dialectTypeMap[configuration.DataBaseConnectionType] ) )
                     .PageEvery( 1024 )
                     .InitializeStorageEngine()
                     .UsingJsonSerialization();
@@ -227,7 +228,7 @@ namespace EventStoreKit.Services
             }
 
             EventSubscribers.Add( subscriberType, subscriberFactory );
-            DataBaseProviderFactoryMap.Add( subscriberType,  );
+            //DataBaseProviderFactoryMap.Add( subscriberType,  );
 
             // 3. register readModels
             //if( context != null )
@@ -239,21 +240,21 @@ namespace EventStoreKit.Services
             //}
         }
 
-        private void MapReadModelToDbFactory<TReadModel>( IDbProviderFactory factory, bool unique )
-        {
-            MapReadModelToDbFactory( typeof(TReadModel), factory, unique );
-        }
-        private void MapReadModelToDbFactory( Type readModelType, IDbProviderFactory factory, bool unique )
-        {
-            if ( unique || !DbProviderFactoryMap.ContainsKey( readModelType ) )
-            {
-                DbProviderFactoryMap.Add( readModelType, factory );
-            }
-            else
-            {
-                DbProviderFactoryMap[readModelType] = factory;
-            }
-        }
+        //private void MapReadModelToDbFactory<TReadModel>( IDbProviderFactory factory, bool unique )
+        //{
+        //    MapReadModelToDbFactory( typeof(TReadModel), factory, unique );
+        //}
+        //private void MapReadModelToDbFactory( Type readModelType, IDbProviderFactory factory, bool unique )
+        //{
+        //    if ( unique || !DbProviderFactoryMap.ContainsKey( readModelType ) )
+        //    {
+        //        DbProviderFactoryMap.Add( readModelType, factory );
+        //    }
+        //    else
+        //    {
+        //        DbProviderFactoryMap[readModelType] = factory;
+        //    }
+        //}
 
         #endregion
 
@@ -390,16 +391,7 @@ namespace EventStoreKit.Services
         {
             return (TSubscriber) EventSubscribers[typeof(TSubscriber)]();
         }
-
-        public IDbProviderFactory GetDataBaseProviderFactory<TModel>()
-        {
-            var key = typeof(TModel);
-            if ( DbProviderFactoryMap.ContainsKey( key ) )
-                return DbProviderFactoryMap[key];
-            else
-                return DbProviderFactoryHash[DbProviderFactorySubscribers];
-        }
-
+        
         public void SendCommand( DomainCommand command )
         {
             CommandBus.Send( command );
