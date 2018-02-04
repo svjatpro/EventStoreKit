@@ -17,7 +17,7 @@ namespace EventStoreKit.Tests
             // service.SetDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DbConnectionType.SqlLite, "data source=db1" ) )
 
             // container.Resolve<IDataBaseConfiguration>() + keyed(subscriber type)
-            // container.Resolve<IEventStoreSubscriberContext>() + keyed(subscriber type)
+            // container.Resolve<IEventStoreSubscriberContext>() + keyed(subscriber type) // ?
             // container.Resolve<IDataBaseProvider>() + keyed(subscriber type)
             // container.Resolve<IDataBaseProviderFactory>() + keyed(subscriber type)
         }

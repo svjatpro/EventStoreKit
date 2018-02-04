@@ -77,6 +77,7 @@ namespace EventStoreKit.Tests
         {
             public Subscriber1( IEventStoreSubscriberContext context ) : base( context ){}
             public void Handle( TestEvent1 message ) { DbProviderFactory.Run( db => db.Insert( message.CopyTo( m => new TestReadModel1() ) ) ); }
+            public IDbProviderFactory GetDbProviderFactory() { return DbProviderFactory; }
         }
         private class Subscriber2 : SqlProjectionBase<TestReadModel2>, IEventHandler<TestEvent1>
         {
@@ -92,6 +93,7 @@ namespace EventStoreKit.Tests
                     return db.Insert( message.CopyTo( m => new TestReadModel3() ) );
                 } );
             }
+            public IDbProviderFactory GetDbProviderFactory() { return DbProviderFactory; }
         }
 
         [OneTimeSetUp]
@@ -136,11 +138,10 @@ namespace EventStoreKit.Tests
         {
             Projection1 = Service.GetSubscriber<Subscriber1>();
             Projection2 = Service.GetSubscriber<Subscriber2>();
-
-            EventStoreDb = Service.GetDataBaseProviderFactory<Commits>();
-            ReadModel1Db = Service.GetDataBaseProviderFactory<TestReadModel1>();
-            ReadModel2Db = Service.GetDataBaseProviderFactory<TestReadModel2>();
-            ReadModel3Db = Service.GetDataBaseProviderFactory<TestReadModel3>();
+            
+            ReadModel1Db = Projection1.GetDbProviderFactory();
+            ReadModel2Db = Projection2.GetDbProviderFactory();
+            ReadModel3Db = Projection2.GetDbProviderFactory();
 
             Thread.Sleep( 100 );
         }
@@ -165,10 +166,11 @@ namespace EventStoreKit.Tests
         public void EventStoreShouldBeMappedToSingleDb()
         {
             Service
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
+                .SetEventStoreDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
                 .RegisterEventSubscriber<Subscriber2>();
             InitializeService();
+            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
 
             var msg = RaiseEvent();
 
@@ -187,10 +189,11 @@ namespace EventStoreKit.Tests
         public void AllProjectionsShouldBeMappedToSingleDb()
         {
             Service
-                .SetSubscriberDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
+                .SetSubscriberDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
                 .RegisterEventSubscriber<Subscriber2>();
             InitializeService();
+            EventStoreDb = new DbProviderFactoryStub();
 
             var msg = RaiseEvent();
 
@@ -208,11 +211,11 @@ namespace EventStoreKit.Tests
         public void EventStoreAndSubscribersShouldBeMappedToSingleDb()
         {
             Service
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
-                .SetSubscriberDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
+                .SetDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
                 .RegisterEventSubscriber<Subscriber2>();
             InitializeService();
+            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
 
             var msg = RaiseEvent();
 
@@ -231,11 +234,11 @@ namespace EventStoreKit.Tests
         public void SubscribersAndEventStoreShouldBeMappedToSingeDb()
         {
             Service
-                .SetSubscriberDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
+                .SetDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
                 .RegisterEventSubscriber<Subscriber2>();
             InitializeService();
+            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
 
             var msg = RaiseEvent();
             
@@ -254,11 +257,12 @@ namespace EventStoreKit.Tests
         public void SubscribersAndEventStoreShouldBeMappedToDifferentDbs()
         {
             Service
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
-                .SetSubscriberDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb2 )
+                .SetEventStoreDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
+                .SetSubscriberDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb2 ) )
                 .RegisterEventSubscriber<Subscriber1>()
-                .RegisterEventSubscriber<Subscriber2>( DataBaseConnectionType.SqlLite, ConnectionStringDb3 );
+                .RegisterEventSubscriber<Subscriber2>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) );
             InitializeService();
+            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
 
             var msg = RaiseEvent();
 
@@ -287,11 +291,12 @@ namespace EventStoreKit.Tests
         public void EventStoreAndSubscribersShouldBeMappedToDifferentDbs()
         {
             Service
-                .SetSubscriberDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb2 )
-                .SetEventStoreDataBase<Linq2DbProviderFactory>( DataBaseConnectionType.SqlLite, ConnectionStringDb1 )
+                .SetSubscriberDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb2 ) )
+                .SetEventStoreDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
-                .RegisterEventSubscriber<Subscriber2>( DataBaseConnectionType.SqlLite, ConnectionStringDb3 );
+                .RegisterEventSubscriber<Subscriber2>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) );
             InitializeService();
+            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
 
             var msg = RaiseEvent();
 

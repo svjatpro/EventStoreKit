@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>EventStoreKit</Description>
     <Authors>svjatpro</Authors>
-    <TargetFrameworks>net40;net47</TargetFrameworks>
+    <TargetFrameworks>net47</TargetFrameworks>
     <AssemblyName>EventStoreKit</AssemblyName>
 
     <PackageId>EventStoreKit</PackageId>
@@ -30,12 +30,7 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
-  <ItemGroup>    
+  <ItemGroup>
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />

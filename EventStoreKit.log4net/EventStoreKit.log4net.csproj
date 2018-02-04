@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>EventStoreKit.log4net</Description>
     <Authors>svjatpro</Authors>
-    <TargetFrameworks>net40;net47</TargetFrameworks>
+    <TargetFrameworks>net47</TargetFrameworks>
     <AssemblyName>EventStoreKit.log4net</AssemblyName>
 
     <PackageId>EventStoreKit.log4net</PackageId>
@@ -26,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="log4net" Version="2.0.3" />
+    <PackageReference Include="log4net" Version="2.0.8" />
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />

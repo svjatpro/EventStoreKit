@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>EventStoreKit.linq2db</Description>
     <Authors>svjatpro</Authors>
-    <TargetFrameworks>net40;net47</TargetFrameworks>
+    <TargetFrameworks>net47</TargetFrameworks>
     <AssemblyName>EventStoreKit.linq2db</AssemblyName>
 
     <PackageId>EventStoreKit.linq2db</PackageId>
@@ -26,13 +26,8 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
   <ItemGroup>    
-    <PackageReference Include="linq2db" Version="1.10.1" />
+    <PackageReference Include="linq2db" Version="1.10.2" />
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />

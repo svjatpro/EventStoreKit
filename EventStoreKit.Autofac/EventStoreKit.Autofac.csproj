@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>EventStoreKit.Autofac</Description>
     <Authors>svjatpro</Authors>
-    <TargetFrameworks>net40;net47</TargetFrameworks>
+    <TargetFrameworks>net47</TargetFrameworks>
     <AssemblyName>EventStoreKit.Autofac</AssemblyName>
 
     <PackageId>EventStoreKit.Autofac</PackageId>
@@ -24,9 +24,9 @@
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
-
-  <ItemGroup>    
-    <PackageReference Include="Autofac" Version="3.5.2" />
+                      
+  <ItemGroup>
+    <PackageReference Include="Autofac" Version="4.6.2" />
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
