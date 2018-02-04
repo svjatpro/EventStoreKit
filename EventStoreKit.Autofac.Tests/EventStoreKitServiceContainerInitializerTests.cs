@@ -3,6 +3,7 @@ using Autofac;
 using EventStoreKit.Autofac;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Services;
+using FluentAssertions;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -32,10 +33,11 @@ namespace EventStoreKit.Tests
         [Test]
         public void DefaultDbProviderFactorySetByServiceShouldBeAvailableThroughTheContainer()
         {
+            var dbConfig = new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" );
             InitializeContainer( ctx => new EventStoreKitService()
-                .SetDataBase<DbProviderFactory1>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" ) ) );
+                .SetDataBase<DbProviderFactory1>(dbConfig) );
 
-
+            Container.Resolve<IDataBaseConfiguration>().Should().Be(dbConfig);
             // container.Resolve<IDataBaseConfiguration>() + keyed(subscriber type)
             // container.Resolve<IEventStoreSubscriberContext>() + keyed(subscriber type) // ?
             // container.Resolve<IDataBaseProvider>() + keyed(subscriber type)
