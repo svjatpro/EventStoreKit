@@ -1,12 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>EventStoreKit</Description>
+    <Description>EventStoreKit.Core</Description>
     <Authors>svjatpro</Authors>
     <TargetFrameworks>net47</TargetFrameworks>
-    <AssemblyName>EventStoreKit</AssemblyName>
+    <AssemblyName>EventStoreKit.Core</AssemblyName>
 
-    <PackageId>EventStoreKit</PackageId>
+    <PackageId>EventStoreKit.Core</PackageId>
     <PackageTags>EventStoreKit;NEventStore;Event Sourcing;CQRS</PackageTags>
     <PackageProjectUrl>https://github.com/svjatpro/EventStoreKit</PackageProjectUrl>
 

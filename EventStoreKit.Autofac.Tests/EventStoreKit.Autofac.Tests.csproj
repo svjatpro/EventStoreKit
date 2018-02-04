@@ -25,8 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EventStoreKit\EventStoreKit.csproj" />
-    <!--ProjectReference Include="..\EventStoreKit.linq2db\EventStoreKit.Autofac.csproj" /-->
+    <ProjectReference Include="..\EventStoreKit.Core\EventStoreKit.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

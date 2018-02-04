@@ -36,7 +36,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EventStoreKit\EventStoreKit.csproj" />
+    <ProjectReference Include="..\EventStoreKit.Core\EventStoreKit.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2010
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit", "EventStoreKit\EventStoreKit.csproj", "{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Core", "EventStoreKit.Core\EventStoreKit.Core.csproj", "{4A3D32C6-F86B-4F52-8A2E-67D6E3A65DC5}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.log4net", "EventStoreKit.log4net\EventStoreKit.log4net.csproj", "{A4A3590B-9711-4F78-92F9-542BA44A3999}"
 EndProject
@@ -11,9 +11,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Autofac", "Ev
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.linq2db", "EventStoreKit.linq2db\EventStoreKit.linq2db.csproj", "{020449A4-746C-45F4-A766-2403BD7E5996}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Tests", "EventStoreKit.Tests\EventStoreKit.Tests.csproj", "{D6B607C3-E439-437A-BADE-CEB11F2C2A12}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Core.Tests", "EventStoreKit.Core.Tests\EventStoreKit.Core.Tests.csproj", "{D6B607C3-E439-437A-BADE-CEB11F2C2A12}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Autofac.Tests", "EventStoreKit.Autofac.Tests\EventStoreKit.Autofac.Tests.csproj", "{1F4ACA53-07BD-4A4F-A8AE-0CF894047AFF}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Northwind", "EventStoreKit.Northwind\EventStoreKit.Northwind.csproj", "{D853440E-7E0C-4745-A028-B1DB2652F933}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -93,6 +95,18 @@ Global
 		{1F4ACA53-07BD-4A4F-A8AE-0CF894047AFF}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{1F4ACA53-07BD-4A4F-A8AE-0CF894047AFF}.Release|x86.ActiveCfg = Release|Any CPU
 		{1F4ACA53-07BD-4A4F-A8AE-0CF894047AFF}.Release|x86.Build.0 = Release|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Debug|x86.Build.0 = Debug|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Release|x86.ActiveCfg = Release|Any CPU
+		{D853440E-7E0C-4745-A028-B1DB2652F933}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

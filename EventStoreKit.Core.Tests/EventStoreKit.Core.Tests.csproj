@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>EventStoreKit.Tests</Description>
+    <Description>EventStoreKit.Core.Tests</Description>
     <Authors>svjatpro</Authors>
     <TargetFramework>net47</TargetFramework>
-    <AssemblyName>EventStoreKit.Tests</AssemblyName>
+    <AssemblyName>EventStoreKit.Core.Tests</AssemblyName>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
 
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\EventStoreKit\EventStoreKit.csproj" />
+    <ProjectReference Include="..\EventStoreKit.Core\EventStoreKit.Core.csproj" />
     <ProjectReference Include="..\EventStoreKit.linq2db\EventStoreKit.linq2db.csproj" />    
   </ItemGroup>
 
