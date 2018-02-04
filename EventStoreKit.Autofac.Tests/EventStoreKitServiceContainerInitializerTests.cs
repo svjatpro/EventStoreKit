@@ -1,4 +1,9 @@
-﻿using NUnit.Framework;
+﻿using System;
+using Autofac;
+using EventStoreKit.Autofac;
+using EventStoreKit.DbProviders;
+using EventStoreKit.Services;
+using NUnit.Framework;
 
 namespace EventStoreKit.Tests
 {
@@ -7,6 +12,19 @@ namespace EventStoreKit.Tests
     {
         #region Private members
 
+        private IContainer Container;
+        private IEventStoreKitService Service;
+
+        private class DbProviderFactory1 : DbProviderFactoryStub { public DbProviderFactory1( IDataBaseConfiguration config ) {} }
+
+        private void InitializeContainer( Func<IComponentContext, EventStoreKitService> initializer )
+        {
+            var builder = new ContainerBuilder();
+            builder.InitializeEventStoreKitService( initializer );
+            Container = builder.Build();
+            Service = Container.Resolve<IEventStoreKitService>();
+        }
+
         #endregion
 
         #region Default DataBase
@@ -14,7 +32,9 @@ namespace EventStoreKit.Tests
         [Test]
         public void DefaultDbProviderFactorySetByServiceShouldBeAvailableThroughTheContainer()
         {
-            // service.SetDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DbConnectionType.SqlLite, "data source=db1" ) )
+            InitializeContainer( ctx => new EventStoreKitService()
+                .SetDataBase<DbProviderFactory1>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" ) ) );
+
 
             // container.Resolve<IDataBaseConfiguration>() + keyed(subscriber type)
             // container.Resolve<IEventStoreSubscriberContext>() + keyed(subscriber type) // ?

@@ -25,6 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EventStoreKit.Autofac\EventStoreKit.Autofac.csproj" />
     <ProjectReference Include="..\EventStoreKit.Core\EventStoreKit.Core.csproj" />
   </ItemGroup>
 

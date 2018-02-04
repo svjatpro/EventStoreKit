@@ -28,7 +28,7 @@
 
   <ItemGroup>    
     <PackageReference Include="NEventStore" Version="5.2.0" />
-    <PackageReference Include="linq2db" Version="1.10.1" />
+    <PackageReference Include="linq2db" Version="1.10.2" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
     <PackageReference Include="Rx-Linq" Version="2.2.5" />
