@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>EventStoreKit.Northwind.Console</Description>
+    <Description>Northwind.Console</Description>
     <Authors>svjatpro</Authors>
     <TargetFramework>net47</TargetFramework>
-    <AssemblyName>EventStoreKit.Northwind.Console</AssemblyName>
+    <AssemblyName>Northwind.Console</AssemblyName>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
     <ApplicationIcon />
     <OutputType>Exe</OutputType>
@@ -19,6 +19,7 @@
   <ItemGroup>
     <PackageReference Include="EventStoreKit" Version="2.0.0" />
     <PackageReference Include="EventStoreKit.linq2db" Version="2.0.0" />
+    <PackageReference Include="EventStoreKit.Northwind" Version="2.0.0" />
     <PackageReference Include="Autofac" Version="4.6.2" />
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
@@ -27,10 +28,6 @@
     <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
     <PackageReference Include="linq2db" Version="1.10.1" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.106" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\EventStoreKit.Northwind\EventStoreKit.Northwind.csproj" />
   </ItemGroup>
 
   <ItemGroup>

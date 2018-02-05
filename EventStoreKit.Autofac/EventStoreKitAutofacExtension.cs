@@ -3,6 +3,7 @@ using System.Linq;
 using Autofac;
 using Autofac.Core;
 using Autofac.Features.GeneratedFactories;
+using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
@@ -15,8 +16,11 @@ namespace EventStoreKit.Autofac
     {
         public static void InitializeEventStoreKitService( 
             this ContainerBuilder builder, 
-            Func<IComponentContext, EventStoreKitService> initializer = null )
+            Func<EventStoreKitService> serviceCreator = null,
+            Action<IComponentContext, EventStoreKitService> serviceInitializer = null )
         {
+            var service = serviceCreator.With( creator => creator() ) ?? new EventStoreKitService();
+
             // register default EventStoreConfiguration
             builder
                 .RegisterInstance(
@@ -28,11 +32,27 @@ namespace EventStoreKit.Autofac
                 .As<IEventStoreConfiguration>()
                 .IfNotRegistered( typeof(IEventStoreConfiguration) );
 
+            // register default IDbProviderFactory and IDataBaseConfiguration
+            var dbProviderFactory = service.GetDataBaseProviderFactory();
+            builder
+                .RegisterInstance( dbProviderFactory )
+                .As<IDbProviderFactory>()
+                .IfNotRegistered( typeof(IDbProviderFactory) );
+            builder
+                .Register( ctx => dbProviderFactory.Create() )
+                .As<IDbProviderFactory>()
+                .IfNotRegistered( typeof(IDbProviderFactory) );
+            builder
+                .RegisterInstance( dbProviderFactory.DefaultDataBaseConfiguration )
+                .As<IDataBaseConfiguration>()
+                .IfNotRegistered( typeof(IDataBaseConfiguration) );
+
             // register service
             builder
                 .Register( ctx =>
                 {
-                    var service = initializer.With( initialize => initialize( ctx ) ) ?? new EventStoreKitService();
+                    serviceInitializer.Do( initializer => initializer( ctx, service ) );
+                    //var service = initializer.With( initialize => initialize( ctx ) ) ?? new EventStoreKitService();
 
                     ctx.ResolveOptional<IEventStoreConfiguration>().Do( config => service.SetConfiguration( config ) );
 

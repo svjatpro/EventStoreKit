@@ -304,6 +304,12 @@ namespace EventStoreKit.Services
             return this;
         }
 
+        public IDbProviderFactory GetDataBaseProviderFactory()
+        {
+            return DbProviderFactorySubscribers;
+        }
+          
+
         #endregion
 
         #region Register command handlers methods

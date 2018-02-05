@@ -16,9 +16,13 @@ namespace EventStoreKit.Tests
         private IContainer Container;
         private IEventStoreKitService Service;
 
-        private class DbProviderFactory1 : DbProviderFactoryStub { public DbProviderFactory1( IDataBaseConfiguration config ) {} }
+        private class DbProviderFactory1 : DbProviderFactoryStub
+        {
+            public new IDataBaseConfiguration DefaultDataBaseConfiguration { get; }
+            public DbProviderFactory1( IDataBaseConfiguration config ) { DefaultDataBaseConfiguration = config; } 
+        }
 
-        private void InitializeContainer( Func<IComponentContext, EventStoreKitService> initializer )
+        private void InitializeContainer( Func<EventStoreKitService> initializer )
         {
             var builder = new ContainerBuilder();
             builder.InitializeEventStoreKitService( initializer );
@@ -34,9 +38,10 @@ namespace EventStoreKit.Tests
         public void DefaultDbProviderFactorySetByServiceShouldBeAvailableThroughTheContainer()
         {
             var dbConfig = new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" );
-            InitializeContainer( ctx => new EventStoreKitService()
-                .SetDataBase<DbProviderFactory1>(dbConfig) );
+            InitializeContainer( 
+                () => new EventStoreKitService().SetDataBase<DbProviderFactory1>(dbConfig) );
 
+            Container.Resolve<IDbProviderFactory>().GetType().Should().Be( typeof(DbProviderFactory1) );
             Container.Resolve<IDataBaseConfiguration>().Should().Be(dbConfig);
             // container.Resolve<IDataBaseConfiguration>() + keyed(subscriber type)
             // container.Resolve<IEventStoreSubscriberContext>() + keyed(subscriber type) // ?
