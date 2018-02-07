@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Reactive.Concurrency;
 using Autofac;
 using Autofac.Core;
 using Autofac.Features.GeneratedFactories;
@@ -14,38 +15,78 @@ namespace EventStoreKit.Autofac
 {
     public static class EventStoreKitAutofacExtension
     {
-        public static void InitializeEventStoreKitService( 
-            this ContainerBuilder builder, 
+        public static void InitializeEventStoreKitService(
+            this ContainerBuilder builder,
             Func<EventStoreKitService> serviceCreator = null,
             Action<IComponentContext, EventStoreKitService> serviceInitializer = null )
         {
-            var service = serviceCreator.With( creator => creator() ) ?? new EventStoreKitService();
+            // create service instance
+            var service = serviceCreator.With( creator => creator() ) ?? new EventStoreKitService( false );
 
             // register default EventStoreConfiguration
-            builder
-                .RegisterInstance(
-                    new EventStoreConfiguration
-                    {
-                        InsertBufferSize = 10000,
-                        OnIddleInterval = 500
-                    } )
+            builder.RegisterInstance( service.Configuration.GetValueOrDefault() )
+                    //new EventStoreConfiguration
+                    //{
+                    //    InsertBufferSize = 10000,
+                    //    OnIddleInterval = 500
+                    //} )
                 .As<IEventStoreConfiguration>()
                 .IfNotRegistered( typeof(IEventStoreConfiguration) );
 
             // register default IDbProviderFactory and IDataBaseConfiguration
             var dbProviderFactory = service.GetDataBaseProviderFactory();
+            dbProviderFactory
+                .Do( dbFactory =>
+                {
+                    builder
+                        .RegisterInstance( dbProviderFactory )
+                        .As<IDbProviderFactory>()
+                        .IfNotRegistered( typeof(IDbProviderFactory) );
+                } );
             builder
-                .RegisterInstance( dbProviderFactory )
-                .As<IDbProviderFactory>()
-                .IfNotRegistered( typeof(IDbProviderFactory) );
+                .Register( ctx => ctx.Resolve<IDbProviderFactory>().Create() )
+                .As<IDbProvider>()
+                .ExternallyOwned()
+                .OnlyIf( reg => 
+                    reg.IsRegistered( new TypedService( typeof(IDbProviderFactory) ) ) &&
+                    !reg.IsRegistered( new TypedService( typeof(IDbProvider) ) ) );
             builder
-                .Register( ctx => dbProviderFactory.Create() )
-                .As<IDbProviderFactory>()
-                .IfNotRegistered( typeof(IDbProviderFactory) );
-            builder
-                .RegisterInstance( dbProviderFactory.DefaultDataBaseConfiguration )
+                .Register( ctx => ctx.Resolve<IDbProviderFactory>().DefaultDataBaseConfiguration )
                 .As<IDataBaseConfiguration>()
-                .IfNotRegistered( typeof(IDataBaseConfiguration) );
+                .ExternallyOwned()
+                .OnlyIf( reg =>
+                    reg.IsRegistered( new TypedService( typeof( IDbProviderFactory ) ) ) &&
+                    !reg.IsRegistered( new TypedService( typeof( IDataBaseConfiguration ) ) ) );
+
+
+            // register EventStoreSubscriberContext
+            builder
+                .RegisterType<EventStoreSubscriberContext>()
+                .As<IEventStoreSubscriberContext>()
+                .ExternallyOwned()
+                .IfNotRegistered( typeof(IEventStoreSubscriberContext) );
+            //builder.RegisterType<ILogger>()
+            builder
+                .RegisterType<IScheduler>() //
+                .As<IScheduler>()
+                .ExternallyOwned()
+                .IfNotRegistered( typeof(IScheduler) );
+
+            // register EventSubscribers
+            var serviceSubscribers = service.GetEventSubscribers()
+                .Select( subscriber => new { Type = subscriber.Key, Factory = subscriber.Value } )
+                .ToList();
+            var registeredSubscribers = serviceSubscribers.Select( s => s.Type ).ToArray();
+            serviceSubscribers
+                .ForEach( subscriver =>
+                {
+                    builder
+                        .Register( ctx => Convert.ChangeType( subscriver.Factory(), subscriver.Type ) )
+                        .As( subscriver.Type )
+                        .As<IEventSubscriber>()
+                        .ExternallyOwned()
+                        .IfNotRegistered( subscriver.Type );
+                } );
 
             // register service
             builder
@@ -54,22 +95,25 @@ namespace EventStoreKit.Autofac
                     serviceInitializer.Do( initializer => initializer( ctx, service ) );
                     //var service = initializer.With( initialize => initialize( ctx ) ) ?? new EventStoreKitService();
 
-                    ctx.ResolveOptional<IEventStoreConfiguration>().Do( config => service.SetConfiguration( config ) );
+                    // IEventStoreConfiguration
+                    ctx.ResolveOptional<IEventStoreConfiguration>().Do( config => service.Configuration.Value = config );
 
-                    // ctx.ResolveKeyed<IDbProviderFactory>( new DataBaseConfiguration( connectionString ) );
+                    // IDbProviderFactory
+                    ctx.ResolveOptional<IDbProviderFactory>().Do( factory => service.SetDataBase( factory ) );
 
                     // Register event handlers
                     var cmdHandlers = ctx
                         .ComponentRegistry
                         .Registrations
-                        .Where( registration => registration.Activator.LimitType.IsAssignableTo<ICommandHandler>() )
+                        .Where( registration => 
+                            registration.Activator.LimitType.IsAssignableTo<ICommandHandler>() &&
+                            !registeredSubscribers.Contains( registration.Activator.LimitType ) ) // prevent cyclic registration
                         .Select( registration =>
                         {
-                            var factoryGenerator = new FactoryGenerator( typeof(Func<ICommandHandler>), registration,
-                                ParameterMapping.ByType );
+                            var factoryGenerator = new FactoryGenerator( typeof(Func<ICommandHandler>), registration, ParameterMapping.ByType );
                             return (Func<ICommandHandler>) factoryGenerator.GenerateFactory( ctx, new Parameter[] { } );
                         } )
-                        .Where( h => h != null )
+                        .Where( factory => factory != null )
                         .ToList();
                     cmdHandlers.ForEach( handler => service.RegisterCommandHandler( handler ) );
 
@@ -77,17 +121,17 @@ namespace EventStoreKit.Autofac
                     var subscribers = ctx
                         .ComponentRegistry
                         .Registrations
-                        .Where( r => r.Activator.LimitType.IsAssignableTo<IEventSubscriber>() )
-                        .Select( r =>
-                            ctx.IsRegistered( r.Activator.LimitType )
-                                ? ctx.Resolve( r.Activator.LimitType )
-                                : r.Services.FirstOrDefault().With( ctx.ResolveService ) )
-                        .Select( h => h.OfType<IEventSubscriber>() )
-                        .Where( h => h != null )
+                        .Where( registration => registration.Activator.LimitType.IsAssignableTo<IEventSubscriber>() )
+                        .Select( registration =>
+                        {
+                            var factoryGenerator = new FactoryGenerator( typeof( Func<IEventSubscriber> ), registration, ParameterMapping.ByType );
+                            return (Func<IEventSubscriber>)factoryGenerator.GenerateFactory( ctx, new Parameter[] { } );
+                        } )
+                        .Where( factory => factory != null )
                         .ToList();
-                    //subscribers.ForEach( s => service.RegisterEventSubscriber(  ) );
+                    subscribers.ForEach( s => service.RegisterEventSubscriber( s ) );
 
-                    return service;
+                    return service.Initialize();
                 } )
                 .As<IEventStoreKitService>()
                 .AutoActivate()

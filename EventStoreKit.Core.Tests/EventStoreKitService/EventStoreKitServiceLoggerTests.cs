@@ -6,10 +6,10 @@ using NUnit.Framework;
 namespace EventStoreKit.Tests
 {
     [TestFixture]
-    public class EventStoreKitServiceConfigurationTests
+    public class EventStoreKitServiceLoggerTests
     {
         [Test]
-        public void ServiceShouldInitalizeDefaultConfiguration()
+        public void ServiceShouldInitalizeDefaultLogger()
         {
             var service = new EventStoreKitService();
             var config = service.Configuration.Value;

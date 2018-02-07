@@ -14,6 +14,5 @@ namespace EventStoreKit.Logging
     }
     public interface ILogger<T> : ILogger
     {
-        
     }
 }

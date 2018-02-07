@@ -6,7 +6,7 @@ namespace EventStoreKit.Services
 {
     public interface IEventStoreKitService
     {
-        IEventStoreConfiguration GetConfiguration();
+        //IEventStoreConfiguration Configuration { get; }
         TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
 
         void SendCommand( DomainCommand command );

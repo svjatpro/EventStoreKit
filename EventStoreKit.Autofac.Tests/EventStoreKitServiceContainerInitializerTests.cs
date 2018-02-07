@@ -1,9 +1,15 @@
 ﻿using System;
+using System.Reactive.Concurrency;
 using Autofac;
 using EventStoreKit.Autofac;
 using EventStoreKit.DbProviders;
+using EventStoreKit.Logging;
+using EventStoreKit.Projections;
 using EventStoreKit.Services;
+using EventStoreKit.Services.Configuration;
+using EventStoreKit.Utility;
 using FluentAssertions;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -13,21 +19,43 @@ namespace EventStoreKit.Tests
     {
         #region Private members
 
+        private ContainerBuilder Builder;
         private IContainer Container;
-        private IEventStoreKitService Service;
+        private EventStoreKitService Service;
 
-        private class DbProviderFactory1 : DbProviderFactoryStub
+        private class DbProviderFactory1 : IDbProviderFactory
         {
-            public new IDataBaseConfiguration DefaultDataBaseConfiguration { get; }
+            public IDataBaseConfiguration DefaultDataBaseConfiguration { get; }
+            public IDbProvider Create() { return new DbProviderStub( null ); }
+            public IDbProvider Create( IDataBaseConfiguration configuration ) { return new DbProviderStub( null ); }
             public DbProviderFactory1( IDataBaseConfiguration config ) { DefaultDataBaseConfiguration = config; } 
+        }
+        private class DbProviderFactory2 : DbProviderFactory1
+        {
+            public DbProviderFactory2( IDataBaseConfiguration config ) : base( config ) { }
+        }
+        public class Subscriber1 : EventQueueSubscriber
+        {
+            public Subscriber1( ) : base( new EventStoreSubscriberContext
+            {
+                Configuration = new EventStoreConfiguration(),
+                DbProviderFactory = new DbProviderFactoryStub(),
+                Scheduler = Substitute.For<IScheduler>(),
+                Logger = Substitute.For<ILogger>()
+            } ) { }
         }
 
         private void InitializeContainer( Func<EventStoreKitService> initializer )
         {
-            var builder = new ContainerBuilder();
-            builder.InitializeEventStoreKitService( initializer );
-            Container = builder.Build();
-            Service = Container.Resolve<IEventStoreKitService>();
+            Builder.InitializeEventStoreKitService( initializer );
+            Container = Builder.Build();
+            Service = Container.Resolve<IEventStoreKitService>().OfType<EventStoreKitService>();
+        }
+
+        [SetUp]
+        protected void Setup()
+        {
+            Builder = new ContainerBuilder();
         }
 
         #endregion
@@ -37,45 +65,52 @@ namespace EventStoreKit.Tests
         [Test]
         public void DefaultDbProviderFactorySetByServiceShouldBeAvailableThroughTheContainer()
         {
-            var dbConfig = new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" );
-            InitializeContainer( 
-                () => new EventStoreKitService().SetDataBase<DbProviderFactory1>(dbConfig) );
-
+            var dbConfig = new DataBaseConfiguration( DataBaseConnectionType.None, "data source1" );
+            InitializeContainer( () => new EventStoreKitService( false ).SetDataBase<DbProviderFactory1>(dbConfig) );
+            
+            Container.Resolve<IDataBaseConfiguration>().Should().Be( dbConfig );
             Container.Resolve<IDbProviderFactory>().GetType().Should().Be( typeof(DbProviderFactory1) );
-            Container.Resolve<IDataBaseConfiguration>().Should().Be(dbConfig);
-            // container.Resolve<IDataBaseConfiguration>() + keyed(subscriber type)
-            // container.Resolve<IEventStoreSubscriberContext>() + keyed(subscriber type) // ?
-            // container.Resolve<IDataBaseProvider>() + keyed(subscriber type)
-            // container.Resolve<IDataBaseProviderFactory>() + keyed(subscriber type)
+
+            var dbProvider1 = Container.Resolve<IDbProvider>();
+            dbProvider1.GetType().Should().Be( typeof( DbProviderStub ) );
+            Container.Resolve<IDbProvider>().Should().NotBe( dbProvider1 );
+            Container.Resolve<Func<IDbProvider>>()().Should().NotBe( dbProvider1 );
         }
 
         [Test]
         public void DefaultDbProviderFactoryAndConfigurationSetByContainerShouldBeAvailableThroughTheService()
         {
-            // builder.Register( new DataBaseConfiguration( DbConnectionType.SqlLite, "data source=db1" ) ).As<IDataBaseConfiguration>()
-            // builder.RegisterType<Linq2DbProviderFactory>().As<IDataBaseProviderFactory>()
+            var dbConfig = new DataBaseConfiguration( DataBaseConnectionType.None, "data source1" );
+            Builder.RegisterInstance( dbConfig ).As<IDataBaseConfiguration>();
+            Builder.RegisterType<DbProviderFactory1>().As<IDbProviderFactory>();
+            InitializeContainer( () => new EventStoreKitService( false ) );
 
-            // container.Resolve<IDataBaseConfiguration>() + keyed
-            // container.Resolve<IEventStoreSubscriberContext>() + keyed
-            // container.Resolve<IDataBaseProvider>() + keyed
-            // container.Resolve<IDataBaseProviderFactory>() + keyed
+            Container.Resolve<IDataBaseConfiguration>().Should().Be( dbConfig );
+            Container.Resolve<IDbProviderFactory>().GetType().Should().Be( typeof( DbProviderFactory1 ) );
 
-            // server.GetDataBaseProviderFactory<TModel>()
-            // server.GetDataBaseProviderFactory<Commit>()
+            var dbProvider1 = Container.Resolve<IDbProvider>();
+            dbProvider1.GetType().Should().Be( typeof( DbProviderStub ) );
+            Container.Resolve<IDbProvider>().Should().NotBe( dbProvider1 );
+            Container.Resolve<Func<IDbProvider>>()().Should().NotBe( dbProvider1 );
+
+            Service.GetDataBaseProviderFactory().DefaultDataBaseConfiguration.Should().Be( dbConfig );
         }
 
         [Test]
         public void DefaultDbProviderFactorySetByContainerShouldBeAvailableThroughTheService()
         {
-            // builder.Register( ctx => new Linq2DbProviderFactory( new DataBaseConfiguration( DbConnectionType.SqlLite, "data source=db1" )  ) ).As<IDataBaseProviderFactory>()
+            var dbConfig = new DataBaseConfiguration( DataBaseConnectionType.None, "data source1" );
+            Builder.RegisterInstance( new DbProviderFactory1( dbConfig ) ).As<IDbProviderFactory>();
+            InitializeContainer( () => new EventStoreKitService( false ) );
 
-            // container.Resolve<IDataBaseConfiguration>() + keyed - null / failed (denied)
-            // container.Resolve<IEventStoreSubscriberContext>() + keyed
-            // container.Resolve<IDataBaseProvider>() + keyed
-            // container.Resolve<IDataBaseProviderFactory>() + keyed
+            Container.Resolve<IDbProviderFactory>().GetType().Should().Be( typeof( DbProviderFactory1 ) );
 
-            // server.GetDataBaseProviderFactory<TModel>()
-            // server.GetDataBaseProviderFactory<Commit>()
+            var dbProvider1 = Container.Resolve<IDbProvider>();
+            dbProvider1.GetType().Should().Be( typeof( DbProviderStub ) );
+            Container.Resolve<IDbProvider>().Should().NotBe( dbProvider1 );
+            Container.Resolve<Func<IDbProvider>>()().Should().NotBe( dbProvider1 );
+
+            Service.GetDataBaseProviderFactory().DefaultDataBaseConfiguration.Should().Be( dbConfig );
         }
 
         #endregion
@@ -85,26 +120,48 @@ namespace EventStoreKit.Tests
         [Test]
         public void StoreAndSubscribersDbProviderFactorySetByServiceShouldBeAvailabeThroughTheContainer()
         {
-            // service.SetEventStoreDataBase<ProviderFactory1>( new DataBaseConfiguration( DbConnectionType.SqlLite, "data source=db1" ) )
-            // service.SetSubscriberDataBase<ProviderFactory2>( new DataBaseConfiguration( DbConnectionType.SqlLite, "data source=db2" ) )
+            var dbConfig1 = new DataBaseConfiguration( DataBaseConnectionType.None, "data source1" );
+            var dbConfig2 = new DataBaseConfiguration( DataBaseConnectionType.None, "data source2" );
+            InitializeContainer( () => new EventStoreKitService( false )
+                .SetEventStoreDataBase<DbProviderFactory1>( dbConfig1 )
+                .SetSubscriberDataBase<DbProviderFactory2>( dbConfig2 ) );
 
-            // container.Resolve<IDataBaseConfiguration>() + keyed(subscriber type) - resolves Subscriber factory
-            // container.Resolve<IEventStoreSubscriberContext>() + keyed(subscriber type) - resolves Subscriber factory
-            // container.ResolveKeyed<IDataBaseProvider>() + keyed(subscriber type) - resolves Subscriber factory
-            // container.ResolveKeyed<IDataBaseProviderFactory>() + keyed(subscriber type) - resolves Subscriber factory
+            // default data base is Subscriber data base
+            Container.Resolve<IDataBaseConfiguration>().Should().Be( dbConfig2 );
+            Container.Resolve<IDbProviderFactory>().GetType().Should().Be( typeof( DbProviderFactory2 ) );
         }
 
         #endregion
 
+        #region RegisterSubscribers
 
-        /*
-        // separate DB for subscriber
+        [Test]
+        public void SubscriberRegisteredByContainerShouldBeAvailableThroughTheService()
+        {
+            Builder.RegisterType<Subscriber1>().AsSelf().SingleInstance();
+            InitializeContainer( () => new EventStoreKitService( false ) );
 
-        .RegisterEventSubscriber<TSubscriber>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) );
+            Service.GetSubscriber<Subscriber1>().Should().Be( Container.Resolve<Subscriber1>() );
+        }
 
-        --
+        [Test]
+        public void SubscriberRegisteredByServiceShouldBeAvailableThroughTheContainer()
+        {
+            InitializeContainer( () => new EventStoreKitService( false ).RegisterEventSubscriber<Subscriber1>() );
 
-        // separate */
+            Container.Resolve<Subscriber1>().Should().Be( Service.GetSubscriber<Subscriber1>() );
+        }
+
+        // register subscriber in container, with context and all internal stuff, which autoregistered by service
+
+        #endregion
+
+        // command handler two way
+
+        // register subscriber in service, with logger from container
+        // register subscriber in service, with dbconfig from container
+        // register subscriber in service, with scheduler from container
+        // register subscriber in service, with scheduler from container
 
     }
 }
