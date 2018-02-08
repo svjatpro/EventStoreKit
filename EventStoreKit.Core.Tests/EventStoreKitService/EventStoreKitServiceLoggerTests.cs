@@ -1,6 +1,8 @@
-﻿using EventStoreKit.Services;
+﻿using EventStoreKit.Logging;
+using EventStoreKit.Services;
 using EventStoreKit.Services.Configuration;
 using FluentAssertions;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -12,32 +14,22 @@ namespace EventStoreKit.Tests
         public void ServiceShouldInitalizeDefaultLogger()
         {
             var service = new EventStoreKitService();
-            var config = service.Configuration.Value;
+            var logger = service.Logger.Value;
 
-            service.Configuration.Value.Should().Be( service.Configuration.Default );
-            config.InsertBufferSize.Should().Be( 10000 );
-            config.OnIddleInterval.Should().Be( 500 );
+            service.Logger.Value.Should().Be( service.Logger.Default );
         }
 
         [Test]
-        public void ServiceShouldUseOverridedConfiguration()
+        public void ServiceShouldUseOverridedLogger()
         {
-            const int buffSize = 123;
-            const int interval = 234;
+            var overridedLogger = Substitute.For<ILogger>();
 
             var service = new EventStoreKitService( false );
-            service.Configuration.Value =
-                new EventStoreConfiguration
-                {
-                    InsertBufferSize = buffSize,
-                    OnIddleInterval = interval
-                };
+            service.Logger.Value = overridedLogger;
             service.Initialize();
 
-            var config = service.Configuration.Value;
-
-            config.InsertBufferSize.Should().Be( buffSize );
-            config.OnIddleInterval.Should().Be( interval );
+            var logger = service.Logger.Value;
+            logger.Should().Be( overridedLogger );
         }
 
     }

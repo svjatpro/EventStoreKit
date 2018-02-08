@@ -27,6 +27,7 @@ namespace EventStoreKit.Services
     {
         //
         ServiceProperty<IEventStoreConfiguration> Configuration { get; }
+        ServiceProperty<ILoggerFactory> LoggerFactory { get; }
 
         IEventStoreKitService Initialize();
     }
@@ -71,19 +72,10 @@ namespace EventStoreKit.Services
             }
 
             ServiceProperties.ForEach( property => property.Initialize() );
-            //Configuration.Initialize();
-            //if( Configuration == null )
-            //{
-            //    Configuration = new EventStoreConfiguration
-            //    {
-            //        InsertBufferSize = 10000,
-            //        OnIddleInterval = 500
-            //    };
-            //}
 
             CurrentUserProvider = new CurrentUserProviderStub { CurrentUserId = Guid.NewGuid() };
 
-            var dispatcher = new MessageDispatcher( ResolveLogger<MessageDispatcher>() );
+            var dispatcher = new MessageDispatcher( LoggerFactory.Value.Create<MessageDispatcher>() );
             Dispatcher = dispatcher;
             EventPublisher = dispatcher;
             CommandBus = dispatcher;
@@ -96,7 +88,7 @@ namespace EventStoreKit.Services
             StoreEvents?.Dispose();
             
             var wireup = InitializeWireup();
-            StoreEvents = new EventStoreAdapter( wireup, ResolveLogger<EventStoreAdapter>(), EventPublisher, CommandBus );
+            StoreEvents = new EventStoreAdapter( wireup, LoggerFactory.Value.Create<EventStoreAdapter>(), EventPublisher, CommandBus );
             ConstructAggregates = new EntityFactory();
             // todo: register also SagaFactory
         }
@@ -105,7 +97,7 @@ namespace EventStoreKit.Services
         {
             var wireup = Wireup
                 .Init()
-                .LogTo( type => ResolveLogger<EventStoreAdapter>() );
+                .LogTo( type => LoggerFactory.Value.Create<EventStoreAdapter>() );
 
             if ( DbProviderFactoryEventStore == null || DbProviderFactoryEventStore.DefaultDataBaseConfiguration.DataBaseConnectionType == DataBaseConnectionType.None )
             {
@@ -142,14 +134,13 @@ namespace EventStoreKit.Services
             where TEntity : class, ITrackableAggregate
         {
             // register Action as handler to dispatcher
-            var loggerFactory = new Func<ILogger>( ResolveLogger<EventStoreKitService> );
             var repositoryFactory = new Func<IRepository>( ResolveRepository );
 
             var handleAction = new Action<TCommand>( cmd =>
             {
                 var repository = repositoryFactory();
                 var handler = handlerFactory();
-                var logger = loggerFactory();
+                var logger = LoggerFactory.Value.Create<EventStoreKitService>();
 
                 if ( cmd.Created == default( DateTime ) )
                     cmd.Created = DateTime.Now;
@@ -210,9 +201,9 @@ namespace EventStoreKit.Services
                 DbProviderFactorySubscribers );
             return new EventStoreSubscriberContext
             {
-                Logger = ResolveLogger<TSubscriber>(),
+                Logger = LoggerFactory.GetValueOrDefault().Create<TSubscriber>(),
                 Scheduler = Scheduler,
-                Configuration = Configuration.Value,
+                Configuration = Configuration.GetValueOrDefault(),
                 DbProviderFactory = dbFactory
             };
         }
@@ -222,22 +213,10 @@ namespace EventStoreKit.Services
                 TryCreateInstance<TSubscriber>( new Dictionary<Type, object>{ { typeof( IEventStoreSubscriberContext ), context } } ) ??
                 TryCreateInstance<TSubscriber>( new Dictionary<Type, object>() );
 
-            //var ctor = stype
-            //    .GetConstructors( BindingFlags.Public | BindingFlags.Instance )
-            //    .FirstOrDefault( c =>
-            //    {
-            //        var args = c.GetParameters();
-            //        return
-            //            args.Length == 1 &&
-            //            args[0].ParameterType == typeof( IEventStoreSubscriberContext );
-            //    } );
-            //if( ctor == null )
             if( subscriber  == null )
                 throw new InvalidOperationException( $"Can't create {typeof( TSubscriber ).Name} instance, because there is no public constructore" );
 
             return subscriber;
-
-            //return (TSubscriber)ctor.Invoke( new object[] { context } );
         }
 
         private void ConfigureEventSubscriberRouts( Func<IEventSubscriber> subscriberFactory )
@@ -264,19 +243,6 @@ namespace EventStoreKit.Services
                 ConfigureEventSubscriberRouts( subscriberFactory );
         }
 
-        #endregion
-
-        #region Protected methods
-
-        protected virtual ICurrentUserProvider ResolveCurrentUserProvider() { return CurrentUserProvider; }
-        protected virtual ILogger<T> ResolveLogger<T>() { return new LoggerStub<T>(); }
-        protected virtual IRepository ResolveRepository()
-        {
-            return new EventStoreRepository(StoreEvents, ConstructAggregates, new ConflictDetector());
-        }
-
-        #endregion
-
         private ServiceProperty<TPropertyValue> InitializeProperty<TPropertyValue>( Func<TPropertyValue> defaultInitializer ) where TPropertyValue : class
         {
             var property = new ServiceProperty<TPropertyValue>( defaultInitializer );
@@ -284,6 +250,18 @@ namespace EventStoreKit.Services
             return property;
         }
 
+        #endregion
+
+        #region Protected methods
+
+        protected virtual ICurrentUserProvider ResolveCurrentUserProvider() { return CurrentUserProvider; }
+        protected virtual IRepository ResolveRepository()
+        {
+            return new EventStoreRepository(StoreEvents, ConstructAggregates, new ConflictDetector());
+        }
+
+        #endregion
+        
         public EventStoreKitService( bool initialize = true )
         {
             Configuration = InitializeProperty<IEventStoreConfiguration>( 
@@ -292,6 +270,7 @@ namespace EventStoreKit.Services
                     InsertBufferSize = 10000,
                     OnIddleInterval = 500
                 } );
+            LoggerFactory = InitializeProperty<ILoggerFactory>( () => new LoggerFactoryStub() );
 
             if ( initialize )
                 Initialize();
@@ -321,15 +300,13 @@ namespace EventStoreKit.Services
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory )
             where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>();
-            RegisterEventSubscriberFactory( () => subscriberFactory( context ) );
+            RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>() ) );
             return this;
         }
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, IDataBaseConfiguration configuration )
             where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( configuration );
-            RegisterEventSubscriberFactory( () => subscriberFactory( context ) );
+            RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>( configuration ) ) );
             return this;
         }
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( IDataBaseConfiguration configuration ) where TSubscriber : class, IEventSubscriber
@@ -454,12 +431,6 @@ namespace EventStoreKit.Services
 
         #endregion
 
-        //public EventStoreKitService SetConfiguration( IEventStoreConfiguration configuration )
-        //{
-        //    Configuration = configuration;
-        //    return this;
-        //}
-
         public EventStoreKitService SetScheduler( IScheduler scheduler )
         {
             Scheduler = scheduler;
@@ -470,12 +441,11 @@ namespace EventStoreKit.Services
         #region IEventStoreKitServiceBuilder implementation
 
         public ServiceProperty<IEventStoreConfiguration> Configuration { get; }
+        public ServiceProperty<ILoggerFactory> LoggerFactory { get; }
 
         #endregion
 
         #region IEventStoreKitService implementation
-
-        //public IEventStoreConfiguration Configuration => Configuration.Value;
 
         public TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
         {
