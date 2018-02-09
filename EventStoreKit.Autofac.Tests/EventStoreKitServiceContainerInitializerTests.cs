@@ -152,16 +152,7 @@ namespace EventStoreKit.Tests
             Container.Resolve<Subscriber1>().Should().Be( Service.GetSubscriber<Subscriber1>() );
         }
 
-        // register subscriber in container, with context and all internal stuff, which autoregistered by service
-
         #endregion
-
-        // command handler two way
-
-        // register subscriber in service, with logger from container
-        // register subscriber in service, with dbconfig from container
-        // register subscriber in service, with scheduler from container
-        // register subscriber in service, with scheduler from container
 
     }
 }

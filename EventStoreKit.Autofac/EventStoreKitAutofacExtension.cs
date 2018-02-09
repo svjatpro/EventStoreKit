@@ -25,11 +25,6 @@ namespace EventStoreKit.Autofac
 
             // register default EventStoreConfiguration
             builder.RegisterInstance( service.Configuration.GetValueOrDefault() )
-                    //new EventStoreConfiguration
-                    //{
-                    //    InsertBufferSize = 10000,
-                    //    OnIddleInterval = 500
-                    //} )
                 .As<IEventStoreConfiguration>()
                 .IfNotRegistered( typeof(IEventStoreConfiguration) );
 
@@ -93,7 +88,6 @@ namespace EventStoreKit.Autofac
                 .Register( ctx =>
                 {
                     serviceInitializer.Do( initializer => initializer( ctx, service ) );
-                    //var service = initializer.With( initialize => initialize( ctx ) ) ?? new EventStoreKitService();
 
                     // IEventStoreConfiguration
                     ctx.ResolveOptional<IEventStoreConfiguration>().Do( config => service.Configuration.Value = config );

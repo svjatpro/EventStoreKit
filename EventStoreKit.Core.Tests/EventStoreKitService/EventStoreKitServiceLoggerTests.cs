@@ -1,6 +1,5 @@
 ﻿using EventStoreKit.Logging;
 using EventStoreKit.Services;
-using EventStoreKit.Services.Configuration;
 using FluentAssertions;
 using NSubstitute;
 using NUnit.Framework;
@@ -14,22 +13,22 @@ namespace EventStoreKit.Tests
         public void ServiceShouldInitalizeDefaultLogger()
         {
             var service = new EventStoreKitService();
-            var logger = service.Logger.Value;
+            var loggerFactory = service.LoggerFactory.Value;
 
-            service.Logger.Value.Should().Be( service.Logger.Default );
+            loggerFactory.Should().Be( service.LoggerFactory.Default );
         }
 
         [Test]
         public void ServiceShouldUseOverridedLogger()
         {
-            var overridedLogger = Substitute.For<ILogger>();
+            var overrided = Substitute.For<ILoggerFactory>();
 
             var service = new EventStoreKitService( false );
-            service.Logger.Value = overridedLogger;
+            service.LoggerFactory.Value = overrided;
             service.Initialize();
 
-            var logger = service.Logger.Value;
-            logger.Should().Be( overridedLogger );
+            var actual = service.LoggerFactory.Value;
+            actual.Should().Be( overrided );
         }
 
     }

@@ -321,7 +321,6 @@ namespace EventStoreKit.Services
         {
             var context = CreateEventSubscriberContext<TSubscriber>();
             var subscriber = InitializeEventSubscriber<TSubscriber>( context );
-
             RegisterEventSubscriberFactory( () => subscriber );
             return this;
         }
