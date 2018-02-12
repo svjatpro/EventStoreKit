@@ -28,6 +28,11 @@ namespace EventStoreKit.Services
         //
         ServiceProperty<IEventStoreConfiguration> Configuration { get; }
         ServiceProperty<ILoggerFactory> LoggerFactory { get; }
+        ServiceProperty<IScheduler> Scheduler { get; }
+
+        IEventStoreKitServiceBuilder SetConfiguration( IEventStoreConfiguration configuration );
+        IEventStoreKitServiceBuilder SetLoggerFactory( ILoggerFactory factory );
+        IEventStoreKitServiceBuilder SetScheduler( IScheduler scheduler );
 
         IEventStoreKitService Initialize();
     }
@@ -43,7 +48,6 @@ namespace EventStoreKit.Services
         private IConstructAggregates ConstructAggregates;
         private ICurrentUserProvider CurrentUserProvider;
         private IIdGenerator IdGenerator;
-        private IScheduler Scheduler;
         
         private IDbProviderFactory DbProviderFactorySubscribers = null;
         private IDbProviderFactory DbProviderFactoryEventStore = null;
@@ -57,6 +61,13 @@ namespace EventStoreKit.Services
 
         #region Private methods
 
+        private EventStoreKitService ReInitialize()
+        {
+            if( Initialized )
+                Initialize();
+            return this;
+        }
+
         private void InitializeCommon()
         {
             if( DbProviderFactorySubscribers == null )
@@ -65,12 +76,6 @@ namespace EventStoreKit.Services
                 DbProviderFactoryEventStore = DbProviderFactorySubscribers;
 
             IdGenerator = new SequentialIdgenerator();
-
-            if( Scheduler == null )
-            {
-                Scheduler = new NewThreadScheduler( action => new Thread(action) { IsBackground = true } ); // todo:
-            }
-
             ServiceProperties.ForEach( property => property.Initialize() );
 
             CurrentUserProvider = new CurrentUserProviderStub { CurrentUserId = Guid.NewGuid() };
@@ -202,7 +207,7 @@ namespace EventStoreKit.Services
             return new EventStoreSubscriberContext
             {
                 Logger = LoggerFactory.GetValueOrDefault().Create<TSubscriber>(),
-                Scheduler = Scheduler,
+                Scheduler = Scheduler.GetValueOrDefault(),
                 Configuration = Configuration.GetValueOrDefault(),
                 DbProviderFactory = dbFactory
             };
@@ -271,30 +276,12 @@ namespace EventStoreKit.Services
                     OnIddleInterval = 500
                 } );
             LoggerFactory = InitializeProperty<ILoggerFactory>( () => new LoggerFactoryStub() );
+            Scheduler = InitializeProperty<IScheduler>( () => new NewThreadScheduler( action => new Thread( action ) { IsBackground = true } ) ); // todo: repace with another scheduler
 
             if ( initialize )
                 Initialize();
         }
-
-        public IEventStoreKitService Initialize()
-        {
-            if ( !Initialized )
-            {
-                InitializeCommon();
-            }
-            InitializeEventStore();
-            Initialized = true;
-
-            return this;
-        }
-
-        public EventStoreKitService ReInitialize()
-        {
-            if( Initialized )
-                Initialize();
-            return this;
-        }
-
+        
         #region Event Subscribers methods
 
         public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory )
@@ -430,17 +417,42 @@ namespace EventStoreKit.Services
 
         #endregion
 
-        public EventStoreKitService SetScheduler( IScheduler scheduler )
+        
+        #region IEventStoreKitServiceBuilder implementation
+        
+        public ServiceProperty<IEventStoreConfiguration> Configuration { get; }
+        public ServiceProperty<ILoggerFactory> LoggerFactory { get; }
+        public ServiceProperty<IScheduler> Scheduler { get; }
+
+        public IEventStoreKitServiceBuilder SetConfiguration( IEventStoreConfiguration configuration )
         {
-            Scheduler = scheduler;
-            ReInitialize();
+            Configuration.Value = configuration;
             return this;
         }
 
-        #region IEventStoreKitServiceBuilder implementation
+        public IEventStoreKitServiceBuilder SetLoggerFactory( ILoggerFactory factory )
+        {
+            LoggerFactory.Value = factory;
+            return this;
+        }
 
-        public ServiceProperty<IEventStoreConfiguration> Configuration { get; }
-        public ServiceProperty<ILoggerFactory> LoggerFactory { get; }
+        public IEventStoreKitServiceBuilder SetScheduler( IScheduler scheduler )
+        {
+            Scheduler.Value = scheduler;
+            return this;
+        }
+
+        public IEventStoreKitService Initialize()
+        {
+            if( !Initialized )
+            {
+                InitializeCommon();
+            }
+            InitializeEventStore();
+            Initialized = true;
+
+            return this;
+        }
 
         #endregion
 
