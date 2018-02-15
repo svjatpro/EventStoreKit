@@ -35,13 +35,14 @@ namespace EventStoreKit.Projections
         private volatile bool MessageProcessed;
 
         private readonly IEventStoreConfiguration EventStoreConfig;
+        private readonly ILoggerFactory LogFactory;
 
         #endregion
 
         #region protected fields
 
-        protected readonly ILogger Log;
         protected bool IsRebuild;
+        protected ILogger Log => LogFactory.Create( GetType() );
 
         #endregion
 
@@ -260,7 +261,7 @@ namespace EventStoreKit.Projections
         protected EventQueueSubscriber( IEventStoreSubscriberContext context )
         {
             EventStoreConfig = context.Configuration;
-            Log = context.Logger.CheckNull( "logger" );
+            LogFactory = context.LoggerFactory;
 
             Handlers = new Dictionary<Type, IMessageHandler>();
             DynamicHandlers = new List<IMessageHandler>();

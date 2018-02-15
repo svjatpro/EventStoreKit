@@ -8,18 +8,18 @@ namespace EventStoreKit.Services
     public class EventStoreSubscriberContext : IEventStoreSubscriberContext
     {
         public IEventStoreConfiguration Configuration { get; set; }
-        public ILogger Logger { get; set; }
+        public ILoggerFactory LoggerFactory { get; set; }
         public IScheduler Scheduler { get; set; }
         public IDbProviderFactory DbProviderFactory { get; set; }
 
         public EventStoreSubscriberContext( 
             IEventStoreConfiguration configuration, 
-            ILogger logger, 
+            ILoggerFactory loggerFactory,
             IScheduler scheduler, 
             IDbProviderFactory dbProviderFactory )
         {
             Configuration = configuration;
-            Logger = logger;
+            LoggerFactory = loggerFactory;
             Scheduler = scheduler;
             DbProviderFactory = dbProviderFactory;
         }

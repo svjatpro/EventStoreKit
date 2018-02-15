@@ -82,7 +82,7 @@ namespace EventStoreKit.Tests
         [SetUp]
         protected void Setup()
         {
-            var logger = Substitute.For<ILogger>();
+            var logger = Substitute.For<ILoggerFactory>();
             var scheduler = new NewThreadScheduler();
             Subscriber1 = new TestSubscriber1( new EventStoreSubscriberContext( new EventStoreConfiguration(), logger, scheduler, null ) );
         }

@@ -73,7 +73,6 @@ namespace EventStoreKit.Autofac
                 .IfNotRegistered( typeof( ILogger ) )
                 .ExternallyOwned();
 
-
             // register default scheduler
             builder
                 .RegisterInstance( service.Scheduler.GetValueOrDefault() )
@@ -100,17 +99,6 @@ namespace EventStoreKit.Autofac
                 .OnlyIf( reg =>
                     reg.IsRegistered( new TypedService( typeof( IDbProviderFactory ) ) ) &&
                     !reg.IsRegistered( new TypedService( typeof( IDataBaseConfiguration ) ) ) );
-
-            // register default IEventStoreSubscriberContext
-            //builder
-            //    //.Register( ( ctx, p ) => new EventStoreSubscriberContext(
-            //    //    ctx.Resolve<IEventStoreConfiguration>(),
-            //    //    ctx.Resolve<ILoggerFactory>().Create( p ) ) )
-            //    //.PropertiesAutowired()
-            //    .Register( ctx => null )
-            //    .As<IEventStoreSubscriberContext>()
-            //    .IfNotRegistered( typeof( IEventStoreSubscriberContext ) )
-            //    .ExternallyOwned();
 
             // register EventStoreSubscriberContext
             builder

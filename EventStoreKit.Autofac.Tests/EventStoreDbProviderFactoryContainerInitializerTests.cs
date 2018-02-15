@@ -34,7 +34,7 @@ namespace EventStoreKit.Tests
                 new EventStoreSubscriberContext
                 (
                     new EventStoreConfiguration(),
-                    Substitute.For<ILogger>(),
+                    Substitute.For<ILoggerFactory>(),
                     Substitute.For<IScheduler>(),
                     new DbProviderFactoryStub()
                 ) )

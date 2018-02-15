@@ -53,7 +53,7 @@ namespace EventStoreKit.Tests
 
         #endregion
 
-        #region Configuration
+        #region Scheduler
 
         [Test]
         public void SchedulerSetByContextShouldBeProvidedToSubscriberThroughTheContext()
@@ -85,7 +85,7 @@ namespace EventStoreKit.Tests
             Builder.RegisterType<Subscriber1>().AsSelf().SingleInstance();
             InitializeContainer( service => service.SetLoggerFactory( loggerFactory ) );
             
-            Container.Resolve<IEventStoreConfiguration>().Should().Be( config );
+            Container.Resolve<Subscriber1>().Context.LoggerFactory.Should().Be( loggerFactory );
         }
 
         [Test]
@@ -93,12 +93,10 @@ namespace EventStoreKit.Tests
         {
             var loggerFactory = Substitute.For<ILoggerFactory>();
             Builder.RegisterType<Subscriber1>().AsSelf().SingleInstance();
-            Builder.RegisterInstance( config ).As<IEventStoreConfiguration>();
+            Builder.RegisterInstance(loggerFactory).As<ILoggerFactory>();
             InitializeContainer();
 
-            Service.Configuration.Value.Should().Be( config );
+            Container.Resolve<Subscriber1>().Context.LoggerFactory.Should().Be( loggerFactory );
         }
-
-        // todo: add test with cross register scenarios: subscriber / config
     }
 }

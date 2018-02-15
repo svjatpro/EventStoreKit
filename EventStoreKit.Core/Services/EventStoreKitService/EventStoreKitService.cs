@@ -216,7 +216,7 @@ namespace EventStoreKit.Services
             return new EventStoreSubscriberContext
             ( 
                 Configuration.GetValueOrDefault(),
-                LoggerFactory.GetValueOrDefault().Create<TSubscriber>(),
+                LoggerFactory.GetValueOrDefault(),
                 Scheduler.GetValueOrDefault(),
                 dbFactory
             );
