@@ -23,20 +23,6 @@ using NEventStore.Persistence.Sql.SqlDialects;
 
 namespace EventStoreKit.Services
 {
-    public interface IEventStoreKitServiceBuilder
-    {
-        //
-        ServiceProperty<IEventStoreConfiguration> Configuration { get; }
-        ServiceProperty<ILoggerFactory> LoggerFactory { get; }
-        ServiceProperty<IScheduler> Scheduler { get; }
-
-        IEventStoreKitServiceBuilder SetConfiguration( IEventStoreConfiguration configuration );
-        IEventStoreKitServiceBuilder SetLoggerFactory( ILoggerFactory factory );
-        IEventStoreKitServiceBuilder SetScheduler( IScheduler scheduler );
-
-        IEventStoreKitService Initialize();
-    }
-
     public class EventStoreKitService : IEventStoreKitService, IEventStoreKitServiceBuilder
     {
         #region Private fields
@@ -49,10 +35,8 @@ namespace EventStoreKit.Services
         private ICurrentUserProvider CurrentUserProvider;
         private IIdGenerator IdGenerator;
         
-        private IDbProviderFactory DbProviderFactorySubscribers = null;
-        private IDbProviderFactory DbProviderFactoryEventStore = null;
-
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
+        private readonly List<Func<ICommandHandler>> CommandHandlers = new List<Func<ICommandHandler>>();
         private readonly List<IServiceProperty> ServiceProperties = new List<IServiceProperty>();
 
         private bool Initialized;
@@ -70,24 +54,24 @@ namespace EventStoreKit.Services
 
         private void InitializeCommon()
         {
-            if( DbProviderFactorySubscribers == null )
-                DbProviderFactorySubscribers = new DbProviderFactoryStub();
-            if( DbProviderFactoryEventStore == null )
-                DbProviderFactoryEventStore = DbProviderFactorySubscribers;
-
             IdGenerator = new SequentialIdgenerator();
-            ServiceProperties.ForEach( property => property.Initialize() );
-
             CurrentUserProvider = new CurrentUserProviderStub { CurrentUserId = Guid.NewGuid() };
+
+            // initialize properties
+            ServiceProperties.ForEach( property => property.Initialize() );
 
             var dispatcher = new MessageDispatcher( LoggerFactory.Value.Create<MessageDispatcher>() );
             Dispatcher = dispatcher;
             EventPublisher = dispatcher;
             CommandBus = dispatcher;
 
+            // register command handlers
+            CommandHandlers.ForEach( ConfigureCommandHandlerRouts );
+
             // register subscribers
             EventSubscribers.Values.ToList().ForEach( ConfigureEventSubscriberRouts );
         }
+
         private void InitializeEventStore()
         {
             StoreEvents?.Dispose();
@@ -104,13 +88,13 @@ namespace EventStoreKit.Services
                 .Init()
                 .LogTo( type => LoggerFactory.Value.Create<EventStoreAdapter>() );
 
-            if ( DbProviderFactoryEventStore == null || DbProviderFactoryEventStore.DefaultDataBaseConfiguration.DataBaseConnectionType == DataBaseConnectionType.None )
+            if ( DbProviderFactoryEventStore == null || DbProviderFactoryEventStore.Value.DefaultDataBaseConfiguration.DataBaseConnectionType == DataBaseConnectionType.None )
             {
                 return wireup.UsingInMemoryPersistence();
             }
             else
             {
-                var configuration = DbProviderFactoryEventStore.DefaultDataBaseConfiguration;
+                var configuration = DbProviderFactoryEventStore.Value.DefaultDataBaseConfiguration;
                 var persistanceWireup =
                     configuration.ConfigurationString != null ?
                     wireup.UsingSqlPersistence(configuration.ConfigurationString ) :
@@ -133,13 +117,37 @@ namespace EventStoreKit.Services
                     .UsingJsonSerialization();
             }
         }
+        
+        private void ConfigureCommandHandlerRouts( Func<ICommandHandler> handlerFactory )
+        {
+            var handlerType = handlerFactory().GetType();
+            var commandHandlerInterfaceType = typeof( ICommandHandler<,> );
+            var registerCommandMehod = GetType().GetMethod( "RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
+            var adjustFactoryTypeMehod = typeof( DelegateAdjuster ).GetMethod( "CastResultToDerived", BindingFlags.Public | BindingFlags.Static );
 
+            handlerType
+                .GetInterfaces()
+                .Where( h => h.Name == commandHandlerInterfaceType.Name )
+                .ToList()
+                .ForEach( h =>
+                {
+                    // ReSharper disable PossibleNullReferenceException
+                    var genericArgs = h.GetGenericArguments();
+                    var factory = adjustFactoryTypeMehod
+                        .MakeGenericMethod( typeof( ICommandHandler ), h )
+                        .Invoke( this, new object[] { handlerFactory } );
+                    registerCommandMehod
+                        .MakeGenericMethod( genericArgs[0], genericArgs[1] )
+                        .Invoke( this, new[] { factory } );
+                    // ReSharper restore PossibleNullReferenceException
+                } );
+        }
         private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
             where TCommand : DomainCommand
             where TEntity : class, ITrackableAggregate
         {
             // register Action as handler to dispatcher
-            var repositoryFactory = new Func<IRepository>( ResolveRepository );
+            var repositoryFactory = new Func<IRepository>( () => new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() ) );
 
             var handleAction = new Action<TCommand>( cmd =>
             {
@@ -192,7 +200,8 @@ namespace EventStoreKit.Services
             var factory =
                 TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
                 TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
-                TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } );
+                TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } ) ??
+                TryCreateInstance( factoryType, new Dictionary<Type, object> () );
             if( factory == null )
                 throw new InvalidOperationException( $"Can't create {factoryType.Name} instance, because there is no appropriate constructor" );
 
@@ -202,15 +211,15 @@ namespace EventStoreKit.Services
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( IDataBaseConfiguration config = null ) where TSubscriber : class, IEventSubscriber
         {
             var dbFactory = config.Return(
-                c => InitializeDbProviderFactory( DbProviderFactorySubscribers.GetType(), config ),
-                DbProviderFactorySubscribers );
+                c => InitializeDbProviderFactory( DbProviderFactorySubscriber.Value.GetType(), config ),
+                DbProviderFactorySubscriber.Value );
             return new EventStoreSubscriberContext
-            {
-                Logger = LoggerFactory.GetValueOrDefault().Create<TSubscriber>(),
-                Scheduler = Scheduler.GetValueOrDefault(),
-                Configuration = Configuration.GetValueOrDefault(),
-                DbProviderFactory = dbFactory
-            };
+            ( 
+                Configuration.GetValueOrDefault(),
+                LoggerFactory.GetValueOrDefault().Create<TSubscriber>(),
+                Scheduler.GetValueOrDefault(),
+                dbFactory
+            );
         }
         private TSubscriber InitializeEventSubscriber<TSubscriber>( IEventStoreSubscriberContext context ) where TSubscriber : class, IEventSubscriber
         {
@@ -256,16 +265,6 @@ namespace EventStoreKit.Services
         }
 
         #endregion
-
-        #region Protected methods
-
-        protected virtual ICurrentUserProvider ResolveCurrentUserProvider() { return CurrentUserProvider; }
-        protected virtual IRepository ResolveRepository()
-        {
-            return new EventStoreRepository(StoreEvents, ConstructAggregates, new ConflictDetector());
-        }
-
-        #endregion
         
         public EventStoreKitService( bool initialize = true )
         {
@@ -277,67 +276,51 @@ namespace EventStoreKit.Services
                 } );
             LoggerFactory = InitializeProperty<ILoggerFactory>( () => new LoggerFactoryStub() );
             Scheduler = InitializeProperty<IScheduler>( () => new NewThreadScheduler( action => new Thread( action ) { IsBackground = true } ) ); // todo: repace with another scheduler
-
+            DbProviderFactorySubscriber = InitializeProperty<IDbProviderFactory>( () => new DbProviderFactoryStub() );
+            DbProviderFactoryEventStore = InitializeProperty<IDbProviderFactory>( () => new DbProviderFactoryStub() );
+            
             if ( initialize )
                 Initialize();
         }
+       
+        #region IEventStoreKitServiceBuilder implementation
         
-        #region Event Subscribers methods
+        public ServiceProperty<IEventStoreConfiguration> Configuration { get; }
+        public ServiceProperty<ILoggerFactory> LoggerFactory { get; }
+        public ServiceProperty<IScheduler> Scheduler { get; }
+        public ServiceProperty<IDbProviderFactory> DbProviderFactorySubscriber { get; }
+        public ServiceProperty<IDbProviderFactory> DbProviderFactoryEventStore { get; }
 
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory )
-            where TSubscriber : class, IEventSubscriber
+        public IEventStoreKitServiceBuilder SetConfiguration( IEventStoreConfiguration configuration )
         {
-            RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>() ) );
+            Configuration.Value = configuration;
             return this;
         }
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, IDataBaseConfiguration configuration )
-            where TSubscriber : class, IEventSubscriber
+        public IEventStoreKitServiceBuilder SetLoggerFactory( ILoggerFactory factory )
         {
-            RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>( configuration ) ) );
+            LoggerFactory.Value = factory;
             return this;
         }
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>( IDataBaseConfiguration configuration ) where TSubscriber : class, IEventSubscriber
+        public IEventStoreKitServiceBuilder SetScheduler( IScheduler scheduler )
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( configuration );
-            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
-            RegisterEventSubscriberFactory( () => subscriber );
+            Scheduler.Value = scheduler;
             return this;
         }
-        public EventStoreKitService RegisterEventSubscriber<TSubscriber>()
-            where TSubscriber : class, IEventSubscriber
-        {
-            var context = CreateEventSubscriberContext<TSubscriber>();
-            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
-            RegisterEventSubscriberFactory( () => subscriber );
-            return this;
-        }
-        public EventStoreKitService RegisterEventSubscriber( Func<IEventSubscriber> subscriberFactory )
-        {
-            RegisterEventSubscriberFactory( subscriberFactory );
-            return this;
-        }
-
-        public Dictionary<Type, Func<IEventSubscriber>> GetEventSubscribers()
-        {
-            return EventSubscribers;
-        }
-
-        #endregion
 
         #region DataBase configuring methods
 
-        public EventStoreKitService SetDataBase<TDbProviderFactory>( IDataBaseConfiguration configuration )
+        public IEventStoreKitServiceBuilder SetDataBase<TDbProviderFactory>( IDataBaseConfiguration configuration )
             where TDbProviderFactory : IDbProviderFactory
         {
-            return SetDataBase( typeof(TDbProviderFactory), configuration );
+            return SetDataBase( typeof( TDbProviderFactory ), configuration );
         }
-        public EventStoreKitService SetDataBase( Type dbProviderFactoryType, IDataBaseConfiguration configuration )
+        public IEventStoreKitServiceBuilder SetDataBase( Type dbProviderFactoryType, IDataBaseConfiguration configuration )
         {
             SetSubscriberDataBase( dbProviderFactoryType, configuration );
             SetEventStoreDataBase( dbProviderFactoryType, configuration );
             return this;
         }
-        public EventStoreKitService SetDataBase( IDbProviderFactory factory )
+        public IEventStoreKitServiceBuilder SetDataBase( IDbProviderFactory factory )
         {
             SetSubscriberDataBase( factory );
             SetEventStoreDataBase( factory );
@@ -345,102 +328,97 @@ namespace EventStoreKit.Services
         }
 
 
-        public EventStoreKitService SetSubscriberDataBase<TDbProviderFactory>( IDataBaseConfiguration configuration )
+        public IEventStoreKitServiceBuilder SetSubscriberDataBase<TDbProviderFactory>( IDataBaseConfiguration configuration )
         {
             return SetSubscriberDataBase( typeof( TDbProviderFactory ), configuration );
         }
-        public EventStoreKitService SetSubscriberDataBase( Type dbProviderFactoryType, IDataBaseConfiguration configuration )
+        public IEventStoreKitServiceBuilder SetSubscriberDataBase( Type dbProviderFactoryType, IDataBaseConfiguration configuration )
         {
             return SetSubscriberDataBase( InitializeDbProviderFactory( dbProviderFactoryType, configuration ) );
         }
-        public EventStoreKitService SetSubscriberDataBase( IDbProviderFactory factory )
+        public IEventStoreKitServiceBuilder SetSubscriberDataBase( IDbProviderFactory factory )
         {
-            DbProviderFactorySubscribers = factory;
+            DbProviderFactorySubscriber.Value = factory;
             return this;
         }
 
-        public EventStoreKitService SetEventStoreDataBase<TDbProviderFactory>( IDataBaseConfiguration configuration )
+        public IEventStoreKitServiceBuilder SetEventStoreDataBase<TDbProviderFactory>( IDataBaseConfiguration configuration )
         {
             return SetEventStoreDataBase( typeof( TDbProviderFactory ), configuration );
         }
-        public EventStoreKitService SetEventStoreDataBase( Type dbProviderFactoryType, IDataBaseConfiguration configuration )
+        public IEventStoreKitServiceBuilder SetEventStoreDataBase( Type dbProviderFactoryType, IDataBaseConfiguration configuration )
         {
             return SetEventStoreDataBase( InitializeDbProviderFactory( dbProviderFactoryType, configuration ) );
         }
-        public EventStoreKitService SetEventStoreDataBase( IDbProviderFactory factory )
+        public IEventStoreKitServiceBuilder SetEventStoreDataBase( IDbProviderFactory factory )
         {
-            DbProviderFactoryEventStore = factory;
+            DbProviderFactoryEventStore.Value = factory;
             ReInitialize();
             return this;
         }
 
-        public IDbProviderFactory GetDataBaseProviderFactory()
+        #endregion
+
+        #region Event Subscribers methods
+
+        public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory )
+            where TSubscriber : class, IEventSubscriber
         {
-            return DbProviderFactorySubscribers;
+            RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>() ) );
+            return this;
+        }
+        public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, IDataBaseConfiguration configuration )
+            where TSubscriber : class, IEventSubscriber
+        {
+            RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>( configuration ) ) );
+            return this;
+        }
+        public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( IDataBaseConfiguration configuration ) where TSubscriber : class, IEventSubscriber
+        {
+            var context = CreateEventSubscriberContext<TSubscriber>( configuration );
+            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
+            RegisterEventSubscriberFactory( () => subscriber );
+            return this;
+        }
+        public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>()
+            where TSubscriber : class, IEventSubscriber
+        {
+            var context = CreateEventSubscriberContext<TSubscriber>();
+            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
+            RegisterEventSubscriberFactory( () => subscriber );
+            return this;
+        }
+        public IEventStoreKitServiceBuilder RegisterEventSubscriber( Func<IEventSubscriber> subscriberFactory )
+        {
+            RegisterEventSubscriberFactory( subscriberFactory );
+            return this;
+        }
+
+        public Dictionary<Type, Func<IEventSubscriber>> GetEventSubscribers()
+        {
+            return EventSubscribers.ToDictionary( s => s.Key, s => s.Value );
         }
 
         #endregion
 
         #region Register command handlers methods
 
-        public EventStoreKitService RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new()
+        public IEventStoreKitServiceBuilder RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new()
         {
             return RegisterCommandHandler( () => new THandler() );
         }
-
-        public EventStoreKitService RegisterCommandHandler<THandler>( Func<THandler> handlerFactory ) where THandler : ICommandHandler
+        
+        public IEventStoreKitServiceBuilder RegisterCommandHandler( Func<ICommandHandler> handlerFactory )
         {
-            var handlerType = handlerFactory().GetType();
-            var commandHandlerInterfaceType = typeof( ICommandHandler<,> );
-            var registerCommandMehod = GetType().GetMethod( "RegisterCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
-            var adjustFactoryTypeMehod = typeof( DelegateAdjuster ).GetMethod( "CastResultToDerived", BindingFlags.Public | BindingFlags.Static );
+            CommandHandlers.Add( handlerFactory );
 
-            handlerType
-                .GetInterfaces()
-                .Where( h => h.Name == commandHandlerInterfaceType.Name )
-                .ToList()
-                .ForEach( h =>
-                {
-                    // ReSharper disable PossibleNullReferenceException
-                    var genericArgs = h.GetGenericArguments();
-                    var factory = adjustFactoryTypeMehod
-                        .MakeGenericMethod( typeof( ICommandHandler ), h )
-                        .Invoke( this, new object[] { handlerFactory } );
-                    registerCommandMehod
-                        .MakeGenericMethod( genericArgs[0], genericArgs[1] )
-                        .Invoke( this, new[] { factory } );
-                    // ReSharper restore PossibleNullReferenceException
-                } );
+            if ( Initialized )
+                ConfigureCommandHandlerRouts( handlerFactory );
 
             return this;
         }
 
         #endregion
-
-        
-        #region IEventStoreKitServiceBuilder implementation
-        
-        public ServiceProperty<IEventStoreConfiguration> Configuration { get; }
-        public ServiceProperty<ILoggerFactory> LoggerFactory { get; }
-        public ServiceProperty<IScheduler> Scheduler { get; }
-
-        public IEventStoreKitServiceBuilder SetConfiguration( IEventStoreConfiguration configuration )
-        {
-            Configuration.Value = configuration;
-            return this;
-        }
-
-        public IEventStoreKitServiceBuilder SetLoggerFactory( ILoggerFactory factory )
-        {
-            LoggerFactory.Value = factory;
-            return this;
-        }
-
-        public IEventStoreKitServiceBuilder SetScheduler( IScheduler scheduler )
-        {
-            Scheduler.Value = scheduler;
-            return this;
-        }
 
         public IEventStoreKitService Initialize()
         {
@@ -494,7 +472,7 @@ namespace EventStoreKit.Services
                 subscribers.ToList() :
                 EventSubscribers.Values.Select( factory => factory() ).ToList();
 
-            var tasks = targets.Select( s => s.WaitMessagesAsync() ).ToArray();
+            var tasks = targets.Select( s => s.OfType<IEventCatch>().WaitMessagesAsync() ).ToArray();
             Task.WaitAll( tasks );
         }
 
@@ -509,7 +487,7 @@ namespace EventStoreKit.Services
                 {
                     var subscriber = subscriberFactory();
                     subscriber.Handle( msg );
-                    return subscriber.WaitMessagesAsync();
+                    return subscriber.OfType<IEventCatch>().WaitMessagesAsync();
                 } )
                 .ToArray();
             Task.WaitAll( tasks );

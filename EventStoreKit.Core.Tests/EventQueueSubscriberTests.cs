@@ -84,13 +84,7 @@ namespace EventStoreKit.Tests
         {
             var logger = Substitute.For<ILogger>();
             var scheduler = new NewThreadScheduler();
-            Subscriber1 = new TestSubscriber1( 
-                new EventStoreSubscriberContext
-                {
-                    Logger = logger,
-                    Scheduler = scheduler,
-                    Configuration = new EventStoreConfiguration()
-                } );
+            Subscriber1 = new TestSubscriber1( new EventStoreSubscriberContext( new EventStoreConfiguration(), logger, scheduler, null ) );
         }
 
         #endregion

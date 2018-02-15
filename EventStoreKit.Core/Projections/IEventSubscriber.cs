@@ -5,6 +5,16 @@ using EventStoreKit.Messages;
 
 namespace EventStoreKit.Projections
 {
+    public class MessageEventArgs : EventArgs
+    {
+        public readonly Message Message;
+
+        public MessageEventArgs( Message message )
+        {
+            Message = message;
+        }
+    }
+
     public class SequenceEventArgs : EventArgs
     {
         public readonly Guid SequenceIdentity;
@@ -15,14 +25,11 @@ namespace EventStoreKit.Projections
         }
     }
 
-    public interface IEventSubscriber
+    /// <summary>
+    /// temporary interface - should be moved to extension methods, which catch messages through the single MessageHandledEvent
+    /// </summary>
+    public interface IEventCatch
     {
-        void Handle( Message e );
-        void Replay( Message e );
-        IEnumerable<Type> HandledEventTypes { get; }
-
-        event EventHandler<SequenceEventArgs> SequenceFinished;
-
         #region Dynamic messages catching - it is required to get the exact moment when a subscriber definitely process some messages and client can use projection data
 
         /// <summary>
@@ -30,7 +37,7 @@ namespace EventStoreKit.Projections
         /// </summary>
         TMessage CatchMessage<TMessage>( Func<TMessage, bool> handler, int timeout ) where TMessage : Message;
         List<TMessage> CatchMessages<TMessage>( params Func<TMessage, bool>[] handlers ) where TMessage : Message;
-        Task<List<TMessage>> CatchMessagesAsync<TMessage>( params Func<TMessage,bool>[] handlers ) where TMessage : Message;
+        Task<List<TMessage>> CatchMessagesAsync<TMessage>( params Func<TMessage, bool>[] handlers ) where TMessage : Message;
 
         /// <summary>
         /// Asynchronously waits until messages processed
@@ -63,5 +70,27 @@ namespace EventStoreKit.Projections
         Task WaitMessagesAsync();
 
         #endregion
+    }
+    public interface IEventSubscriber
+    {
+        /// <summary>
+        /// Handle message
+        /// </summary>
+        void Handle( Message message );
+
+        /// <summary>
+        /// Replay ( repeat ) message
+        /// </summary>
+        void Replay( Message message );
+
+        /// <summary>
+        /// Message types, which can be handled by subscriber
+        /// </summary>
+        IEnumerable<Type> HandledEventTypes { get; }
+
+        [Obsolete]
+        event EventHandler<SequenceEventArgs> SequenceFinished;
+
+        event EventHandler<MessageEventArgs> MessageHandled;
     }
 }

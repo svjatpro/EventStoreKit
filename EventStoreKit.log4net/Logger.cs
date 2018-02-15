@@ -7,7 +7,13 @@ using log4net;
 
 namespace EventStoreKit.log4net
 {
-    public class Logger<T> : ILogger<T>
+    public class Logger<T> : Logger, ILogger<T>
+    {
+        public Logger( ILog internalLog ) : base( internalLog )
+        {
+        }
+    }
+    public class Logger : ILogger
     {
         #region private fields
 
@@ -29,9 +35,9 @@ namespace EventStoreKit.log4net
 
         #endregion
 
-        public Logger()
+        public Logger( ILog internalLog )
         {
-            InternalLog = LogManager.GetLogger( typeof(T) );
+            InternalLog = internalLog;
         } 
         
         public void Verbose( string message, params object[] values )

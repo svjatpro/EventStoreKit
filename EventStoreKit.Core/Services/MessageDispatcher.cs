@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
-using EventStoreKit.Utility;
 
 namespace EventStoreKit.Services
 {
@@ -17,7 +16,7 @@ namespace EventStoreKit.Services
 
         public MessageDispatcher( ILogger<MessageDispatcher> logger )
         {
-            Logger = logger.CheckNull( "logger" );
+            Logger = logger;
         }
 
         public void RegisterHandler<T>( Action<T> handler ) where T : Message

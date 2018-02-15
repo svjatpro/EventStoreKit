@@ -31,5 +31,18 @@ namespace EventStoreKit.Tests
             actual.Should().Be( overrided );
         }
 
+        [Test]
+        public void ServiceShouldUseLoggerOverridedByMethod()
+        {
+            var overrided = Substitute.For<ILoggerFactory>();
+
+            var service = new EventStoreKitService( false );
+            service
+                .SetLoggerFactory( overrided )
+                .Initialize();
+
+            var actual = service.LoggerFactory.Value;
+            actual.Should().Be( overrided );
+        }
     }
 }

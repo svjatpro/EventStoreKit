@@ -12,6 +12,7 @@ namespace EventStoreKit.Logging
         void Error( string message, Exception exception = null, Dictionary<string, string> attributes = null );
         void Fatal( string message, Exception exception = null, Dictionary<string, string> attributes = null );
     }
+
     public interface ILogger<T> : ILogger
     {
     }

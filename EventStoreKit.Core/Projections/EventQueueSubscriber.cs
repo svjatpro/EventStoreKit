@@ -18,7 +18,7 @@ using Newtonsoft.Json;
 
 namespace EventStoreKit.Projections
 {
-    public abstract class EventQueueSubscriber : IEventSubscriber
+    public abstract class EventQueueSubscriber : IEventSubscriber, IEventCatch
     {
         #region Private fields
 
@@ -70,7 +70,7 @@ namespace EventStoreKit.Projections
         private void ProcessMessages( EventInfo i )
         {
             var message = i.Event;
-            message.CheckNull( "e" );
+            message.CheckNull( "message" );
             var msgType = message.GetType();
             IsRebuild = i.IsRebuild;
             try
@@ -96,6 +96,9 @@ namespace EventStoreKit.Projections
                         } );
                     DynamicHandlers.RemoveAll( h => !h.IsAlive );
                 }
+
+                if( !IsRebuild )
+                    MessageHandled.ExecuteAsync( this, new MessageEventArgs( message ) );
             }
             catch ( Exception ex )
             {
@@ -252,6 +255,7 @@ namespace EventStoreKit.Projections
         #endregion
 
         public event EventHandler<SequenceEventArgs> SequenceFinished;
+        public event EventHandler<MessageEventArgs> MessageHandled;
 
         protected EventQueueSubscriber( IEventStoreSubscriberContext context )
         {
@@ -287,9 +291,9 @@ namespace EventStoreKit.Projections
         
         public void Handle( Message e ) { Handle( e, false ); }
         
-        public virtual void Replay( Message e )
+        public virtual void Replay( Message message )
         {
-            Handle( e, true );
+            Handle( message, true );
         }
 
         public IEnumerable<Type> HandledEventTypes

@@ -7,9 +7,9 @@ namespace EventStoreKit.Services
 {
     public interface IEventStoreSubscriberContext
     {
-        ILogger Logger { get; }
-        IScheduler Scheduler { get; }
         IEventStoreConfiguration Configuration { get; }
+        ILoggerFactory LoggerFactory { get; }
+        IScheduler Scheduler { get; }
         IDbProviderFactory DbProviderFactory { get; }
     }
 }

@@ -1,14 +1,13 @@
-﻿using EventStoreKit.Messages;
+﻿using System.Collections.Generic;
+using EventStoreKit.Messages;
 using EventStoreKit.Projections;
-using EventStoreKit.Services.Configuration;
 
 namespace EventStoreKit.Services
 {
     public interface IEventStoreKitService
     {
-        //IEventStoreConfiguration Configuration { get; }
         TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
-
+        
         void SendCommand( DomainCommand command );
 
         void RaiseEvent( DomainEvent message );
