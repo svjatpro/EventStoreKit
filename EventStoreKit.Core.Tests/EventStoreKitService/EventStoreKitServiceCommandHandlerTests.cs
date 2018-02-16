@@ -65,6 +65,12 @@ namespace EventStoreKit.Tests
         {
             Service = new EventStoreKitService();
         }
+
+        [TearDown]
+        protected void Teardown()
+        {
+            Service?.Dispose();
+        }
         
         #endregion
 

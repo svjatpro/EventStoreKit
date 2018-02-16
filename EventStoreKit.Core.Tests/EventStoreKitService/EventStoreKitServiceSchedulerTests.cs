@@ -9,13 +9,25 @@ namespace EventStoreKit.Tests
     [TestFixture]
     public class EventStoreKitServiceSchedulerTests
     {
+        #region Private members
+
+        private EventStoreKitService Service;
+
+        [TearDown]
+        protected void Teardown()
+        {
+            Service?.Dispose();
+        }
+
+        #endregion
+
         [Test]
         public void ServiceShouldInitalizeDefaultScheduler()
         {
-            var service = new EventStoreKitService();
-            var scheduler = service.Scheduler.Value;
+            Service = new EventStoreKitService();
+            var scheduler = Service.Scheduler.Value;
 
-            scheduler.Should().Be( service.Scheduler.Default );
+            scheduler.Should().Be( Service.Scheduler.Default );
         }
 
         [Test]
@@ -23,11 +35,11 @@ namespace EventStoreKit.Tests
         {
             var overrided = Substitute.For<IScheduler>();
 
-            var service = new EventStoreKitService( false );
-            service.Scheduler.Value = overrided;
-            service.Initialize();
+            Service = new EventStoreKitService( false );
+            Service.Scheduler.Value = overrided;
+            Service.Initialize();
 
-            var actual = service.Scheduler.Value;
+            var actual = Service.Scheduler.Value;
             actual.Should().Be( overrided );
         }
 
@@ -36,12 +48,12 @@ namespace EventStoreKit.Tests
         {
             var overrided = Substitute.For<IScheduler>();
 
-            var service = new EventStoreKitService( false );
-            service
+            Service = new EventStoreKitService( false );
+            Service
                 .SetScheduler( overrided )
                 .Initialize();
 
-            var actual = service.Scheduler.Value;
+            var actual = Service.Scheduler.Value;
             actual.Should().Be( overrided );
         }
     }

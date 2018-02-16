@@ -213,12 +213,17 @@ namespace EventStoreKit.Services
             var dbFactory = config.Return(
                 c => InitializeDbProviderFactory( DbProviderFactorySubscriber.Value.GetType(), config ),
                 DbProviderFactorySubscriber.Value );
+            return CreateEventSubscriberContext<TSubscriber>( dbFactory );
+        }
+        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( IDbProviderFactory dbProviderFactory ) where TSubscriber : class, IEventSubscriber
+        {
+            
             return new EventStoreSubscriberContext
             ( 
                 Configuration.GetValueOrDefault(),
                 LoggerFactory.GetValueOrDefault(),
                 Scheduler.GetValueOrDefault(),
-                dbFactory
+                dbProviderFactory
             );
         }
         private TSubscriber InitializeEventSubscriber<TSubscriber>( IEventStoreSubscriberContext context ) where TSubscriber : class, IEventSubscriber
@@ -373,6 +378,12 @@ namespace EventStoreKit.Services
             RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>( configuration ) ) );
             return this;
         }
+        public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, IDbProviderFactory dbProviderFactory )
+            where TSubscriber : class, IEventSubscriber
+        {
+            RegisterEventSubscriberFactory( () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>( dbProviderFactory ) ) );
+            return this;
+        }
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( IDataBaseConfiguration configuration ) where TSubscriber : class, IEventSubscriber
         {
             var context = CreateEventSubscriberContext<TSubscriber>( configuration );
@@ -380,6 +391,14 @@ namespace EventStoreKit.Services
             RegisterEventSubscriberFactory( () => subscriber );
             return this;
         }
+        public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( IDbProviderFactory dbProviderFactory ) where TSubscriber : class, IEventSubscriber
+        {
+            var context = CreateEventSubscriberContext<TSubscriber>( dbProviderFactory );
+            var subscriber = InitializeEventSubscriber<TSubscriber>( context );
+            RegisterEventSubscriberFactory( () => subscriber );
+            return this;
+        }
+
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>()
             where TSubscriber : class, IEventSubscriber
         {
@@ -472,7 +491,10 @@ namespace EventStoreKit.Services
                 subscribers.ToList() :
                 EventSubscribers.Values.Select( factory => factory() ).ToList();
 
-            var tasks = targets.Select( s => s.OfType<IEventCatch>().WaitMessagesAsync() ).ToArray();
+            var tasks = targets
+                .Select( s => s.OfType<IEventCatch>().With( srv => srv.WaitMessagesAsync() ) )
+                .Where( s => s != null )
+                .ToArray();
             Task.WaitAll( tasks );
         }
 
@@ -494,5 +516,10 @@ namespace EventStoreKit.Services
         }
 
         #endregion
+
+        public void Dispose()
+        {
+            StoreEvents?.Dispose();
+        }
     }
 }

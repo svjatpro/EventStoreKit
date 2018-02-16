@@ -1,10 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 
 namespace EventStoreKit.Services
 {
-    public interface IEventStoreKitService
+    public interface IEventStoreKitService : IDisposable
     {
         TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
         

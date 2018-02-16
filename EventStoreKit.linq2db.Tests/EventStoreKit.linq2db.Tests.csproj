@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>EventStoreKit.Core.Tests</Description>
+    <Description>EventStoreKit.linq2db.Tests</Description>
     <Authors>svjatpro</Authors>
     <TargetFramework>net47</TargetFramework>
-    <AssemblyName>EventStoreKit.Core.Tests</AssemblyName>
+    <AssemblyName>EventStoreKit.linq2db.Tests</AssemblyName>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
 
@@ -14,19 +14,21 @@
   </ItemGroup>
 
   <ItemGroup>    
-    <PackageReference Include="NEventStore" Version="5.2.0" />    
+    <PackageReference Include="NEventStore" Version="5.2.0" />
+    <PackageReference Include="linq2db" Version="1.10.2" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.107" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
     <PackageReference Include="Rx-Linq" Version="2.2.5" />
     <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
     <PackageReference Include="FluentAssertions" Version="4.19.4" />
     <PackageReference Include="NSubstitute" Version="3.1.0" />
-    <PackageReference Include="NUnit" Version="3.9.0" />    
+    <PackageReference Include="NUnit" Version="3.9.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EventStoreKit.linq2db\EventStoreKit.linq2db.csproj" />
     <ProjectReference Include="..\EventStoreKit.Core\EventStoreKit.Core.csproj" />
-    <ProjectReference Include="..\EventStoreKit.linq2db\EventStoreKit.linq2db.csproj" />    
   </ItemGroup>
 
   <ItemGroup>

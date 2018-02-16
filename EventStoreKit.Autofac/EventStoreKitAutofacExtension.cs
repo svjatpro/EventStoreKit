@@ -175,7 +175,8 @@ namespace EventStoreKit.Autofac
                 } )
                 .As<IEventStoreKitService>()
                 .AutoActivate()
-                .SingleInstance();
+                .SingleInstance()
+                .OwnedByLifetimeScope();
         }
     }
 }

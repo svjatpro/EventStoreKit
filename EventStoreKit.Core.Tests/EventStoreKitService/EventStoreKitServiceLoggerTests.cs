@@ -9,13 +9,25 @@ namespace EventStoreKit.Tests
     [TestFixture]
     public class EventStoreKitServiceLoggerTests
     {
+        #region Private members
+
+        private EventStoreKitService Service;
+
+        [TearDown]
+        protected void Teardown()
+        {
+            Service?.Dispose();
+        }
+
+        #endregion
+
         [Test]
         public void ServiceShouldInitalizeDefaultLogger()
         {
-            var service = new EventStoreKitService();
-            var loggerFactory = service.LoggerFactory.Value;
+            Service = new EventStoreKitService();
+            var loggerFactory = Service.LoggerFactory.Value;
 
-            loggerFactory.Should().Be( service.LoggerFactory.Default );
+            loggerFactory.Should().Be( Service.LoggerFactory.Default );
         }
 
         [Test]
@@ -23,11 +35,11 @@ namespace EventStoreKit.Tests
         {
             var overrided = Substitute.For<ILoggerFactory>();
 
-            var service = new EventStoreKitService( false );
-            service.LoggerFactory.Value = overrided;
-            service.Initialize();
+            Service = new EventStoreKitService( false );
+            Service.LoggerFactory.Value = overrided;
+            Service.Initialize();
 
-            var actual = service.LoggerFactory.Value;
+            var actual = Service.LoggerFactory.Value;
             actual.Should().Be( overrided );
         }
 
@@ -36,12 +48,12 @@ namespace EventStoreKit.Tests
         {
             var overrided = Substitute.For<ILoggerFactory>();
 
-            var service = new EventStoreKitService( false );
-            service
+            Service = new EventStoreKitService( false );
+            Service
                 .SetLoggerFactory( overrided )
                 .Initialize();
 
-            var actual = service.LoggerFactory.Value;
+            var actual = Service.LoggerFactory.Value;
             actual.Should().Be( overrided );
         }
     }
