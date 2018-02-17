@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using EventStoreKit.DbProviders;
@@ -27,6 +28,10 @@ namespace EventStoreKit.Tests
         }
         public static void ContainsCommit( this ObjectAssertions factory, Guid id )
         {
+            var r1 = factory.Subject
+                .OfType<IDbProviderFactory>()
+                .Run( db => db.Query<Commits>().ToList() );
+
             var result = factory.Subject
                 .OfType<IDbProviderFactory>()
                 .Run( db => db.SingleOrDefault<Commits>( c => c.StreamIdOriginal == id.ToString() ) );
@@ -102,14 +107,6 @@ namespace EventStoreKit.Tests
             // clean all data
             var clean = new Action<string>( connectionString =>
             {
-                new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, connectionString ) )
-                    .Run( db =>
-                    {
-                        db.CreateTable<TestReadModel1>();
-                        db.CreateTable<TestReadModel2>();
-                        db.CreateTable<TestReadModel3>();
-                    } );
-
                 using( var wireup = Wireup
                     .Init()
                     .UsingSqlPersistence( connectionString, DataBaseConfiguration.ResolveSqlProviderName( DataBaseConnectionType.SqlLite ), connectionString )
@@ -119,6 +116,15 @@ namespace EventStoreKit.Tests
                     .Build() )
                 {
                 }
+
+                new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, connectionString ) )
+                    .Run( db =>
+                    {
+                        db.CreateTable<TestReadModel1>();
+                        db.CreateTable<TestReadModel2>();
+                        db.CreateTable<TestReadModel3>();
+                        db.TruncateTable<Commits>();
+                    } );
             } );
 
             clean( ConnectionStringDb1 );
@@ -142,14 +148,14 @@ namespace EventStoreKit.Tests
 
         private void InitializeService()
         {
+            Service.Initialize();
+
             Projection1 = Service.GetSubscriber<Subscriber1>();
-            Projection2 = Service.GetSubscriber<Subscriber2>();
+            //Projection2 = Service.GetSubscriber<Subscriber2>();
             
             ReadModelDb = Projection1.GetDbProviderFactory();
-            ReadModel2Db = Projection2.GetDbProviderFactory();
-            ReadModel3Db = Projection2.GetDbProviderFactory();
-
-            Service.Initialize();
+            //ReadModel2Db = Projection2.GetDbProviderFactory();
+            //ReadModel3Db = Projection2.GetDbProviderFactory();
 
             Thread.Sleep( 100 );
         }
