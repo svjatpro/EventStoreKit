@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
@@ -10,49 +8,12 @@ using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
 using FluentAssertions;
-using FluentAssertions.Primitives;
 using NEventStore;
 using NEventStore.Persistence.Sql.SqlDialects;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
 {
-    public static class TestUtility
-    {
-        public static void NotContainsCommit( this ObjectAssertions factory, Guid id )
-        {
-            var result = factory.Subject
-                .OfType<IDbProviderFactory>()
-                .Run( db => db.SingleOrDefault<Commits>( c => c.StreamIdOriginal == id.ToString() ) );
-            result.Should().BeNull();
-        }
-        public static void ContainsCommit( this ObjectAssertions factory, Guid id )
-        {
-            var r1 = factory.Subject
-                .OfType<IDbProviderFactory>()
-                .Run( db => db.Query<Commits>().ToList() );
-
-            var result = factory.Subject
-                .OfType<IDbProviderFactory>()
-                .Run( db => db.SingleOrDefault<Commits>( c => c.StreamIdOriginal == id.ToString() ) );
-            result.Should().NotBeNull();
-        }
-        public static void NotContainsReadModel<TReadModel>( this ObjectAssertions factory, Expression<Func<TReadModel, bool>> predicat ) where TReadModel : class
-        {
-            var result = factory.Subject
-                .OfType<IDbProviderFactory>()
-                .Run( db => db.SingleOrDefault( predicat ) );
-            result.Should().BeNull();
-        }
-        public static void ContainsReadModel<TReadModel>( this ObjectAssertions factory, Expression<Func<TReadModel,bool>> predicat ) where TReadModel : class
-        {
-            var result = factory.Subject
-                .OfType<IDbProviderFactory>()
-                .Run( db => db.SingleOrDefault( predicat ) );
-            result.Should().NotBeNull();
-        }
-    }
-
     [TestFixture]
     public class EventStoreKitServiceDataBaseTests
     {
@@ -63,14 +24,6 @@ namespace EventStoreKit.Tests
         private const string ConnectionStringDb3 = "data source=db3";
 
         private EventStoreKitService Service;
-// ReSharper disable NotAccessedField.Local
-        private Subscriber1 Projection1;
-        private Subscriber2 Projection2;
-        private IDbProviderFactory EventStoreDb;
-        private IDbProviderFactory ReadModelDb;
-        private IDbProviderFactory ReadModel2Db;
-        private IDbProviderFactory ReadModel3Db;
-// ReSharper restore NotAccessedField.Local
 
         private class TestReadModel1 { public Guid Id { get; set; } public string Name { get; set; } }
         private class TestReadModel2 { public Guid Id { get; set; } public string Name { get; set; } }
@@ -82,7 +35,6 @@ namespace EventStoreKit.Tests
         {
             public Subscriber1( IEventStoreSubscriberContext context ) : base( context ){}
             public void Handle( TestEvent1 message ) { DbProviderFactory.Run( db => db.Insert( message.CopyTo( m => new TestReadModel1() ) ) ); }
-            public IDbProviderFactory GetDbProviderFactory() { return DbProviderFactory; }
         }
         private class Subscriber2 : SqlProjectionBase<TestReadModel2>, IEventHandler<TestEvent1>
         {
@@ -98,14 +50,13 @@ namespace EventStoreKit.Tests
                     return db.Insert( message.CopyTo( m => new TestReadModel3() ) );
                 } );
             }
-            public IDbProviderFactory GetDbProviderFactory() { return DbProviderFactory; }
         }
 
         [OneTimeSetUp]
         protected void ResetDataBases()
         {
-            // clean all data
-            var clean = new Action<string>( connectionString =>
+            // make sure all tables exists
+            var initializeDb = new Action<string>( connectionString =>
             {
                 using( var wireup = Wireup
                     .Init()
@@ -123,13 +74,12 @@ namespace EventStoreKit.Tests
                         db.CreateTable<TestReadModel1>();
                         db.CreateTable<TestReadModel2>();
                         db.CreateTable<TestReadModel3>();
-                        db.TruncateTable<Commits>();
                     } );
             } );
 
-            clean( ConnectionStringDb1 );
-            clean( ConnectionStringDb2 );
-            clean( ConnectionStringDb3 );
+            initializeDb( ConnectionStringDb1 );
+            initializeDb( ConnectionStringDb2 );
+            initializeDb( ConnectionStringDb3 );
 
             Thread.Sleep( 100 );
         }
@@ -137,7 +87,7 @@ namespace EventStoreKit.Tests
         [SetUp]
         protected void Setup()
         {
-            Service = new EventStoreKitService();
+            Service = new EventStoreKitService( false );
         }
 
         [TearDown]
@@ -145,21 +95,7 @@ namespace EventStoreKit.Tests
         {
             Service?.Dispose();
         }
-
-        private void InitializeService()
-        {
-            Service.Initialize();
-
-            Projection1 = Service.GetSubscriber<Subscriber1>();
-            //Projection2 = Service.GetSubscriber<Subscriber2>();
-            
-            ReadModelDb = Projection1.GetDbProviderFactory();
-            //ReadModel2Db = Projection2.GetDbProviderFactory();
-            //ReadModel3Db = Projection2.GetDbProviderFactory();
-
-            Thread.Sleep( 100 );
-        }
-
+        
         private TestEvent1 RaiseEvent()
         {
             var id = Guid.NewGuid();
@@ -177,14 +113,13 @@ namespace EventStoreKit.Tests
         {
             Service
                 .SetEventStoreDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
-                .RegisterEventSubscriber<Subscriber1>();
-            InitializeService();
-            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
-
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
+            
             var msg = RaiseEvent();
 
-            EventStoreDb.Should().ContainsCommit( msg.Id );
-            ReadModelDb.Should().NotContainsCommit( msg.Id );
+            var db = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+            db.Should().ContainsCommit( msg.Id );
         }
 
         [Test]
@@ -193,20 +128,16 @@ namespace EventStoreKit.Tests
             Service
                 .SetSubscriberDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
-                .RegisterEventSubscriber<Subscriber2>();
-            InitializeService();
-            EventStoreDb = new DbProviderFactoryStub();
-
+                .RegisterEventSubscriber<Subscriber2>()
+                .Initialize();
+            
             var msg = RaiseEvent();
 
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
-
-            ReadModelDb.Should().NotContainsCommit( msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            var db = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+            db.Should().NotContainsCommit( msg.Id );
+            db.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
         }
 
         [Test]
@@ -215,44 +146,35 @@ namespace EventStoreKit.Tests
             Service
                 .SetDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
-                .RegisterEventSubscriber<Subscriber2>();
-            InitializeService();
-            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
-
+                .RegisterEventSubscriber<Subscriber2>()
+                .Initialize();
+            
             var msg = RaiseEvent();
 
-            EventStoreDb.Should().ContainsCommit( msg.Id );
-            EventStoreDb.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            EventStoreDb.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            EventStoreDb.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
-
-            ReadModelDb.Should().ContainsCommit( msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            var db = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+            db.Should().ContainsCommit( msg.Id );
+            db.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
         }
 
         [Test]
         public void SubscribersAndEventStoreShouldBeMappedToSingeDb()
         {
             Service
-                .SetDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
+                .SetEventStoreDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
+                .SetSubscriberDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
-                .RegisterEventSubscriber<Subscriber2>();
-            InitializeService();
-            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
-
-            var msg = RaiseEvent();
+                .RegisterEventSubscriber<Subscriber2>()
+                .Initialize();
             
-            EventStoreDb.Should().ContainsCommit(msg.Id);
-            EventStoreDb.Should().ContainsReadModel<TestReadModel1>(r => r.Id == msg.Id);
-            EventStoreDb.Should().ContainsReadModel<TestReadModel2>(r => r.Id == msg.Id);
-            EventStoreDb.Should().ContainsReadModel<TestReadModel3>(r => r.Id == msg.Id);
+            var msg = RaiseEvent();
 
-            ReadModelDb.Should().ContainsCommit(msg.Id);
-            ReadModelDb.Should().ContainsReadModel<TestReadModel1>(r => r.Id == msg.Id);
-            ReadModelDb.Should().ContainsReadModel<TestReadModel2>(r => r.Id == msg.Id);
-            ReadModelDb.Should().ContainsReadModel<TestReadModel3>(r => r.Id == msg.Id);
+            var db = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+            db.Should().ContainsCommit( msg.Id );
+            db.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
         }
 
         [Test]
@@ -262,31 +184,23 @@ namespace EventStoreKit.Tests
                 .SetEventStoreDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .SetSubscriberDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb2 ) )
                 .RegisterEventSubscriber<Subscriber1>()
-                .RegisterEventSubscriber<Subscriber2>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) );
-            InitializeService();
-            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+                .RegisterEventSubscriber<Subscriber2>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) )
+                .Initialize();
 
             var msg = RaiseEvent();
 
-            EventStoreDb.Should().ContainsCommit(msg.Id);
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel1>(r => r.Id == msg.Id);
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel2>(r => r.Id == msg.Id);
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel3>(r => r.Id == msg.Id);
+            var db1 = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+            var db2 = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb2 ) );
 
-            ReadModelDb.Should().NotContainsCommit( msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModelDb.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModelDb.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            db1.Should().ContainsCommit(msg.Id);
+            db1.Should().NotContainsReadModel<TestReadModel1>(r => r.Id == msg.Id);
+            db1.Should().NotContainsReadModel<TestReadModel2>(r => r.Id == msg.Id);
+            db1.Should().NotContainsReadModel<TestReadModel3>(r => r.Id == msg.Id);
 
-            ReadModel2Db.Should().NotContainsCommit( msg.Id );
-            ReadModel2Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModel2Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModel2Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
-
-            ReadModel3Db.Should().NotContainsCommit( msg.Id );
-            ReadModel3Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModel3Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModel3Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            db2.Should().NotContainsCommit( msg.Id );
+            db2.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            db2.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            db2.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
         }
 
         [Test]
@@ -296,31 +210,29 @@ namespace EventStoreKit.Tests
                 .SetSubscriberDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb2 ) )
                 .SetEventStoreDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) )
                 .RegisterEventSubscriber<Subscriber1>()
-                .RegisterEventSubscriber<Subscriber2>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) );
-            InitializeService();
-            EventStoreDb = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+                .RegisterEventSubscriber<Subscriber2>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) )
+                .Initialize();
 
             var msg = RaiseEvent();
 
-            EventStoreDb.Should().ContainsCommit( msg.Id );
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            EventStoreDb.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            var db1 = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb1 ) );
+            var db2 = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb2 ) );
+            var db3 = new Linq2DbProviderFactory( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, ConnectionStringDb3 ) );
 
-            ReadModelDb.Should().NotContainsCommit( msg.Id );
-            ReadModelDb.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModelDb.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModelDb.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            db1.Should().ContainsCommit( msg.Id );
+            db1.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            db1.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            db1.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
 
-            ReadModel2Db.Should().NotContainsCommit( msg.Id );
-            ReadModel2Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModel2Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModel2Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            db2.Should().NotContainsCommit( msg.Id );
+            db2.Should().ContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            db2.Should().NotContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            db2.Should().NotContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
 
-            ReadModel3Db.Should().NotContainsCommit( msg.Id );
-            ReadModel3Db.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
-            ReadModel3Db.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
-            ReadModel3Db.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
+            db3.Should().NotContainsCommit( msg.Id );
+            db3.Should().NotContainsReadModel<TestReadModel1>( r => r.Id == msg.Id );
+            db3.Should().ContainsReadModel<TestReadModel2>( r => r.Id == msg.Id );
+            db3.Should().ContainsReadModel<TestReadModel3>( r => r.Id == msg.Id );
         }
     }
 }

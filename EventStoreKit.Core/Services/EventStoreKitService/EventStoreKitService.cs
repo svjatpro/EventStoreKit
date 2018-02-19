@@ -211,8 +211,8 @@ namespace EventStoreKit.Services
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( IDataBaseConfiguration config = null ) where TSubscriber : class, IEventSubscriber
         {
             var dbFactory = config.Return(
-                c => InitializeDbProviderFactory( DbProviderFactorySubscriber.Value.GetType(), config ),
-                DbProviderFactorySubscriber.Value );
+                c => InitializeDbProviderFactory( DbProviderFactorySubscriber.GetValueOrDefault().GetType(), config ),
+                DbProviderFactorySubscriber.GetValueOrDefault() );
             return CreateEventSubscriberContext<TSubscriber>( dbFactory );
         }
         private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( IDbProviderFactory dbProviderFactory ) where TSubscriber : class, IEventSubscriber
