@@ -17,28 +17,33 @@ namespace EventStoreKit.DbProviders
             this IDbProviderFactory factory,
             Action<IDbProvider> action,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            Action<Exception> processException = null)
+            Action<Exception> processException = null,
+            bool transaction = true )
         {
             new Func<IDbProvider>( factory.Create )
-                .RunLazy( action, isolationLevel, processException );
+                .RunLazy( action, isolationLevel, processException, transaction );
         }
         public static void RunLazy( 
             this Func<IDbProvider> persistanceManagerCreator, 
             Action<IDbProvider> action, 
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            Action<Exception> processException = null )
+            Action<Exception> processException = null,
+            bool transaction = true )
         {
             using ( var persistanceManager = new DbProviderProxy( persistanceManagerCreator ) )
             {
                 try
                 {
-                    persistanceManager.BeginTransaction( isolationLevel );
+                    if( transaction )
+                        persistanceManager.BeginTransaction( isolationLevel );
                     action( persistanceManager );
-                    persistanceManager.CommitTransaction();
+                    if( transaction )
+                        persistanceManager.CommitTransaction();
                 }
                 catch ( Exception exc )
                 {
-                    persistanceManager.RollbackTransaction();
+                    if( transaction )
+                        persistanceManager.RollbackTransaction();
                     processException.Do( a => a( exc ) );
                     throw;
                 }
@@ -52,59 +57,33 @@ namespace EventStoreKit.DbProviders
             this IDbProviderFactory factory,
             Action<IDbProvider> action,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            Action<Exception> processException = null )
+            Action<Exception> processException = null,
+            bool transaction = true )
         {
             new Func<IDbProvider>( factory.Create )
-                .Run( action, isolationLevel, processException );
+                .Run( action, isolationLevel, processException, transaction );
         }
         public static void Run( 
             this Func<IDbProvider> persistanceManagerCreator, 
             Action<IDbProvider> action, 
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            Action<Exception> processException = null )
+            Action<Exception> processException = null,
+            bool transaction = true )
         {
             using ( var persistanceManager = persistanceManagerCreator() )
             {
                 try
                 {
-                    persistanceManager.BeginTransaction( isolationLevel );
+                    if( transaction )
+                        persistanceManager.BeginTransaction( isolationLevel );
                     action( persistanceManager );
-                    persistanceManager.CommitTransaction();
+                    if( transaction )
+                        persistanceManager.CommitTransaction();
                 }
                 catch ( Exception exc )
                 {
-                    persistanceManager.RollbackTransaction();
-                    processException.Do( a => a( exc ) );
-                    throw;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Performs action/method with separate instance of DbProvider without transaction
-        ///   Use
-        /// </summary>
-        public static TResult Read<TResult>(
-            this IDbProviderFactory factory,
-            Func<IDbProvider, TResult> action,
-            Action<Exception> processException = null )
-        {
-            return new Func<IDbProvider>( factory.Create ).Read( action, processException );
-        }
-        public static TResult Read<TResult>(
-            this Func<IDbProvider> persistanceManagerCreator,
-            Func<IDbProvider, TResult> action,
-            Action<Exception> processException = null )
-        {
-            using( var persistanceManager = persistanceManagerCreator() )
-            {
-                try
-                {
-                    var result = action( persistanceManager );
-                    return result;
-                }
-                catch( Exception exc )
-                {
+                    if( transaction )
+                        persistanceManager.RollbackTransaction();
                     processException.Do( a => a( exc ) );
                     throw;
                 }
