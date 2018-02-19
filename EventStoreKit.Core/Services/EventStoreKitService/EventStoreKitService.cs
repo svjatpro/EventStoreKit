@@ -257,7 +257,23 @@ namespace EventStoreKit.Services
         {
             var subscriberInstance = subscriberFactory();
             var subscriberType = subscriberInstance.GetType();
+            var basicType = typeof(IEventSubscriber);
+
+            // register as self
             EventSubscribers.Add( subscriberType, subscriberFactory );
+
+            // register as all user-implemented interfaces, which is assignable to IEventSubscriber
+            subscriberType
+                .GetInterfaces()
+                .Where( type => basicType.IsAssignableFrom( type ) && type.Assembly != basicType.Assembly ) // exclude all basic types
+                .ToList()
+                .ForEach( type =>
+                {
+                    if ( EventSubscribers.ContainsKey( type ) )
+                        throw new InvalidOperationException( $"{type.Name} already registered" );
+                    EventSubscribers.Add( type, subscriberFactory );
+                } );
+
             if ( Initialized )
                 ConfigureEventSubscriberRouts( subscriberFactory );
         }

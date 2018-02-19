@@ -5,6 +5,7 @@ using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using FluentAssertions;
+using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -19,7 +20,9 @@ namespace EventStoreKit.Tests
         public static List<Message> ProcessedEvents = new List<Message>();
 
         private class TestEvent1 : DomainEvent { public string Name { get; set; } }
-        private class Subscriber1 : IEventSubscriber
+        private interface ISubscriber1 : IEventSubscriber { }
+        private interface ISubscriber2 : ISubscriber1 { }
+        private class Subscriber1 : ISubscriber2
         {
             public void Handle( Message message ) { ProcessedEvents.Add( message ); }
             public void Replay( Message message ) {}
@@ -27,6 +30,7 @@ namespace EventStoreKit.Tests
             public event EventHandler<SequenceEventArgs> SequenceFinished;
             public event EventHandler<MessageEventArgs> MessageHandled;
         }
+        private class Subscriber2 : Subscriber1{}
         
         [SetUp]
         protected void Setup()
@@ -53,7 +57,7 @@ namespace EventStoreKit.Tests
         #endregion
 
         [Test]
-        public void SetDatabaseShouldMapSubscriversToSingleDb()
+        public void ServerShouldRegisterSubscriberAndConfigureMessageRoutes()
         {
             Service
                 .RegisterEventSubscriber<Subscriber1>()
@@ -62,6 +66,28 @@ namespace EventStoreKit.Tests
             var msg = RaiseEvent();
 
             ProcessedEvents[0].Should().Be( msg );
+        }
+
+        [Test]
+        public void SubscriberShouldBeRegisteredInServiceAsAllImplementedSubscriberInterfaces()
+        {
+            Service
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
+
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+            Service.GetSubscriber<ISubscriber1>().Should().Be( subscriber );
+            Service.GetSubscriber<ISubscriber2>().Should().Be( subscriber );
+        }
+
+        [Test]
+        public void SubscriberInterfacesShouldBeRegisteredAsUnique()
+        {
+            Assert.Throws( 
+                typeof( InvalidOperationException ), 
+                () => Service
+                    .RegisterEventSubscriber<Subscriber1>()
+                    .RegisterEventSubscriber<Subscriber2>() );
         }
     }
 }

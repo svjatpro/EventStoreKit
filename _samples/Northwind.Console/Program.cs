@@ -1,14 +1,7 @@
 ﻿using Autofac;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
-using Autofac.Core;
-using Autofac.Core.Lifetime;
-using Autofac.Features.GeneratedFactories;
+using EventStoreKit.Autofac;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.linq2db;
@@ -21,9 +14,7 @@ using EventStoreKit.Northwind.Projections.Customer;
 using EventStoreKit.Northwind.Projections.OrderDetail;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
-using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
-using LinqToDB.DataProvider;
 using Module = Autofac.Module;
 
 namespace EventStoreKit.Northwind.Console
@@ -33,6 +24,7 @@ namespace EventStoreKit.Northwind.Console
     {
         protected override void Load( ContainerBuilder builder )
         {
+            // register command handlers
             builder.RegisterType<CustomerHandler>()
                 .As<ICommandHandler<CreateCustomerCommand, Customer>>()
                 .As<ICommandHandler<UpdateCustomerCommand, Customer>>();
@@ -40,12 +32,21 @@ namespace EventStoreKit.Northwind.Console
             builder.RegisterType<OrderHandler>().AsImplementedInterfaces().SingleInstance();
             builder.RegisterType<OrderDetailHandler>().AsImplementedInterfaces();
 
-            // register DbProviderFactory
-            // builder.RegisterType<Linq2DbProviderFactory>().As<IDbProviderFactory>(); // can be used with .Create( configuration ) only
-            // builder.Register( ctx => return new Linq2DbProviderFactory( defaultConfiguration ) ).As<IDbProviderFactory>();
-            builder.RegisterType<Linq2DbProviderFactory>().As<IDbProviderFactory>();
+            // configure data base
+            builder
+                .RegisterInstance( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" ) )
+                .As<IDataBaseConfiguration>()
+                .SingleInstance();
+            builder
+                .RegisterType<Linq2DbProviderFactory>()
+                .As<IDbProviderFactory>()
+                .SingleInstance();
 
-
+            // register projections
+            builder.RegisterType<ProductProjection>().SingleInstance();
+            builder.RegisterType<CustomerProjection>().SingleInstance();
+            builder.RegisterType<OrderProjection>().SingleInstance();
+            builder.RegisterType<OrderDetailProjection>().SingleInstance();
         }
     }
         
@@ -58,7 +59,7 @@ namespace EventStoreKit.Northwind.Console
             where TEvent : DomainEvent
         {
             var subscriber = service.GetSubscriber<TSubscriber>();
-            var messageHandled = subscriber.CatchMessagesAsync<TEvent>( msg => msg.Id == cmd.Id );
+            var messageHandled = subscriber.OfType<IEventCatch>().CatchMessagesAsync<TEvent>( msg => msg.Id == cmd.Id );
             service.SendCommand( cmd );
             messageHandled.Wait( 1000 );
         }
@@ -136,31 +137,14 @@ namespace EventStoreKit.Northwind.Console
         {
             var builder = new ContainerBuilder();
             builder.RegisterModule<NorthwindModule>();
-            builder.InitializeEventStoreKitService( ( ctx ) =>
-            {
-                return new EventStoreKitService()
-                    .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-                    .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-                    .RegisterEventSubscriber<ProductProjection>()
-                    .RegisterEventSubscriber<CustomerProjection>()
-                    .RegisterEventSubscriber<OrderProjection>()
-                    .RegisterEventSubscriber<OrderDetailProjection>();
-            } );
+            builder.InitializeEventStoreKitService();
 
             var container = builder.Build();
 
             var service = container.Resolve<IEventStoreKitService>();
             service.CleanData();
-            // ----------------------------------------------
 
-            //var service = new EventStoreKitService()
-            //    .RegisterCommandHandler()...
-            //    .SetEventStoreDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-            //    .SetSubscriberDataBase<Linq2DbProviderFactory>( DbConnectionType.SqlLite, "data source=db1" )
-            //    .RegisterEventSubscriber<ProductProjection>()
-            //    .RegisterEventSubscriber<CustomerProjection>()
-            //    .RegisterEventSubscriber<OrderProjection>()
-            //    .RegisterEventSubscriber<OrderDetailProjection>();
+            // ----------------------------------------------
 
             // create customer
             var customerId1 = service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );

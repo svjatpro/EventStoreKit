@@ -28,6 +28,9 @@ namespace EventStoreKit.Tests
         {
             public DbProviderFactory2( IDataBaseConfiguration config ) : base( config ) { }
         }
+        private interface ISubscriber1 : IEventSubscriber { }
+        private interface ISubscriber2 : IEventSubscriber { }
+        private interface ISubscriber3 : ISubscriber2 { }
         private class Subscriber1 : IEventSubscriber
         {
             public void Handle( Message message ){}
@@ -37,13 +40,9 @@ namespace EventStoreKit.Tests
             public event EventHandler<MessageEventArgs> MessageHandled;
         }
         private class Subscriber2 : Subscriber1 { }
-        private class Subscriber3 : EventQueueSubscriber
-        {
-            public Subscriber3( IEventStoreSubscriberContext context ) :
-                base( context )
-            {
-            }
-        }
+        private class Subscriber3 : EventQueueSubscriber { public Subscriber3( IEventStoreSubscriberContext context ) : base( context ) {} }
+
+        private class Subscriber4 : Subscriber1, ISubscriber1, ISubscriber3{}
 
         private void InitializeContainer( Action<IEventStoreKitServiceBuilder> initializer = null )
         {
@@ -91,5 +90,20 @@ namespace EventStoreKit.Tests
             Service.GetSubscriber<Subscriber3>().Should().Be( Container.Resolve<Subscriber3>() );
         }
 
+        [Test]
+        public void SubscriberShouldBeRegisteredInServiceAsAllImplementedSubscriberInterfaces()
+        {
+            Builder
+                .RegisterType<Subscriber4>()
+                .As<ISubscriber1>()
+                .SingleInstance();
+            InitializeContainer();
+
+            var subscriber = Container.Resolve<ISubscriber1>();
+            Service.GetSubscriber<Subscriber4>().Should().Be( subscriber );
+            Service.GetSubscriber<ISubscriber1>().Should().Be( subscriber );
+            Service.GetSubscriber<ISubscriber2>().Should().Be( subscriber );
+            Service.GetSubscriber<ISubscriber3>().Should().Be( subscriber );
+        }
     }
 }

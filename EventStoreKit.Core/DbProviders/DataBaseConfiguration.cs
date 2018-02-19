@@ -8,10 +8,10 @@ namespace EventStoreKit.Services
 {
     public class DataBaseConfiguration : IDataBaseConfiguration
     {
-        public DataBaseConnectionType DataBaseConnectionType { get; set; }
+        public DataBaseConnectionType DataBaseConnectionType { get; }
         public string ConnectionProviderName { get; set; }
-        public string ConfigurationString { get; set; }
-        public string ConnectionString { get; set; }
+        public string ConfigurationString { get; }
+        public string ConnectionString { get; }
 
         #region Static members
 

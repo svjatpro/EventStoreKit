@@ -22,7 +22,7 @@ namespace EventStoreKit.Autofac
         {
             registration.Preparing += ( sender, args ) =>
             {
-                args.Parameters = args.Parameters.Union( new[] 
+                args.Parameters = args.Parameters.Union( new[]
                 {
                     new ResolvedParameter( 
                         (p,c) => p.ParameterType.IsAssignableTo<ILogger>(),
@@ -171,9 +171,12 @@ namespace EventStoreKit.Autofac
                         .ToList();
                     subscribers.ForEach( s => service.RegisterEventSubscriber( s ) );
 
-                    return service.Initialize();
+                    service.Initialize();
+                    return service;
                 } )
                 .As<IEventStoreKitService>()
+                //.As<ICommandBus>()
+                //.As<IEventPublisher>()
                 .AutoActivate()
                 .SingleInstance()
                 .OwnedByLifetimeScope();
