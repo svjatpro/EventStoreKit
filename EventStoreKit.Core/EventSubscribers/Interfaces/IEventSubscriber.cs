@@ -71,6 +71,7 @@ namespace EventStoreKit.Projections
 
         #endregion
     }
+
     public interface IEventSubscriber
     {
         /// <summary>

@@ -3,17 +3,18 @@ using System.Runtime.Serialization;
 
 namespace EventStoreKit.Messages
 {
-    //[DataContract]
     public abstract class Message
     {
-        //[DataMember]
         public int Version { get; set; }
 
-        //[DataMember]
+        public string BucketId { get; set; }
+
+        public string CheckpointToken { get; set; }
+
         public DateTime Created { get; set; }
 
-        //[DataMember]
         public Guid CreatedBy { get; set; }
+
 
         /// <summary>
         /// Indicates, that the message is a part of message group, logically related
