@@ -16,9 +16,6 @@ namespace EventStoreKit.Services
 
         #region Private fields
 
-        public const string IssuedByHeader = "IssuedBy";
-        public const string TimestampHeader = "Timestamp";
-
         private IStoreEvents InternalStore;
         private readonly IEventPublisher EventPublisher;
         private readonly object LockObject = new object();
@@ -27,20 +24,6 @@ namespace EventStoreKit.Services
         
         #endregion
 
-        #region Private methods
-        
-        private void SetTimestamp( Message e, ICommit commit )
-        {
-            var header = commit.Headers
-                .Where( h => h.Key == TimestampHeader )
-                .Select( h => h.Value )
-                .FirstOrDefault();
-            if ( header != null )
-                e.Created = (DateTime)header;
-        }
-        
-        #endregion
-        
         #region Implementation of IDisposable
 
         public void Dispose( )
@@ -137,7 +120,9 @@ namespace EventStoreKit.Services
                             @event.ProcessEvent( e =>
                             {
                                 e.Version = commit.StreamRevision;
-                                SetTimestamp( e, commit );
+                                e.BucketId = commit.BucketId;
+                                e.CheckpointToken = commit.CheckpointToken;
+
                                 EventPublisher.Publish( e );
                             } );
                         }
