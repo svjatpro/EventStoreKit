@@ -1,12 +1,12 @@
 ﻿using System;
-using EventStoreKit.Aggregates;
+using CommonDomain.Core;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
 {
-    public class OrderDetail : TrackableAggregateBase
+    public class OrderDetail : AggregateBase
     {
         #region private fields
 

@@ -1,12 +1,12 @@
 ﻿using System;
-using EventStoreKit.Aggregates;
+using CommonDomain.Core;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
 {
-    public class Customer : TrackableAggregateBase
+    public class Customer : AggregateBase
     {
         #region Private fields
 
@@ -78,7 +78,6 @@ namespace EventStoreKit.Northwind.Aggregates
         
         public Customer(CreateCustomerCommand cmd ) : this( cmd.Id )
         {
-            IssuedBy = cmd.CreatedBy;
             RaiseEvent( cmd.CopyTo( c => new CustomerCreatedEvent() ) ); // its Ok if all fields equal in command and event
         }
 

@@ -1,4 +1,4 @@
-﻿using EventStoreKit.Aggregates;
+﻿using CommonDomain;
 using EventStoreKit.Messages;
 
 namespace EventStoreKit.Handler
@@ -9,7 +9,7 @@ namespace EventStoreKit.Handler
     
     public interface ICommandHandler<TCommand, TEntity> : ICommandHandler
         where TCommand : DomainCommand
-        where TEntity : ITrackableAggregate
+        where TEntity : IAggregate
     {
         void Handle( TCommand cmd, CommandHandlerContext<TEntity> context );
     }

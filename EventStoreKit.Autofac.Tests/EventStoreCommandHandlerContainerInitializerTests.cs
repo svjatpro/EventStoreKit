@@ -1,6 +1,6 @@
 ﻿using System;
 using Autofac;
-using EventStoreKit.Aggregates;
+using CommonDomain.Core;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using FluentAssertions;
@@ -19,7 +19,7 @@ namespace EventStoreKit.Tests
         private class Command2 : DomainCommand { }
 
         // ReSharper disable ClassNeverInstantiated.Local
-        private class Aggregate1 : TrackableAggregateBase { public Aggregate1( Guid id ){} }
+        private class Aggregate1 : AggregateBase { public Aggregate1( Guid id ){} }
         private class CommandHandler1 :
             ICommandHandler<Command1, Aggregate1>,
             ICommandHandler<Command2, Aggregate1>

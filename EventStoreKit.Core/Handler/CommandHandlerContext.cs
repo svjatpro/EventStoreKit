@@ -1,5 +1,4 @@
-﻿
-using EventStoreKit.Aggregates;
+﻿using CommonDomain;
 
 namespace EventStoreKit.Handler
 {
@@ -7,7 +6,7 @@ namespace EventStoreKit.Handler
     {
     }
     public class CommandHandlerContext<TEntity> : CommandHandlerContext
-        where TEntity : ITrackableAggregate
+        where TEntity : IAggregate
     {
         public TEntity Entity { get; set; }
     }

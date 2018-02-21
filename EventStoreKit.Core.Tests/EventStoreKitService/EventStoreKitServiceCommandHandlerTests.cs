@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using EventStoreKit.Aggregates;
+using CommonDomain.Core;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -35,7 +35,7 @@ namespace EventStoreKit.Tests
         private class Command1 : DomainCommand { }
         private class Command2 : DomainCommand { }
 
-        private class Aggregate1 : TrackableAggregateBase
+        private class Aggregate1 : AggregateBase
         {
             public Aggregate1( Guid id )
             {
@@ -118,6 +118,88 @@ namespace EventStoreKit.Tests
             processed[0].Name.Should().Be( typeof( Command1 ).Name );
             processed[1].Id.Should().Be( id2 );
             processed[1].Name.Should().Be( typeof( Command2 ).Name );
+        }
+
+        [Test]
+        public void EventsRaisedByCommandHandlerShouldBeInitializedWithCurrentUserId()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            Service
+                .RegisterCommandHandler( () => new CommandHandler1() )
+                .RegisterEventSubscriber<Subscriber1>();
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            Service.SendCommand( new Command1 { Id = id1 } );
+            Service.SendCommand( new Command2 { Id = id2 } );
+            wait.Wait( 1000 );
+
+            var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
+            processed[0].CreatedBy.Should().NotBe( default(Guid) );
+            processed[0].CreatedBy.Should().Be( processed[1].CreatedBy );
+        }
+
+        [Test]
+        public void EventsRaisedByCommandHandlerShouldBeInitializedWithCurrentUserIdFromCommand()
+        {
+            var userId = Guid.NewGuid();
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            Service
+                .RegisterCommandHandler( () => new CommandHandler1() )
+                .RegisterEventSubscriber<Subscriber1>();
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            Service.SendCommand( new Command1 { Id = id1, CreatedBy = userId } );
+            Service.SendCommand( new Command2 { Id = id2, CreatedBy = userId } );
+            wait.Wait( 1000 );
+
+            var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
+            processed[0].CreatedBy.Should().Be( userId );
+            processed[1].CreatedBy.Should().Be( userId );
+        }
+
+        [Test]
+        public void EventsRaisedByCommandHandlerShouldBeInitializedWithDateTimeFromCommand()
+        {
+            var time = DateTime.Now.AddDays( -1 );
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            Service
+                .RegisterCommandHandler( () => new CommandHandler1() )
+                .RegisterEventSubscriber<Subscriber1>();
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            Service.SendCommand( new Command1 { Id = id1, Created = time } );
+            Service.SendCommand( new Command2 { Id = id2, Created = time } );
+            wait.Wait( 1000 );
+
+            var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
+            processed[0].Created.Should().Be( time );
+            processed[1].Created.Should().Be( time );
+        }
+
+        [Test]
+        public void EventsRaisedByCommandHandlerShouldBeInitializedWithCurrentDateTime()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            Service
+                .RegisterCommandHandler( () => new CommandHandler1() )
+                .RegisterEventSubscriber<Subscriber1>();
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            Service.SendCommand( new Command1 { Id = id1 } );
+            Service.SendCommand( new Command2 { Id = id2 } );
+            wait.Wait( 1000 );
+
+            var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
+            processed[0].Created.Should().BeCloseTo( DateTime.Now, 200 );
+            processed[1].Created.Should().BeCloseTo( DateTime.Now, 200 );
         }
 
     }

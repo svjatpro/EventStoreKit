@@ -5,10 +5,10 @@ using System.Reactive.Concurrency;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using CommonDomain;
 using CommonDomain.Core;
 using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
-using EventStoreKit.Aggregates;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -144,7 +144,7 @@ namespace EventStoreKit.Services
         }
         private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
             where TCommand : DomainCommand
-            where TEntity : class, ITrackableAggregate
+            where TEntity : class, IAggregate
         {
             // register Action as handler to dispatcher
             var repositoryFactory = new Func<IRepository>( () => new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() ) );
@@ -160,13 +160,19 @@ namespace EventStoreKit.Services
                 if ( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
                     cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
                 var context = new CommandHandlerContext<TEntity>{  Entity = repository.GetById<TEntity>( cmd.Id ) };
-                if ( cmd.CreatedBy != Guid.Empty )
-                    context.Entity.IssuedBy = cmd.CreatedBy;
-                else
-                    CurrentUserProvider.CurrentUserId.Do( userId => context.Entity.IssuedBy = userId.GetValueOrDefault() );
 
                 handler.Handle( cmd, context );
                 logger.Info( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
+
+                context.Entity
+                    .With( entity => entity.GetUncommittedEvents() )
+                    .Do( messages => messages.OfType<Message>().ToList().ForEach( 
+                        message =>
+                        {
+                            message.Created = cmd.Created;
+                            message.CreatedBy = cmd.CreatedBy;
+                        } ) );
+
                 repository.Save( context.Entity, IdGenerator.NewGuid() );
             } );
             Dispatcher.RegisterHandler( handleAction );
