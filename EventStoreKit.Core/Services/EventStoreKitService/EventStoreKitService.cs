@@ -159,7 +159,7 @@ namespace EventStoreKit.Services
                     cmd.Created = DateTime.Now;
                 if ( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
                     cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
-                var context = new CommandHandlerContext<TEntity>{  Entity = repository.GetById<TEntity>( cmd.Id ) };
+                var context = new CommandHandlerContext<TEntity>( () => repository.GetById<TEntity>( cmd.Id ) );
 
                 handler.Handle( cmd, context );
                 logger.Info( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
