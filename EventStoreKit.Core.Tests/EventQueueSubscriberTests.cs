@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using System.Threading;
-using System.Threading.Tasks;
+using EventStoreKit.Core.EventSubscribers;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;

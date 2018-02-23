@@ -4,6 +4,7 @@ using System.Threading;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
+using EventStoreKit.Utility;
 using FluentAssertions;
 using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
@@ -24,7 +25,11 @@ namespace EventStoreKit.Tests
         private interface ISubscriber2 : ISubscriber1 { }
         private class Subscriber1 : ISubscriber2
         {
-            public void Handle( Message message ) { ProcessedEvents.Add( message ); }
+            public void Handle( Message message )
+            {
+                ProcessedEvents.Add( message );
+                MessageHandled.ExecuteAsync( this, new MessageEventArgs( message ) );
+            }
             public void Replay( Message message ) {}
             public IEnumerable<Type> HandledEventTypes => new List<Type>{ typeof(TestEvent1) };
             public event EventHandler<SequenceEventArgs> SequenceFinished;
@@ -50,7 +55,6 @@ namespace EventStoreKit.Tests
             var msg = new TestEvent1 { Id = id, Name = "name_" + id };
             Service.RaiseEvent( msg );
             Service.Wait();
-            Thread.Sleep( 300 );
             return msg;
         }
        

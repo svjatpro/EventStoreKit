@@ -15,6 +15,16 @@ namespace EventStoreKit.Utility
             } );
         }
 
+        public static Task ContinueWithEx<TResult,TResultContinuation>( this Task<TResult> task, Action<Task<TResult>> continuation )
+        {
+            return task.ContinueWith( t =>
+            {
+                if( t.IsFaulted )
+                    throw t.Exception;
+                continuation( t );
+            } );
+        }
+
         public static Task<TResult> ContinueWithEx<TResult>( this Task task, Func<Task,TResult> continuation )
         {
             return task.ContinueWith( t =>

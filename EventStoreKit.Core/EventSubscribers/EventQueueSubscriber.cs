@@ -100,6 +100,7 @@ namespace EventStoreKit.Projections
 
                 if( !IsRebuild )
                     MessageHandled.ExecuteAsync( this, new MessageEventArgs( message ) );
+                    //MessageHandled.Execute( this, new MessageEventArgs( message ) );
             }
             catch ( Exception ex )
             {
@@ -369,27 +370,6 @@ namespace EventStoreKit.Projections
             {
                 DynamicHandlers.Add( handler );
             }
-            return task;
-        }
-
-        /// <summary>
-        /// Sync wait until all messages, which are in EventSubscriber queue at the moment of the method call, will be processed
-        ///  key point here, that there is guarantee, that each IEventSubscriber instance have its own message queue and process it synchronously
-        /// </summary>
-        public void WaitMessages()
-        {
-            WaitMessagesAsync().Wait();
-        }
-
-        /// <summary>
-        /// Wait until all messages, which are in EventSubscriber queue at the moment of the method call, will be processed
-        ///  key point here, that there is guarantee, that each IEventSubscriber instance have its own message queue and process it synchronously
-        /// </summary>
-        public Task WaitMessagesAsync()
-        {
-            var key = Guid.NewGuid();
-            var task = CatchMessagesAsync<SequenceMarkerEvent>( msg => msg.Identity == key );
-            Handle( new SequenceMarkerEvent { Identity = key } );
             return task;
         }
 

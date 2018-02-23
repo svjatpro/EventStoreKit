@@ -9,6 +9,7 @@ using CommonDomain;
 using CommonDomain.Core;
 using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
+using EventStoreKit.Core.EventSubscribers;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -508,15 +509,19 @@ namespace EventStoreKit.Services
 
         public void Wait( params IEventSubscriber[] subscribers )
         {
+            var markerMessage = new SequenceMarkerEvent{ Identity = Guid.NewGuid() };
             var targets =
                 subscribers.Any() ?
                 subscribers.ToList() :
-                EventSubscribers.Values.Select( factory => factory() ).ToList();
+                EventSubscribers.Values
+                    .Select( factory => factory() )
+                    .Distinct()
+                    .ToList();
 
             var tasks = targets
-                .Select( s => s.OfType<IEventCatch>().With( srv => srv.WaitMessagesAsync() ) )
-                .Where( s => s != null )
+                .Select( subscriber => subscriber.When<SequenceMarkerEvent>( msg => msg.Identity == markerMessage.Identity ) )
                 .ToArray();
+            targets.ForEach( subscriber => subscriber.Handle( markerMessage ) );
             Task.WaitAll( tasks );
         }
 
@@ -525,16 +530,12 @@ namespace EventStoreKit.Services
             StoreEvents.Advanced.Purge();
 
             var msg = new SystemCleanedUpEvent();
-            var tasks = EventSubscribers
+            EventSubscribers
                 .Values.ToList()
-                .Select( subscriberFactory =>
-                {
-                    var subscriber = subscriberFactory();
-                    subscriber.Handle( msg );
-                    return subscriber.OfType<IEventCatch>().WaitMessagesAsync();
-                } )
-                .ToArray();
-            Task.WaitAll( tasks );
+                .Select( subscriberFactory => subscriberFactory() )
+                .ToList()
+                .ForEach( s => { s.Handle( msg ); } );
+            Wait();
         }
 
         #endregion

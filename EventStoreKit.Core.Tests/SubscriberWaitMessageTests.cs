@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Configuration;
 using System.Reactive.Concurrency;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +13,9 @@ using EventStoreKit.Services;
 using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
 using FluentAssertions;
+using FluentAssertions.Common;
 using NSubstitute;
+using NSubstitute.ClearExtensions;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -87,304 +90,210 @@ namespace EventStoreKit.Tests
             for ( var i = 0; i < count; i++ )
                 Subscriber1.Handle( new Message1 { Id = i.ToString() } );
 
-            Subscriber1.WaitMessages1();
+            Subscriber1.WaitMessages();
 
             Subscriber1.ProcessedMessages.Count.Should().Be( count );
         }
-        [Test]
-        public void test1()
-        {
-            var task = Subscriber1.When<Message1>( msg => msg.Id == "2" );
-
-            Subscriber1.Handle( new Message1 { Id = "1" } );
-            Subscriber1.Handle( new Message1 { Id = "2" } );
-
-            task.Wait();
-            task.Result.Id.Should().Be( "2" );
-
-            //var result = await Subscriber1.Catch();
-
-        }
-
-        [Test]
-        public async void test2()
-        {
-            var task = Subscriber1.When<Message1>( msg => msg.Id == "2" );
-
-            Subscriber1.Handle( new Message1 { Id = "1" } );
-            Subscriber1.Handle( new Message1 { Id = "2" } );
-
-            task.Wait();
-            task.Result.Id.Should().Be( "2" );
-
-            //var result = await Subscriber1.Catch();
-
-        }
-
-        #region CatchEvent functionality tests
-
-        [Test]
-        public void EventQueueSubscriberShouldCatchSingleMessageSyncronously()
-        {
-            new Task( () =>
-            {
-                Thread.Sleep( 100 );
-                Subscriber1.Handle( new Message1 {Id = "1"} );
-                Subscriber1.Handle( new Message1 {Id = "2"} );
-            } ).Start();
-
-            var catched = Subscriber1.CatchMessage<Message1>( msg => msg.Id == "2" );
-
-            catched.Id.Should().Be( "2" );
-        }
         
         [Test]
-        public void EventQueueSubscriberShouldCatchBasicSingleMessageSyncronously()
+        public void WhenMethodShouldCatchTheMomentWhenMessageHandledByType()
         {
-            new Task( () =>
-            {
-                Thread.Sleep( 100 );
-                Subscriber1.Handle( new Message1 { Id = "1" } );
-                Subscriber1.Handle( new Message1 { Id = "2" } );
-            } ).Start();
+            var id1 = "2";
 
-            var catched = Subscriber1.CatchMessage<Message>( msg => msg.OfType<Message1>().Id == "2" );
-
-            catched.OfType<Message1>().Id.Should().Be( "2" );
-        }
-
-        [Test]
-        public void EventQueueSubscriberShouldCatchFirstMatchedSingleMessageSyncronously()
-        {
-            new Task( () =>
-            {
-                Thread.Sleep( 100 );
-                Subscriber1.Handle( new Message1 { Id = "1" } );
-                Subscriber1.Handle( new Message1 { Id = "2" } );
-            } ).Start();
-
-            var catched = Subscriber1.CatchMessage<Message1>( msg => msg.Id == "1" || msg.Id == "2" );
-
-            catched.OfType<Message1>().Id.Should().Be( "1" );
-        }
-
-        [Test]
-        public void EventQueueSubscriberShouldStopCatchingSingleMessageSyncronouslyByTimeout()
-        {
-            new Task( () =>
-            {
-                Thread.Sleep( 2000 );
-                Subscriber1.Handle( new Message1 { Id = "1" } );
-                Subscriber1.Handle( new Message1 { Id = "2" } );
-            } ).Start();
-
-            var catched = Subscriber1.CatchMessage<Message1>( msg => msg.Id == "1", 100 );
-
-            catched.Should().BeNull();
-        }
-
-        [Test]
-        public void EventQueueSubscriberShouldCatchMultipleMessagesSyncronously()
-        {
-            new Task( () =>
-            {
-                Thread.Sleep( 100 );
-                Subscriber1.Handle( new Message1 { Id = "1" } );
-                Subscriber1.Handle( new Message1 { Id = "2" } );
-                Subscriber1.Handle( new Message1 { Id = "3" } );
-            } ).Start();
-
-            var catched = Subscriber1.CatchMessages<Message1>( msg => msg.Id == "1", msg => msg.Id == "3" );
-
-            catched[0].Id.Should().Be( "1" );
-            catched[1].Id.Should().Be( "3" );
-        }
-
-        [Test]
-        public void EventQueueSubscriberShouldCatchMultipleMessagesAsync()
-        {
-            var task = Subscriber1.CatchMessagesAsync<Message1>( msg => msg.Id == "1", msg => msg.Id == "3" );
-
-            Subscriber1.Handle( new Message1 { Id = "1" } );
-            Subscriber1.Handle( new Message1 { Id = "2" } );
-            Subscriber1.Handle( new Message1 { Id = "3" } );
+            var task = Subscriber1.When<Message2>( msg => msg.Id == id1 );
+            Subscriber1.Handle( new Message1 { Id = "0" } );
+            Subscriber1.Handle( new Message2 { Id = "1" } );
+            Subscriber1.Handle( new Message2 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
 
             task.Wait();
-            var catched = task.Result;
-
-            catched[0].Id.Should().Be( "1" );
-            catched[1].Id.Should().Be( "3" );
+            task.Result.Id.Should().Be( id1 );
         }
 
         [Test]
-        public void EventQueueSubscriberShouldNotCancelCatchingMultipleMessagesAsync()
+        public void WhenMethodShouldCatchTheMomentWhenMessageHandledAsBasic()
         {
-            var task = Subscriber1.CatchMessagesAsync<Message1>( 
-                mandatory: new Func<Message1,bool>[] { msg => msg.Id == "1", msg => msg.Id == "3" },
-                optional: new Func<Message1, bool>[] { msg => 
-                    {
-                        if ( msg.Id == "wrong" )
-                            throw new Exception();
-                        return false; // if return true - it will not be processed for other messages, because handler already "processed"
-                    } } );
+            var id1 = "2";
 
-            Subscriber1.Handle( new Message1 { Id = "1" } );
-            Subscriber1.Handle( new Message1 { Id = "2" } );
-            Subscriber1.Handle( new Message1 { Id = "3" } );
-            Subscriber1.Handle( new Message1 { Id = "wrong" } );
+            var task = Subscriber1.When<Message2>( msg => msg.Id == id1 );
+            Subscriber1.Handle( new Message1 { Id = "0" } );
+            Subscriber1.Handle( new Message2 { Id = "1" } );
+            Subscriber1.Handle( new Message2 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
 
             task.Wait();
-            var catched = task.Result;
-
-            catched[0].Id.Should().Be( "1" );
-            catched[1].Id.Should().Be( "3" );
+            task.Result.OfType<Message2>().Id.Should().Be( id1 );
         }
 
         [Test]
-        public void EventQueueSubscriberShouldCatchMultipleMessagesAsyncInAnyOrder()
+        public void WhenMethodShouldCatchTheMomentWhenMessagesHandledUnordered()
         {
-            var task = Subscriber1.CatchMessagesAsync<Message1>(
-                mandatory: new Func<Message1, bool>[] { msg => msg.Id == "1", msg => msg.Id == "3" },
-                optional: new Func<Message1, bool>[] { msg =>
-                    {
-                        if ( msg.Id == "wrong" )
-                            throw new Exception();
-                        return false; // if return true - it will not be processed for other messages, because handler already "processed"
-                    } },
-                sequence: false );
-
-            Subscriber1.Handle( new Message1 { Id = "3" } );
-            Subscriber1.Handle( new Message1 { Id = "2" } );
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message1>( msg => msg.Id == "2" )
+                    .And<Message2>( msg => msg.Id == "3" ) );
             Subscriber1.Handle( new Message1 { Id = "1" } );
-            Subscriber1.Handle( new Message1 { Id = "wrong" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
 
             task.Wait();
-            var catched = task.Result;
-
-            catched[0].Id.Should().Be( "3" );
-            catched[1].Id.Should().Be( "1" );
+            task.Result[0].OfType<Message1>().Id.Should().Be( "2" );
+            task.Result[1].OfType<Message2>().Id.Should().Be( "3" );
         }
 
         [Test]
-        public void EventQueueSubscriberShouldCancelCatchingMultipleMessagesAsync()
+        public void WhenMethodShouldCatchTheMomentWhenMessagesHandledUnorderedInReverseOrder()
         {
-            var task = Subscriber1.CatchMessagesAsync<Message1>(
-                mandatory: new Func<Message1, bool>[] { msg => msg.Id == "1", msg => msg.Id == "3" },
-                optional: new Func<Message1, bool>[] { msg =>
-                    {
-                        if ( msg.Id == "wrong" )
-                            throw new InvalidOperationException();
-                        return false; // if return true - it will not be processed for other messages, because handler already "processed"
-                    } } );
-
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message2>( msg => msg.Id == "3" )
+                    .And<Message1>( msg => msg.Id == "2" ) );
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message1 { Id = "2" } );
-            Subscriber1.Handle( new Message1 { Id = "wrong" } );
-            Subscriber1.Handle( new Message1 { Id = "3" } );
-
-            new Action( () => task.Wait( 1000 ) ).ShouldThrow<InvalidOperationException>();
-        }
-
-        [Test]
-        public void EventQueueSubscriberShouldCatchMultipleMessagesSequenceAsync()
-        {
-            var task = Subscriber1.CatchMessagesAsync<Message1>(
-                mandatory: new Func<Message1, bool>[] { msg => msg.Id == "1", msg => msg.Id == "3" },
-                optional: new Func<Message1, bool>[] { msg =>
-                    {
-                        if ( msg.Id == "wrong" )
-                            throw new InvalidOperationException();
-                        return false; // if return true - it will not be processed for other messages, because handler already "processed"
-                    } },
-                sequence: true );
-
-            Subscriber1.Handle( new Message1 { Id = "3", Key = "0" } );
-            Subscriber1.Handle( new Message1 { Id = "1", Key = "0" } );
-            Subscriber1.Handle( new Message1 { Id = "2", Key = "0" } );
-            Subscriber1.Handle( new Message1 { Id = "3", Key = "1" } );
-            Subscriber1.Handle( new Message1 { Id = "wrong" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
 
             task.Wait();
-            var catched = task.Result;
-            catched[0].Id.Should().Be( "1" );
-            catched[1].Id.Should().Be( "3" );
-            catched[1].Key.Should().Be( "1" );
+            task.Result[0].OfType<Message1>().Id.Should().Be( "2" );
+            task.Result[1].OfType<Message2>().Id.Should().Be( "3" );
         }
 
         [Test]
-        public void EventQueueSubscriberShouldNotCatchMultipleMessagesSequenceAsyncInWrongOrder()
+        public void WhenMethodShouldCatchTheMomentWhenMessagesHandledOrdered()
         {
-            var task = Subscriber1.CatchMessagesAsync<Message1>(
-                mandatory: new Func<Message1, bool>[] { msg => msg.Id == "1", msg => msg.Id == "3" },
-                optional: new Func<Message1, bool>[] { msg =>
-                    {
-                        if ( msg.Id == "wrong" )
-                            throw new InvalidOperationException();
-                        return false; // if return true - it will not be processed for other messages, because handler already "processed"
-                    } },
-                sequence: true );
-
-            Subscriber1.Handle( new Message1 { Id = "3" } );
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message1>( msg => msg.Id == "2" )
+                    .And<Message2>( msg => msg.Id == "3" )
+                    .Ordered() );
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message1 { Id = "2" } );
-            Subscriber1.Handle( new Message1 { Id = "wrong" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
 
-            new Action( () => task.Wait( 1000 ) ).ShouldThrow<InvalidOperationException>();
+            task.Wait();
+            task.Result[0].OfType<Message1>().Id.Should().Be( "2" );
+            task.Result[1].OfType<Message2>().Id.Should().Be( "3" );
         }
 
         [Test]
-        public void EventQueueSubscriberShouldBreakCatchingMultipleMessagesAsyncByTimeout()
+        public void WhenMethodShouldNotCatchTheMomentWhenMessagesHandledInWrongOrder()
         {
-            var task = Subscriber1.CatchMessagesAsync<Message1>(
-                mandatory: new Func<Message1, bool>[]
-                {
-                    msg => msg.Id == "1",
-                    msg =>
-                    {
-                        Thread.Sleep( 60 );
-                        return msg.Id == "3";
-                    }
-                },
-                optional: new Func<Message1, bool>[] { msg =>
-                    {
-                        if ( msg.Id == "wrong" )
-                            throw new InvalidOperationException();
-                        return false; // if return true - it will not be processed for other messages, because handler already "processed"
-                    } },
-                timeout: 50 );
-
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message2>( msg => msg.Id == "3" )
+                    .And<Message1>( msg => msg.Id == "2" )
+                    .Ordered() );
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message1 { Id = "2" } );
-            Subscriber1.Handle( new Message1 { Id = "3" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
+
+            task.Wait( 200 );
+
+            task.IsCompleted.Should().Be( false );
+        }
+
+        [Test]
+        public void WhenMethodShouldCatchTheMomentWhenMessagesHandledUnorderedOrBreakByMessage()
+        {
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message1>( msg => msg.Id == "2" )
+                    .And<Message2>( msg => msg.Id == "3" )
+                    .BreakBy<Message1>( msg => msg.Id == "error" ) );
+            Subscriber1.Handle( new Message1 { Id = "1" } );
+            Subscriber1.Handle( new Message1 { Id = "error" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
+
+            task.Wait();
+            task.Result.Count.Should().Be( 1 );
+            task.Result[0].OfType<Message1>().Id.Should().Be( "error" );
+        }
+
+        [Test]
+        public void WhenMethodShouldCatchTheMomentWhenMessagesHandledUnorderedOrBreakByException()
+        {
+            var exception = new Exception( "exception1" );
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message1>( msg => msg.Id == "2" )
+                    .And<Message2>( msg => msg.Id == "3" )
+                    .BreakBy<Message1>( 
+                        msg =>
+                        {
+                            if ( msg.Id == "error" )
+                                throw exception;
+                            return false;
+                        } ) );
+            Subscriber1.Handle( new Message1 { Id = "1" } );
+            Subscriber1.Handle( new Message1 { Id = "error" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
+
+            new Action( () => task.Wait() ).ShouldThrow<Exception>().WithMessage( exception.Message );
+        }
+
+
+        [Test]
+        public void WhenMethodShouldCatchTheMomentWhenMessagesHandledOrderedOrBreakByMessage()
+        {
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message1>( msg => msg.Id == "2" )
+                    .And<Message2>( msg => msg.Id == "3" )
+                    .Ordered()
+                    .BreakBy<Message1>( msg => msg.Id == "error" ) );
+            Subscriber1.Handle( new Message1 { Id = "1" } );
+            Subscriber1.Handle( new Message1 { Id = "error" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
+
+            task.Wait();
+            task.Result.Count.Should().Be( 1 );
+            task.Result[0].OfType<Message1>().Id.Should().Be( "error" );
+        }
+
+        [Test]
+        public void WhenMethodShouldCatchTheMomentWhenMessagesHandledOrderedOrBreakByException()
+        {
+            var exception = new Exception( "exception1" );
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message1>( msg => msg.Id == "2" )
+                    .And<Message2>( msg => msg.Id == "3" )
+                    .Ordered()
+                    .BreakBy<Message1>(
+                        msg =>
+                        {
+                            if( msg.Id == "error" )
+                                throw exception;
+                            return false;
+                        } ) );
+            Subscriber1.Handle( new Message1 { Id = "1" } );
+            Subscriber1.Handle( new Message1 { Id = "error" } );
+            Subscriber1.Handle( new Message1 { Id = "2" } );
+            Subscriber1.Handle( new Message2 { Id = "3" } );
+
+            new Action( () => task.Wait() ).ShouldThrow<Exception>().WithMessage( exception.Message );
+        }
+
+
+        [Test]
+        public void WhenMethodShouldBeStoppedByTimeout()
+        {
+            var task = Subscriber1
+                .When( MessageMatch
+                    .Is<Message1>( msg => msg.Id == "1" )
+                    .WithTimeout( 100 ) );
+
+            Thread.Sleep( 110 );
+            Subscriber1.Handle( new Message1 { Id = "1" } );
 
             new Action( () => task.Wait() ).ShouldThrow<TimeoutException>();
         }
-
-        [Test]
-        public void EventQueueSubscriberShouldOnCatchingMultipleMessagesAsyncShouldWaitAllQueuedMessagesProcessing()
-        {
-            var task = Subscriber1.CatchMessagesAsync<Message1>(
-                mandatory: new Func<Message1, bool>[] { msg => msg.Id == "1", msg => msg.Id == "3" },
-                optional: new Func<Message1, bool>[] { msg =>
-                    {
-                        if ( msg.Id == "wrong" )
-                            throw new InvalidOperationException();
-                        return false; // if return true - it will not be processed for other messages, because handler already "processed"
-                    } },
-                waitUnprocessed: true );
-
-            Subscriber1.Handle( new Message1 { Id = "1" } );
-            Subscriber1.Handle( new Message1 { Id = "2" } );
-            Subscriber1.Handle( new Message1 { Id = "3" } );
-            Subscriber1.Handle( new Message1 { Id = "4" } );
-            Subscriber1.Handle( new Message1 { Id = "5" } );
-
-            task.Wait();
-            task.Status.Should().Be( TaskStatus.RanToCompletion );
-            Subscriber1.ProcessedMessages.Count.Should().Be( 5 );
-        }
-
-        #endregion
 
     }
 }
