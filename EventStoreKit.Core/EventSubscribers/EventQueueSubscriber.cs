@@ -6,7 +6,6 @@ using System.Reactive.Linq;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Threading;
-using System.Threading.Tasks;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
@@ -18,7 +17,7 @@ using Newtonsoft.Json;
 
 namespace EventStoreKit.Projections
 {
-    public abstract class EventQueueSubscriber : IEventSubscriber, IEventCatch
+    public abstract class EventQueueSubscriber : IEventSubscriber
     {
         #region Private fields
 
@@ -26,7 +25,6 @@ namespace EventStoreKit.Projections
 
         private readonly BlockingCollection<EventInfo> MessageQueue;
         private readonly Dictionary<Type, IMessageHandler> Handlers;
-        private readonly List<IMessageHandler> DynamicHandlers;
         
 // ReSharper disable RedundantNameQualifier
         private System.Threading.Timer OnIddleTimer;
@@ -85,22 +83,8 @@ namespace EventStoreKit.Projections
                     Log.Info( "{0} handled ( version = {1} ). Unprocessed events: {2}", msgType.Name, message.Version, MessageQueue.Count );
                 }
 
-                // process dynamic handlers
-                lock ( DynamicHandlers )
-                {
-                    DynamicHandlers
-                        .Where( handler => handler.IsAlive && ( handler.Type == msgType || handler.Type == typeof(Message) ) )
-                        .ToList()
-                        .ForEach( handler =>
-                        {
-                            handler.Process( message );
-                        } );
-                    DynamicHandlers.RemoveAll( h => !h.IsAlive );
-                }
-
                 if( !IsRebuild )
                     MessageHandled.ExecuteAsync( this, new MessageEventArgs( message ) );
-                    //MessageHandled.Execute( this, new MessageEventArgs( message ) );
             }
             catch ( Exception ex )
             {
@@ -265,7 +249,6 @@ namespace EventStoreKit.Projections
             LogFactory = context.LoggerFactory;
 
             Handlers = new Dictionary<Type, IMessageHandler>();
-            DynamicHandlers = new List<IMessageHandler>();
 
             MessageQueue = new BlockingCollection<EventInfo>();
             MessageQueue.GetConsumingEnumerable()
@@ -302,78 +285,6 @@ namespace EventStoreKit.Projections
         {
             get { return Handlers.Keys; }
         }
-
-        #region Dynamic messages catching
-
-        /// <summary>
-        /// Waits until messages processed
-        /// </summary>
-        /// <returns>The list of matched messages</returns>
-        public TMessage CatchMessage<TMessage>( Func<TMessage, bool> handler, int timeout = DefaultWaitMessageTimeout ) where TMessage : Message
-        {
-            var task = CatchMessagesAsync( new [] { handler }, null, timeout : timeout );
-            task.Wait( timeout );
-            return task.IsCompleted ? task.Result.FirstOrDefault() : null;
-        }
-        public List<TMessage> CatchMessages<TMessage>( params Func<TMessage, bool>[] handlers ) where TMessage : Message
-        {
-            var task = CatchMessagesAsync( handlers, null );
-            task.Wait( DefaultWaitMessageTimeout );
-            return task.Result;
-        }
-        public Task<List<TMessage>> CatchMessagesAsync<TMessage>( params Func<TMessage, bool>[] mandatory ) where TMessage : Message
-        {
-            return CatchMessagesAsync( mandatory, null );
-        }
-        
-        /// <summary>
-        /// Asynchronously waits until messages processed
-        /// </summary>
-        /// <typeparam name="TMessage"></typeparam>
-        /// <param name="mandatory">mandatory handlers</param>
-        /// <param name="optional">optional handlers. 
-        /// Usual case : mandatory events are 'happy path' for the schema, while optional handlers - all exceptional events ( and its handlers can throw exceptions to break the schema )</param>
-        /// <param name="timeout"></param>
-        /// <param name="sequence">if true, then mandatory handlers must be processed in sctrict order, otherwise it can be processed in any order</param>
-        /// <param name="waitUnprocessed">if true, then after successfull processed of mandatory handlers it will wait until all unrpocessed messages in queue are processed</param>
-        /// <returns>The list of matched messages</returns>
-        public Task<List<TMessage>> CatchMessagesAsync<TMessage>(
-            IEnumerable<Func<TMessage, bool>> mandatory,
-            IEnumerable<Func<TMessage, bool>> optional = null,
-            int timeout = DefaultWaitMessageTimeout,
-            bool sequence = false,
-            bool waitUnprocessed = false )
-            where TMessage : Message
-        {
-            var msgType = typeof( TMessage );
-            if ( mandatory == null || ( msgType != typeof( Message ) && !Handlers.ContainsKey( msgType ) ) )
-                return null;
-
-            var handler = new DynamicMessageHandler<TMessage>( mandatory, optional, timeout, sequence: sequence );
-            var task = handler.TaskCompletionSource.Task;
-            if ( waitUnprocessed )
-            {
-                task = task.ContinueWith( t =>
-                {
-                    if ( t.IsFaulted )
-                        throw t.Exception;
-
-                    var key = Guid.NewGuid();
-                    var taskWait = CatchMessagesAsync<SequenceMarkerEvent>( msg => msg.Identity == key );
-                    Handle( new SequenceMarkerEvent { Identity = key } );
-                    taskWait.Wait();
-
-                    return t.Result;
-                } );
-            }
-            lock ( DynamicHandlers )
-            {
-                DynamicHandlers.Add( handler );
-            }
-            return task;
-        }
-
-        #endregion
         
     }
 }

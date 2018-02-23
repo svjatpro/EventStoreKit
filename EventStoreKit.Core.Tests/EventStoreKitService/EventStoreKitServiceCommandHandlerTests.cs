@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using CommonDomain.Core;
+using EventStoreKit.Core.EventSubscribers;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -84,7 +85,9 @@ namespace EventStoreKit.Tests
                 .RegisterEventSubscriber<Subscriber1>();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
-            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1,bool>>{ msg => msg.Id == id1, msg => msg.Id == id2 } );
+            var wait = subscriber.When( MessageMatch
+                .Is<TestEvent1>( msg => msg.Id == id1 )
+                .And<TestEvent1>( msg => msg.Id == id2 ) );
             Service.SendCommand( new Command1{ Id = id1 } );
             Service.SendCommand( new Command2{ Id = id2 } );
             wait.Wait( 1000 );
@@ -107,7 +110,7 @@ namespace EventStoreKit.Tests
                 .RegisterEventSubscriber<Subscriber1>();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
-            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
             Service.SendCommand( new Command1 { Id = id1 } );
             Service.SendCommand( new Command2 { Id = id2 } );
             wait.Wait( 1000 );
@@ -130,7 +133,7 @@ namespace EventStoreKit.Tests
                 .RegisterEventSubscriber<Subscriber1>();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
-            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
             Service.SendCommand( new Command1 { Id = id1 } );
             Service.SendCommand( new Command2 { Id = id2 } );
             wait.Wait( 1000 );
@@ -151,7 +154,7 @@ namespace EventStoreKit.Tests
                 .RegisterEventSubscriber<Subscriber1>();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
-            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
             Service.SendCommand( new Command1 { Id = id1, CreatedBy = userId } );
             Service.SendCommand( new Command2 { Id = id2, CreatedBy = userId } );
             wait.Wait( 1000 );
@@ -172,7 +175,7 @@ namespace EventStoreKit.Tests
                 .RegisterEventSubscriber<Subscriber1>();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
-            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
             Service.SendCommand( new Command1 { Id = id1, Created = time } );
             Service.SendCommand( new Command2 { Id = id2, Created = time } );
             wait.Wait( 1000 );
@@ -192,7 +195,7 @@ namespace EventStoreKit.Tests
                 .RegisterEventSubscriber<Subscriber1>();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
-            var wait = subscriber.CatchMessagesAsync( new List<Func<TestEvent1, bool>> { msg => msg.Id == id1, msg => msg.Id == id2 } );
+            var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
             Service.SendCommand( new Command1 { Id = id1 } );
             Service.SendCommand( new Command2 { Id = id2 } );
             wait.Wait( 1000 );
