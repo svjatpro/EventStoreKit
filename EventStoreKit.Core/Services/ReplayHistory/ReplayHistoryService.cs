@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using EventStoreKit.Constants;
+using EventStoreKit.Core.EventSubscribers;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -18,7 +18,6 @@ namespace EventStoreKit.Services
 
         private const string SagaTypeHeader = "SagaType";
         private readonly IEventPublisher EventPublisher;
-        private readonly EventSequence EventSequence;
         private readonly ILogger<ReplayHistoryService> Logger;
         private ICommitsIterator Iterator;
 
@@ -26,7 +25,7 @@ namespace EventStoreKit.Services
         private Dictionary<IEventSubscriber, ProjectionRebuildInfo> Subscribers;
         private enum RebuildStatus { Ready, Started, WaitingForProjections }
         private volatile RebuildStatus Status = RebuildStatus.Ready;
-        
+
         #endregion
 
         #region Private methods
@@ -38,7 +37,6 @@ namespace EventStoreKit.Services
                 @event.ProcessEvent( e =>
                 {
                     e.Version = commit.StreamRevision;
-                    //SetTimestamp( e, commit );
                     model.Replay( e );
                 } );
             }
@@ -52,7 +50,6 @@ namespace EventStoreKit.Services
             foreach ( var model in projections )
                 model.Handle( new SystemCleanedUpEvent() );
 
-            //var commits = LoadNextCommits( interval );
             iterator.Reset();
             var commits = iterator.LoadNext();
             while ( commits.Any() )
@@ -66,28 +63,47 @@ namespace EventStoreKit.Services
                         ReplayCommit( commit, model );
                     }
                 }
-                //commits = LoadNextCommits( interval );
                 commits = iterator.LoadNext();
                 var count = commits.Count;
-                if ( projectionProgressAction != null )
-                {
-                    EventSequence.OnFinish( null, ( p, id ) =>
-                    {
-                        if ( Subscribers.ContainsKey( p ) )
-                        {
-                            Subscribers[p].MessagesProcessed += count;
-                            projectionProgressAction( p, Subscribers[p] );
-                        }
-                    } );
-                }
-                else
-                {
-                    Subscribers.ToList().ForEach( p => p.Value.MessagesProcessed += count );
-                }
-                if ( commits.Any() )
-                {
-                    EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
-                }
+
+                var tasks = Subscribers.Keys
+                    .Select( subscriber =>
+                    { 
+                        return subscriber
+                            .QueuedMessages()
+                            .ContinueWith( t =>
+                            {
+                                Subscribers[subscriber].MessagesProcessed += count;
+                                projectionProgressAction.Do( action => action( subscriber, Subscribers[subscriber] ) );
+                            } );
+                    } )
+                    .ToArray();
+                Task.WaitAll( tasks );
+
+                    //    .ToList()
+                    //    .ForEach( task => task
+                    //        .ContinueWith( t =>
+                    //        {
+
+                    //        } ) );
+
+                    //EventSequence.OnFinish( null, ( p, id ) =>
+                    //{
+                    //    if ( Subscribers.ContainsKey( p ) )
+                    //    {
+                    //        Subscribers[p].MessagesProcessed += count;
+                    //        projectionProgressAction( p, Subscribers[p] );
+                    //    }
+                    //} );
+                //}
+                //else
+                //{
+                //    Subscribers.ToList().ForEach( p => p.Value.MessagesProcessed += count );
+                //}
+                //if ( commits.Any() )
+                //{
+                //    EventSequence.Wait( projections, EventStoreConstants.RebuildSessionIdentity );
+                //}
             }
         }
 
@@ -96,12 +112,10 @@ namespace EventStoreKit.Services
         public ReplayHistoryService(
             IStoreEvents store,
             IEventPublisher eventPublisher,
-            EventSequence eventSequence,
             ILogger<ReplayHistoryService> logger,
             ICommitsIterator iterator = null )
         {
             EventPublisher = eventPublisher;
-            EventSequence = eventSequence;
             Logger = logger;
             Iterator = iterator ?? new CommitsIteratorByPeriod( store );
         }
@@ -150,15 +164,31 @@ namespace EventStoreKit.Services
                 {
                     RebuildInternal( projections, Iterator, subscriberProgressAction );
                     Status = RebuildStatus.WaitingForProjections;
-                    EventSequence.OnFinish(
-                        id =>
+                    var tasks = Subscribers.Keys
+                        .Select( subscriber =>
                         {
-                            finishAllAction.Do( a => a() );
-                            Status = RebuildStatus.Ready;
-                        },
-                        ( projection, id ) => finishSubscriberAction.Do( a => a( projection ) ),
-                        projections,
-                        EventStoreConstants.RebuildSessionIdentity );
+                            return subscriber
+                                .QueuedMessages()
+                                .ContinueWith( t =>
+                                {
+                                    finishSubscriberAction.Do( action => action( subscriber ) );
+                                    Subscribers[subscriber].Done = true;
+                                } );
+                        } )
+                        .ToArray();
+                    Task.WaitAll( tasks );
+                    finishAllAction.Do( a => a() );
+                    Status = RebuildStatus.Ready;
+
+                    //EventSequence.OnFinish(
+                    //    id =>
+                    //    {
+                    //        finishAllAction.Do( a => a() );
+                    //        Status = RebuildStatus.Ready;
+                    //    },
+                    //    ( projection, id ) => finishSubscriberAction.Do( a => a( projection ) ),
+                    //    projections,
+                    //    EventStoreConstants.RebuildSessionIdentity );
                 }
                 catch ( Exception ex )
                 {
@@ -182,10 +212,13 @@ namespace EventStoreKit.Services
                 case RebuildStatus.Started:
                     return Subscribers;
                 case RebuildStatus.WaitingForProjections:
-                    return EventSequence
-                        .GetActiveProjections( EventStoreConstants.RebuildSessionIdentity )
-                        .ToDictionary( p => p, p => Subscribers[p] );
-// ReSharper disable RedundantCaseLabel
+                    return Subscribers
+                        .Where( kvp => !kvp.Value.Done )
+                        .ToDictionary( kvp => kvp.Key, kvp => kvp.Value );
+                //return EventSequence
+                //    .GetActiveProjections( EventStoreConstants.RebuildSessionIdentity )
+                //    .ToDictionary( p => p, p => Subscribers[p] );
+                // ReSharper disable RedundantCaseLabel
                 case RebuildStatus.Ready:
 // ReSharper restore RedundantCaseLabel
                 default:

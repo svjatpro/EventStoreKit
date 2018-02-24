@@ -36,8 +36,9 @@ namespace EventStoreKit.Tests
             public void Handle( Message message ){}
             public void Replay( Message message ){}
             public IEnumerable<Type> HandledEventTypes => new List<Type>();
-            public event EventHandler<SequenceEventArgs> SequenceFinished;
+            
             public event EventHandler<MessageEventArgs> MessageHandled;
+            public event EventHandler<MessageEventArgs> MessageSequenceHandled;
         }
         private class Subscriber2 : Subscriber1 { }
         private class Subscriber3 : EventQueueSubscriber { public Subscriber3( IEventStoreSubscriberContext context ) : base( context ) {} }

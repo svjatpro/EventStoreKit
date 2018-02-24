@@ -220,7 +220,6 @@ namespace EventStoreKit.Projections
         }
 
         protected virtual void PreprocessMessage( Message message ) { }
-        protected virtual void OnSequenceFinished( SequenceMarkerEvent message ) { }
         protected virtual void OnStreamOnIdle( StreamOnIdleEvent message ) { }
 
         #endregion
@@ -229,8 +228,7 @@ namespace EventStoreKit.Projections
 
         private void Apply( SequenceMarkerEvent msg )
         {
-            OnSequenceFinished( msg );
-            SequenceFinished.Execute( this, new SequenceEventArgs( msg.Identity ) );
+            MessageSequenceHandled.ExecuteAsync( this, new MessageEventArgs( msg ) );
         }
 
         private void Apply( StreamOnIdleEvent msg )
@@ -240,8 +238,8 @@ namespace EventStoreKit.Projections
 
         #endregion
 
-        public event EventHandler<SequenceEventArgs> SequenceFinished;
         public event EventHandler<MessageEventArgs> MessageHandled;
+        public event EventHandler<MessageEventArgs> MessageSequenceHandled;
 
         protected EventQueueSubscriber( IEventStoreSubscriberContext context )
         {
@@ -265,7 +263,7 @@ namespace EventStoreKit.Projections
                 .ForEach( interfaceType =>
                 {
                     var messageType = interfaceType.GetGenericArguments()[0];
-                    createHandlerMehod.MakeGenericMethod( messageType ).Invoke( this, new object[] { } );
+                    createHandlerMehod?.MakeGenericMethod( messageType ).Invoke( this, new object[] { } );
                 } );
 
             Register<SequenceMarkerEvent>( Apply );
@@ -281,10 +279,6 @@ namespace EventStoreKit.Projections
             Handle( message, true );
         }
 
-        public IEnumerable<Type> HandledEventTypes
-        {
-            get { return Handlers.Keys; }
-        }
-        
+        public IEnumerable<Type> HandledEventTypes => Handlers.Keys;
     }
 }

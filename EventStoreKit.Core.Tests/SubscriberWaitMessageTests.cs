@@ -1,21 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Configuration;
 using System.Reactive.Concurrency;
 using System.Threading;
-using System.Threading.Tasks;
 using EventStoreKit.Core.EventSubscribers;
 using EventStoreKit.Logging;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
-using EventStoreKit.Projections.MessageHandler;
 using EventStoreKit.Services;
 using EventStoreKit.Services.Configuration;
 using EventStoreKit.Utility;
 using FluentAssertions;
-using FluentAssertions.Common;
 using NSubstitute;
-using NSubstitute.ClearExtensions;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -36,16 +31,11 @@ namespace EventStoreKit.Tests
         {
             public readonly List<MessageProcessInfo> ProcessedMessages = new List<MessageProcessInfo>();
             public readonly List<MessageProcessInfo> PreProcessedMessages = new List<MessageProcessInfo>();
-            public readonly List<Guid> SequenceMarkerEvents = new List<Guid>();
 
             protected override void PreprocessMessage( Message message )
             {
                 PreProcessedMessages.Add( new MessageProcessInfo { Message = message } );
                 Console.WriteLine( "PreprocessMessage : " + message.GetType().Name + " " + PreProcessedMessages.Count );
-            }
-            protected override void OnSequenceFinished( SequenceMarkerEvent message )
-            {
-                SequenceMarkerEvents.Add( message.Identity );
             }
             protected override void OnStreamOnIdle( StreamOnIdleEvent message ){}
 
@@ -90,7 +80,7 @@ namespace EventStoreKit.Tests
             for ( var i = 0; i < count; i++ )
                 Subscriber1.Handle( new Message1 { Id = i.ToString() } );
 
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             Subscriber1.ProcessedMessages.Count.Should().Be( count );
         }

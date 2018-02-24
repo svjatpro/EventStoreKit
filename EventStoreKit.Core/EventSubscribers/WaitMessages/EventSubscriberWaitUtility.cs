@@ -14,13 +14,25 @@ namespace EventStoreKit.Core.EventSubscribers
         /// Wait until all messages, which are in EventSubscriber queue at the moment of the method call, will be processed
         ///  key point here, that there is guarantee, that each IEventSubscriber instance have its own message queue and process it synchronously
         /// </summary>
-        public static void WaitMessages( this IEventSubscriber subscriber )
+        public static Task QueuedMessages( this IEventSubscriber subscriber, Guid? identity = null )
         {
-            var identity = Guid.NewGuid();
-            var sequenceMarker = subscriber.When<SequenceMarkerEvent>( msg => msg.Identity == identity );
-            subscriber.Handle( new SequenceMarkerEvent{ Identity = identity } );
-
-            sequenceMarker.Wait();
+            if( identity == null )
+                identity = Guid.NewGuid();
+            var completion = new TaskCompletionSource<SequenceMarkerEvent>();
+            
+            void Handler( object sender, MessageEventArgs arg )
+            {
+                var message = arg.Message.OfType<SequenceMarkerEvent>();
+                if ( message.With( msg => msg.Identity == identity ) )
+                {
+                    completion.SetResult( message );
+                    subscriber.MessageSequenceHandled -= Handler;
+                }
+            }
+            subscriber.MessageSequenceHandled += Handler;
+            subscriber.Handle( new SequenceMarkerEvent{ Identity = identity.GetValueOrDefault() } );
+            
+            return completion.Task;
         }
 
         /// <summary>

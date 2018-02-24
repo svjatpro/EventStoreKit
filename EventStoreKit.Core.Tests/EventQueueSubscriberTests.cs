@@ -33,18 +33,12 @@ namespace EventStoreKit.Tests
         {
             public readonly List<MessageProcessInfo> ProcessedMessages = new List<MessageProcessInfo>();
             public readonly List<MessageProcessInfo> PreProcessedMessages = new List<MessageProcessInfo>();
-            public readonly List<Guid> SequenceMarkerEvents = new List<Guid>();
             public int OnIddleCounter;
 
             protected override void PreprocessMessage( Message message )
             {
                 PreProcessedMessages.Add( new MessageProcessInfo { Message = message } );
                 Console.WriteLine( "PreprocessMessage : " + message.GetType().Name + " " + PreProcessedMessages.Count );
-            }
-
-            protected override void OnSequenceFinished( SequenceMarkerEvent message )
-            {
-                SequenceMarkerEvents.Add( message.Identity );
             }
 
             protected override void OnStreamOnIdle( StreamOnIdleEvent message )
@@ -110,7 +104,7 @@ namespace EventStoreKit.Tests
             Subscriber1.Handle( new Message2 { Id = "2" } );
             Subscriber1.Handle( new Message1 { Id = "3" } );
 
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             Subscriber1.ProcessedMessages[0].Message.OfType<Message1>().Id.Should().Be( "1" );
             Subscriber1.ProcessedMessages[1].Message.OfType<Message2>().Id.Should().Be( "2" );
@@ -125,7 +119,7 @@ namespace EventStoreKit.Tests
             Subscriber1.Replay( new Message1 { Id = "3" } );
             Subscriber1.Handle( new Message1 { Id = "4" } );
 
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             Subscriber1.ProcessedMessages[0].IsReplay.Should().Be( false );
             Subscriber1.ProcessedMessages[1].IsReplay.Should().Be( true );
@@ -147,7 +141,7 @@ namespace EventStoreKit.Tests
 
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message3 { Id = "3" } );
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             Subscriber1.ProcessedMessages[0].Message.OfType<Message1>().Id.Should().Be( "1" );
             postProcessed1.Should().BeFalse();
@@ -164,7 +158,7 @@ namespace EventStoreKit.Tests
 
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message3 { Id = "3" } );
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             Subscriber1.ProcessedMessages.Should().BeEmpty();
             postProcessed1.Should().BeTrue();
@@ -182,7 +176,7 @@ namespace EventStoreKit.Tests
 
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message3 { Id = "3" } );
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             Subscriber1.ProcessedMessages[0].Message.OfType<Message1>().Id.Should().Be( "1" );
             postProcessed1.Should().Be( "12" );
@@ -200,7 +194,7 @@ namespace EventStoreKit.Tests
 
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message3 { Id = "3" } );
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             Subscriber1.ProcessedMessages[0].Message.OfType<Message1>().Id.Should().Be( "1" );
             postProcessed1.Should().Be( "21" );
@@ -217,7 +211,7 @@ namespace EventStoreKit.Tests
             Subscriber1.Handle( new Message1 { Id = "1" } );
             Subscriber1.Handle( new Message2 { Id = "2" } );
             Subscriber1.Handle( new Message1 { Id = "3" } );
-            Subscriber1.WaitMessages();
+            Subscriber1.QueuedMessages().Wait();
 
             var start = 0;
             for ( ; start < Subscriber1.PreProcessedMessages.Count && Subscriber1.PreProcessedMessages[start].Message is StreamOnIdleEvent; start++ );
@@ -225,19 +219,6 @@ namespace EventStoreKit.Tests
             Subscriber1.PreProcessedMessages[start++].Message.OfType<Message1>().Id.Should().Be( "1" );
             Subscriber1.PreProcessedMessages[start++].Message.OfType<Message2>().Id.Should().Be( "2" );
             Subscriber1.PreProcessedMessages[start].Message.OfType<Message1>().Id.Should().Be( "3" );
-        }
-
-        [Test]
-        public void EventQueueSubscriberShouldAllowToOverrideSequenceMarkerEventProcedure()
-        {
-            var id = Guid.NewGuid();
-            Subscriber1.WaitMessages();
-            Subscriber1.Handle( new SequenceMarkerEvent { Identity = id } );
-            Subscriber1.Handle( new Message1 { Id = "3" } );
-            Subscriber1.WaitMessages();
-
-            Subscriber1.SequenceMarkerEvents.Count.Should().Be( 3 );
-            Subscriber1.SequenceMarkerEvents[1].Should().Be( id );
         }
 
         [Test]

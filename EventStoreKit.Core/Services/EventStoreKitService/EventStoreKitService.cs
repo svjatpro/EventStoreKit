@@ -292,6 +292,14 @@ namespace EventStoreKit.Services
             return property;
         }
 
+        private List<IEventSubscriber> GetSubscribersInstances()
+        {
+            return EventSubscribers.Values
+                .Select( factory => factory() )
+                .Distinct()
+                .ToList();
+        }
+
         #endregion
         
         public EventStoreKitService( bool initialize = true )
@@ -509,19 +517,9 @@ namespace EventStoreKit.Services
 
         public void Wait( params IEventSubscriber[] subscribers )
         {
-            var markerMessage = new SequenceMarkerEvent{ Identity = Guid.NewGuid() };
-            var targets =
-                subscribers.Any() ?
-                subscribers.ToList() :
-                EventSubscribers.Values
-                    .Select( factory => factory() )
-                    .Distinct()
-                    .ToList();
-
-            var tasks = targets
-                .Select( subscriber => subscriber.When<SequenceMarkerEvent>( msg => msg.Identity == markerMessage.Identity ) )
-                .ToArray();
-            targets.ForEach( subscriber => subscriber.Handle( markerMessage ) );
+            // todo: send message through the publisher
+            var targets = subscribers.Any() ? subscribers.ToList() : GetSubscribersInstances();
+            var tasks = targets.Select( t => t.QueuedMessages() ).ToArray();
             Task.WaitAll( tasks );
         }
 
@@ -530,12 +528,14 @@ namespace EventStoreKit.Services
             StoreEvents.Advanced.Purge();
 
             var msg = new SystemCleanedUpEvent();
-            EventSubscribers
-                .Values.ToList()
-                .Select( subscriberFactory => subscriberFactory() )
-                .ToList()
-                .ForEach( s => { s.Handle( msg ); } );
-            Wait();
+            var tasks = GetSubscribersInstances()
+                .Select( s =>
+                {
+                    s.Handle( msg );
+                    return s.QueuedMessages();
+                } )
+                .ToArray();
+            Task.WaitAll( tasks );
         }
 
         #endregion

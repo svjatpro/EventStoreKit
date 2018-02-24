@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
 using FluentAssertions;
-using NSubstitute.ExceptionExtensions;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -29,11 +27,13 @@ namespace EventStoreKit.Tests
             {
                 ProcessedEvents.Add( message );
                 MessageHandled.ExecuteAsync( this, new MessageEventArgs( message ) );
+                if( message is SequenceMarkerEvent )
+                    MessageSequenceHandled.ExecuteAsync( this, new MessageEventArgs( message ) );
             }
             public void Replay( Message message ) {}
             public IEnumerable<Type> HandledEventTypes => new List<Type>{ typeof(TestEvent1) };
-            public event EventHandler<SequenceEventArgs> SequenceFinished;
             public event EventHandler<MessageEventArgs> MessageHandled;
+            public event EventHandler<MessageEventArgs> MessageSequenceHandled;
         }
         private class Subscriber2 : Subscriber1{}
         

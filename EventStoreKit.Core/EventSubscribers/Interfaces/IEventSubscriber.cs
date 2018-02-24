@@ -14,16 +14,6 @@ namespace EventStoreKit.Projections
         }
     }
 
-    public class SequenceEventArgs : EventArgs
-    {
-        public readonly Guid SequenceIdentity;
-
-        public SequenceEventArgs( Guid sequenceIdentity )
-        {
-            SequenceIdentity = sequenceIdentity;
-        }
-    }
-
     public interface IEventSubscriber
     {
         /// <summary>
@@ -41,9 +31,14 @@ namespace EventStoreKit.Projections
         /// </summary>
         IEnumerable<Type> HandledEventTypes { get; }
 
-        [Obsolete]
-        event EventHandler<SequenceEventArgs> SequenceFinished;
-
+        /// <summary>
+        /// Occurese on each message handled
+        /// </summary>
         event EventHandler<MessageEventArgs> MessageHandled;
+
+        /// <summary>
+        /// Occurese on each SequenceMarkerEvent handled
+        /// </summary>
+        event EventHandler<MessageEventArgs> MessageSequenceHandled;
     }
 }
