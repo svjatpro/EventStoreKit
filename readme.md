@@ -20,3 +20,8 @@ EventStoreKit is a library, which provide various tool to work with EventSourcin
 From **NuGet**:
 * `Install-Package EventStoreKit`
 
+### EventStoreKit Extensions ###
+
+- [EventStoreKit.linq2db](https://github.com/svjatpro/EventStoreKit/tree/2.0.0.x/EventStoreKit.linq2db) - Implementation of IDataBaseProvider based on [linq2db](https://github.com/linq2db/linq2db)
+
+
