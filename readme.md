@@ -34,7 +34,7 @@ in this way, the controller method have to looks like this
 
 ```cs
 service.SendCommand( new Command1{ Id = id } );
-subscriber.QueuedMessages().Wait();  // Wait until all messages, which are in EventSubscriber queue at the moment of the method call, will be processed
+subscriber.QueuedMessages().Wait();  // Wait until all messages, which are in subscriber queue will be processed
 
 ```
 

@@ -23,7 +23,7 @@ namespace EventStoreKit.DbProviders
                         InternalInstance.BeginTransaction( IsolationLevel );
                 }
                 return InternalInstance;
-            } 
+            }
         }
 
         private bool UseTransaction;
