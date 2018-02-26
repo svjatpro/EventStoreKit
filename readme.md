@@ -29,15 +29,16 @@ From **NuGet**:
 
 ## Waiting for message processing by subscribers
 
-Sometimes it's necessary to make sure that the subscriber has processed the message you send or messages, coused by command you sent.
+Sometimes it's necessary to make sure that the subscriber has processed the message you send 
+or messages, coused by command you sent.
 There are following extension methods to do this:
 
-* Task QueuedMessages( this IEventSubscriber subscriber )
+*  QueuedMessages( this IEventSubscriber subscriber )
+
 Wait until all messages, which are in subscriber queue at the moment will be processed
 ```cs
-var task = subscriber.QueuedMessages();
 service.SendCommand( new Command1{ Id = id } );
-task.Wait();
+subscriber.QueuedMessages().Wait();
 ```
 * Task<TMessage> When( this IEventSubscriber subscriber, Func<TMessage,bool> predicat )
 Wait for message processed by subscriber, detected by simple expression
