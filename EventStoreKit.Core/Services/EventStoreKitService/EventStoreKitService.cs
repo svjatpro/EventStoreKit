@@ -37,6 +37,7 @@ namespace EventStoreKit.Services
         private IIdGenerator IdGenerator;
         
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
+        private readonly List<Type> AggregateCommandHandlers = new List<Type>();
         private readonly List<Func<ICommandHandler>> CommandHandlers = new List<Func<ICommandHandler>>();
         private readonly List<IServiceProperty> ServiceProperties = new List<IServiceProperty>();
 
@@ -68,6 +69,7 @@ namespace EventStoreKit.Services
 
             // register command handlers
             CommandHandlers.ForEach( ConfigureCommandHandlerRouts );
+            AggregateCommandHandlers.ForEach( ConfigureAggregateCommandHandlerRouts );
 
             // register subscribers
             EventSubscribers.Values.ToList().ForEach( ConfigureEventSubscriberRouts );
@@ -118,7 +120,63 @@ namespace EventStoreKit.Services
                     .UsingJsonSerialization();
             }
         }
-        
+
+        private void ConfigureAggregateCommandHandlerRouts( Type aggregateType )
+        {
+            var commandHandlerInterfaceType = typeof( ICommandHandler<> );
+            var registerCommandMehod = GetType().GetMethod( "RegisterAggregateCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
+
+            aggregateType
+                .GetInterfaces()
+                .Where( handlerInterface => handlerInterface.IsGenericType && handlerInterface.GetGenericTypeDefinition() == commandHandlerInterfaceType.GetGenericTypeDefinition() )
+                .ToList()
+                .ForEach( handlerInterface =>
+                {
+                    // ReSharper disable PossibleNullReferenceException
+                    var genericArgs = handlerInterface.GetGenericArguments();
+                    registerCommandMehod
+                        .MakeGenericMethod( genericArgs[0], aggregateType )
+                        .Invoke( this, new object[] {} );
+                    // ReSharper restore PossibleNullReferenceException
+                } );
+        }
+
+        private void RegisterAggregateCommandHandler<TCommand,TAggregate>()
+            where TCommand : DomainCommand
+            where TAggregate : class, IAggregate
+        {
+            // register Action as handler to dispatcher
+            var repositoryFactory = new Func<IRepository>( () => new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() ) );
+
+            var handleAction = new Action<TCommand>( cmd =>
+            {
+                var repository = repositoryFactory();
+                var aggregate = repository.GetById<TAggregate>( cmd.Id );
+                var handler = aggregate.OfType<ICommandHandler<TCommand>>();
+                var logger = LoggerFactory.Value.Create<EventStoreKitService>();
+
+                if( cmd.Created == default( DateTime ) )
+                    cmd.Created = DateTime.Now;
+                if( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
+                    cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
+
+                handler.Handle( cmd );
+                logger.Info( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
+
+                aggregate
+                    .With( entity => entity.GetUncommittedEvents() )
+                    .Do( messages => messages.OfType<Message>().ToList().ForEach(
+                        message =>
+                        {
+                            message.Created = cmd.Created;
+                            message.CreatedBy = cmd.CreatedBy;
+                        } ) );
+
+                repository.Save( aggregate, IdGenerator.NewGuid() );
+            } );
+            Dispatcher.RegisterHandler( handleAction );
+        }
+
         private void ConfigureCommandHandlerRouts( Func<ICommandHandler> handlerFactory )
         {
             var handlerType = handlerFactory().GetType();
@@ -128,14 +186,14 @@ namespace EventStoreKit.Services
 
             handlerType
                 .GetInterfaces()
-                .Where( h => h.Name == commandHandlerInterfaceType.Name )
+                .Where( handlerInterface => handlerInterface.IsGenericType && handlerInterface.GetGenericTypeDefinition() == commandHandlerInterfaceType.GetGenericTypeDefinition() ) 
                 .ToList()
-                .ForEach( h =>
+                .ForEach( handlerInterface =>
                 {
                     // ReSharper disable PossibleNullReferenceException
-                    var genericArgs = h.GetGenericArguments();
+                    var genericArgs = handlerInterface.GetGenericArguments();
                     var factory = adjustFactoryTypeMehod
-                        .MakeGenericMethod( typeof( ICommandHandler ), h )
+                        .MakeGenericMethod( typeof( ICommandHandler ), handlerInterface )
                         .Invoke( this, new object[] { handlerFactory } );
                     registerCommandMehod
                         .MakeGenericMethod( genericArgs[0], genericArgs[1] )
@@ -143,6 +201,7 @@ namespace EventStoreKit.Services
                     // ReSharper restore PossibleNullReferenceException
                 } );
         }
+
         private void RegisterCommandHandler<TCommand, TEntity>( Func<ICommandHandler<TCommand, TEntity>> handlerFactory )
             where TCommand : DomainCommand
             where TEntity : class, IAggregate
@@ -452,6 +511,27 @@ namespace EventStoreKit.Services
         #endregion
 
         #region Register command handlers methods
+
+        public IEventStoreKitServiceBuilder RegisterAggregateCommandHandler<TAggregate>() where TAggregate : ICommandHandler, IAggregate
+        {
+            var aggregateType = typeof(TAggregate);
+            RegisterAggregateCommandHandler( aggregateType );
+            
+            return this;
+        }
+
+        public IEventStoreKitServiceBuilder RegisterAggregateCommandHandler( Type aggregateType )
+        {
+            if( !typeof( IAggregate ).IsAssignableFrom( aggregateType ) )
+                throw new ArgumentException();
+
+            AggregateCommandHandlers.Add( aggregateType );
+
+            if( Initialized )
+                ConfigureAggregateCommandHandlerRouts( aggregateType );
+
+            return this;
+        }
 
         public IEventStoreKitServiceBuilder RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new()
         {

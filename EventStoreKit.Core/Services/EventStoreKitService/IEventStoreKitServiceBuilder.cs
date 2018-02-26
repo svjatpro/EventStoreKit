@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
+using CommonDomain;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -41,6 +42,8 @@ namespace EventStoreKit.Services
         IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>() where TSubscriber : class, IEventSubscriber;
         IEventStoreKitServiceBuilder RegisterEventSubscriber( Func<IEventSubscriber> subscriberFactory );
 
+        IEventStoreKitServiceBuilder RegisterAggregateCommandHandler<TAggregate>() where TAggregate : ICommandHandler, IAggregate;
+        IEventStoreKitServiceBuilder RegisterAggregateCommandHandler( Type aggregateType );
         IEventStoreKitServiceBuilder RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new();
         IEventStoreKitServiceBuilder RegisterCommandHandler( Func<ICommandHandler> handlerFactory );
 

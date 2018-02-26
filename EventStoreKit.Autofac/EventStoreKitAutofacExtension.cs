@@ -5,6 +5,7 @@ using System.Reflection;
 using Autofac;
 using Autofac.Core;
 using Autofac.Features.GeneratedFactories;
+using CommonDomain;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -141,11 +142,24 @@ namespace EventStoreKit.Autofac
                     // IDbProviderFactory
                     ctx.ResolveOptional<IDbProviderFactory>().Do( factory => service.DbProviderFactorySubscriber.Value = factory );
 
-                    // Register event handlers
+                    // Register aggregates command handlers
+                    var cmdAggregatesHandlers = ctx
+                        .ComponentRegistry
+                        .Registrations
+                        .Where( registration => 
+                            registration.Activator.LimitType.IsAssignableTo<IAggregate>() &&
+                            registration.Activator.LimitType.GetInterfaces().Any( i =>
+                                i.IsGenericType && i.GetGenericTypeDefinition() == typeof( ICommandHandler<> ).GetGenericTypeDefinition() ) )
+                        .Select( registration => registration.Activator.LimitType )
+                        .ToList();
+                    cmdAggregatesHandlers.ForEach( type => service.RegisterAggregateCommandHandler( type ) );
+
+                    // Register command handlers
                     var cmdHandlers = ctx
                         .ComponentRegistry
                         .Registrations
-                        .Where( registration => registration.Activator.LimitType.IsAssignableTo<ICommandHandler>() )
+                        .Where( registration => registration.Activator.LimitType.GetInterfaces().Any( i => 
+                            i.IsGenericType && i.GetGenericTypeDefinition() == typeof( ICommandHandler<,> ).GetGenericTypeDefinition() ) )
                         .Select( registration =>
                         {
                             var factoryGenerator = new FactoryGenerator( typeof( Func<ICommandHandler> ), registration, ParameterMapping.ByType );
