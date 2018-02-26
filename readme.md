@@ -35,14 +35,16 @@ There are following extension methods to do this:
 * Task QueuedMessages( this IEventSubscriber subscriber )
 Wait until all messages, which are in subscriber queue at the moment will be processed
 ```cs
+var task = subscriber.QueuedMessages();
 service.SendCommand( new Command1{ Id = id } );
-subscriber.QueuedMessages().Wait();
+task.Wait();
 ```
 * Task<TMessage> When( this IEventSubscriber subscriber, Func<TMessage,bool> predicat )
 Wait for message processed by subscriber, detected by simple expression
 ```cs
+var task = subscriber.When<Message1>( msg => msg.Id == id );
 service.SendCommand( new Command1{ Id = id } );
-subscriber.When<Message1>( msg => msg.Id == id ).Wait();
+task.Wait();
 ```
 
 * Task<List<TMessage>> When( this IEventSubscriber subscriber, MessageMatch match )
@@ -51,15 +53,15 @@ return all matched messages
 ```cs
 try
 {
-    service.SendCommand( new RequestCommand{ Id = id } );
-    subscriber
+    var task = subscriber
         .When( MessageMatch
             .Is<ConfirmedMessage1>( msg => msg.Id == id )
             .And<ConfirmedMessage2>( msg => msg.Id == id )
             .Ordered() // default option is unordered processing
             .BreakBy<RejectedMessage1>( msg => msg.Id == id )
             .BreakBy<RejectedMessage2>( msg => { if( msg.Id == id ) throw new Exception1(); } ) )
-        .Wait();
+    service.SendCommand( new RequestCommand{ Id = id } );
+    task.Wait();
 }
 catch( Exception1 exception )
 {
