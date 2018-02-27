@@ -1,8 +1,7 @@
 ﻿using System;
-using EventStoreKit.Logging;
 using log4net;
 
-namespace EventStoreKit.log4net
+namespace EventStoreKit.Logging
 {
     public class LoggerFactory : ILoggerFactory
     {

@@ -15,7 +15,7 @@ using EventStoreKit.Utility;
 
 namespace EventStoreKit.Projections
 {
-    public abstract class SqlProjectionBase : EventQueueSubscriber, IReadModelOwner
+    public abstract class SqlProjectionBase : EventQueueSubscriber
     {
         #region Private fields
 
@@ -171,7 +171,6 @@ namespace EventStoreKit.Projections
             Register<StreamOnIdleEvent>( m => Flush(), ActionMergeMethod.MultipleRunBefore );
         }
 
-        public abstract Type GetPrimaryReadModel { get; }
         public List<Type> GetReadModels => ReadModels.ToList();
     }
 
@@ -255,7 +254,5 @@ namespace EventStoreKit.Projections
 
             return new QueryResult<TModel>( result, new SearchOptions.SearchOptions(), total: result.Count, summary: summary );
         }
-
-        public override Type GetPrimaryReadModel => typeof(TModel);
     }
 }

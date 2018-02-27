@@ -27,6 +27,85 @@ From **NuGet**:
 - [EventStoreKit.Autofac](https://github.com/svjatpro/EventStoreKit/tree/2.0.0.x/EventStoreKit.Autofac) - Integration with [Autofac](https://github.com/autofac/Autofac)
 
 
+## Command Handlers
+
+First approach is to map commands to aggregate method
+
+```cs
+class Aggregate1 : AggregateBase,
+    ICommandHandler<Command1>,
+    ICommandHandler<Command2>
+{
+    public Aggregate1( Guid id ) { ... }
+
+    public void Handle( Command1 command )
+    {
+        Raise( new Event1{} );
+    }
+
+    public void Handle( Command2 command )
+    {
+        if( ... )
+            throw new InvalidOperationException();
+        Raise( new Event1{} );
+    }
+}
+
+// register aggregate with service on the application start
+service.RegisterAggregateCommandHandler<Aggregate1>();
+
+// and then all sent commands will be handled by appropriate method of aggregate, initialized by EventStore
+service.SendCommand( new Command1{...} );
+```
+
+Second approach is to map commands to external command handler class,
+use this approach if handler can call more than one aggregate methods, depends on command content,
+or if there is complex validation logic, which can be applyed before aggregate creation
+```cs
+class Aggregate1 : AggregateBase
+{
+    public Aggregate1( Guid id ) { ... }
+    public Aggregate1( CreateCommand1 cmd ) 
+    {
+        Raise( new CreatedEvent{} );
+    }
+
+    public void Method2( Command2 command )
+    {
+        Raise( new Event2{} );
+    }
+}
+class AggregateHandler : 
+    ICommandHandler<CreateCommand1, Aggregate1>,
+    ICommandHandler<Command2, Aggregate1>
+{
+    public void Handle( CreateCommand1 command, CommandHandlerContext<Aggregate1> context )
+    {
+        context.Entity = new Aggregate1();
+    }
+
+    public void Handle( Command2 command, CommandHandlerContext<Aggregate1> context )
+    {
+        if( cmd... ) // in this case aggregate is not created
+            throw new InvalidOperationException();
+
+        if( cmd... )
+            context.Entity.Method1();
+
+        if( cmd... )
+            context.Entity.Method2();
+    }
+}
+
+// register aggregate handler with service on the application start
+service.RegisterCommandHandler<AggregateHandler>();
+
+// and then all sent commands will be handled by appropriate method of aggregate, initialized by EventStore
+service.SendCommand( new Command1{...} );
+```
+
+
+
 ## Waiting for message processing by subscribers
 
 Sometimes it's necessary to make sure that the subscriber has processed the message you send 

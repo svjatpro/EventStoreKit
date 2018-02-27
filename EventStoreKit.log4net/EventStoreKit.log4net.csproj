@@ -18,6 +18,7 @@
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
     <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
     <Version>2.0.0</Version>
+    <RootNamespace>EventStoreKit.Logging</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net47' ">

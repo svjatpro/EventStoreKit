@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using EventStoreKit.Logging;
 using EventStoreKit.Utility;
 using log4net;
 
-namespace EventStoreKit.log4net
+namespace EventStoreKit.Logging
 {
     public class Logger<T> : Logger, ILogger<T>
     {
