@@ -81,7 +81,7 @@ class AggregateHandler :
 {
     public void Handle( CreateCommand1 command, CommandHandlerContext<Aggregate1> context )
     {
-        context.Entity = new Aggregate1();
+        context.Entity = new Aggregate1( command );
     }
 
     public void Handle( Command2 command, CommandHandlerContext<Aggregate1> context )
