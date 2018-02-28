@@ -96,7 +96,7 @@ namespace EventStoreKit.Utility
 
             Enumerable.OfType<DomainCommand>( saga.GetUndispatchedMessages() )
                 .ToList()
-                .ForEach( commandBus.Send );
+                .ForEach( commandBus.SendCommand );
 
             saga.ClearUndispatchedMessages();
             repository.Save( saga, Guid.NewGuid(), a => { } );
@@ -124,7 +124,7 @@ namespace EventStoreKit.Utility
 
             Enumerable.OfType<DomainCommand>( saga.GetUndispatchedMessages() )
                 .ToList()
-                .ForEach( commandBus.Send );
+                .ForEach( commandBus.SendCommand );
 
             saga.ClearUncommittedEvents();
             saga.ClearUndispatchedMessages();
@@ -149,7 +149,7 @@ namespace EventStoreKit.Utility
 
             Enumerable.OfType<DomainCommand>( saga.GetUndispatchedMessages() )
                 .ToList()
-                .ForEach( commandBus.Send );
+                .ForEach( commandBus.SendCommand );
 
             saga.ClearUncommittedEvents();
             saga.ClearUndispatchedMessages();

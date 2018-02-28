@@ -17,11 +17,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="EventStoreKit.Core" Version="2.0.0" />
+    <None Remove="db1-journal" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--PackageReference Include="EventStoreKit.Core" Version="2.0.0" />
     <PackageReference Include="EventStoreKit.Autofac" Version="2.0.0" />
     <PackageReference Include="EventStoreKit.linq2db" Version="2.0.0" />
-    <PackageReference Include="EventStoreKit.Northwind" Version="2.0.0" />
-    <PackageReference Include="Autofac" Version="4.6.2" />
+    <PackageReference Include="EventStoreKit.Northwind" Version="2.0.0" /-->
     <PackageReference Include="NEventStore" Version="5.2.0" />
     <PackageReference Include="Rx-Core" Version="2.2.5" />
     <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
@@ -29,6 +32,12 @@
     <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
     <PackageReference Include="linq2db" Version="1.10.2" />
     <PackageReference Include="System.Data.SQLite" Version="1.0.106" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\EventStoreKit.Core\EventStoreKit.Core.csproj" />
+    <ProjectReference Include="..\..\EventStoreKit.linq2db\EventStoreKit.linq2db.csproj" />
+    <ProjectReference Include="..\..\EventStoreKit.Northwind\EventStoreKit.Northwind.csproj" />
   </ItemGroup>
 
   <ItemGroup>

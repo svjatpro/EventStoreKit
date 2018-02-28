@@ -102,7 +102,7 @@ namespace EventStoreKit.Services
                     {
                         try
                         {
-                            CommandBus.Send( cmd );
+                            CommandBus.SendCommand( cmd );
                         }
                         catch ( Exception ex )
                         {

@@ -8,6 +8,7 @@ using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using FluentAssertions;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -59,7 +60,7 @@ namespace EventStoreKit.Tests
         [SetUp]
         protected void Setup()
         {
-            Service = new EventStoreKitService();
+            Service = new EventStoreKitService( false );
         }
 
         [TearDown]
@@ -77,7 +78,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterAggregateCommandHandler<Aggregate1>()
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch
@@ -102,7 +104,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterAggregateCommandHandler<Aggregate1>()
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -121,11 +124,17 @@ namespace EventStoreKit.Tests
         [Test]
         public void EventsRaisedByCommandHandlerShouldBeInitializedWithCurrentUserId()
         {
+            var userId = Guid.NewGuid();
+            var userProvider = Substitute.For<ICurrentUserProvider>();
+            userProvider.CurrentUserId.Returns( userId );
+
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             Service
+                .SetCurrentUserProvider( userProvider )
                 .RegisterAggregateCommandHandler<Aggregate1>()
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -134,7 +143,7 @@ namespace EventStoreKit.Tests
             wait.Wait( 1000 );
 
             var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
-            processed[0].CreatedBy.Should().NotBe( default( Guid ) );
+            processed[0].CreatedBy.Should().Be( userId );
             processed[0].CreatedBy.Should().Be( processed[1].CreatedBy );
         }
 
@@ -146,7 +155,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterAggregateCommandHandler<Aggregate1>()
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -167,7 +177,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterAggregateCommandHandler<Aggregate1>()
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -187,7 +198,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterAggregateCommandHandler<Aggregate1>()
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );

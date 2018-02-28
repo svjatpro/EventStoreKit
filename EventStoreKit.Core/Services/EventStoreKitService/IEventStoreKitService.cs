@@ -4,12 +4,10 @@ using EventStoreKit.Projections;
 
 namespace EventStoreKit.Services
 {
-    public interface IEventStoreKitService : IDisposable
+    public interface IEventStoreKitService : ICommandBus, IDisposable
     {
         TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber;
         
-        void SendCommand( DomainCommand command );
-
         void RaiseEvent( DomainEvent message );
         void Publish( DomainEvent message );
 
