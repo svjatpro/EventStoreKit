@@ -189,7 +189,7 @@ namespace EventStoreKit.Autofac
                     return service;
                 } )
                 .As<IEventStoreKitService>()
-                //.As<ICommandBus>()
+                .As<ICommandBus>()
                 //.As<IEventPublisher>()
                 .AutoActivate()
                 .SingleInstance()

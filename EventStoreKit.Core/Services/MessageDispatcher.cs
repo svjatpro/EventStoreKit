@@ -52,7 +52,7 @@ namespace EventStoreKit.Services
             Logger.Debug( "Event published: {0}", @event.GetType().Name );
         }
         
-        public void Send<TCommand>( TCommand command ) where TCommand : DomainCommand
+        public void SendCommand<TCommand>( TCommand command ) where TCommand : DomainCommand
         {
             if ( command == null )
                 throw new ArgumentNullException( "command" );

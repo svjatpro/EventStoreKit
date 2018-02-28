@@ -9,6 +9,7 @@ using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using FluentAssertions;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace EventStoreKit.Tests
@@ -64,7 +65,7 @@ namespace EventStoreKit.Tests
         [SetUp]
         protected void Setup()
         {
-            Service = new EventStoreKitService();
+            Service = new EventStoreKitService( false );
         }
 
         [TearDown]
@@ -82,7 +83,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterCommandHandler<CommandHandler1>()
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch
@@ -107,7 +109,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterCommandHandler( () => new CommandHandler1() )
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -126,11 +129,17 @@ namespace EventStoreKit.Tests
         [Test]
         public void EventsRaisedByCommandHandlerShouldBeInitializedWithCurrentUserId()
         {
+            var userId = Guid.NewGuid();
+            var userProvider = Substitute.For<ICurrentUserProvider>();
+            userProvider.CurrentUserId.Returns( userId );
+
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             Service
+                .SetCurrentUserProvider( userProvider )
                 .RegisterCommandHandler( () => new CommandHandler1() )
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -151,7 +160,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterCommandHandler( () => new CommandHandler1() )
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -172,7 +182,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterCommandHandler( () => new CommandHandler1() )
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );
@@ -192,7 +203,8 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .RegisterCommandHandler( () => new CommandHandler1() )
-                .RegisterEventSubscriber<Subscriber1>();
+                .RegisterEventSubscriber<Subscriber1>()
+                .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
 
             var wait = subscriber.When( MessageMatch.Is<TestEvent1>( msg => msg.Id == id1 ).And<TestEvent1>( msg => msg.Id == id2 ) );

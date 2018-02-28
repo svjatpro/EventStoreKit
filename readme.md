@@ -8,19 +8,68 @@ EventStoreKit is a library, which provide various tool to work with EventSourcin
 
 * small code examples, registration, and use of stuff, probably dummy code
 
-## Easy migration to another technology
-
-* there are various extentions, like
-* switch to another IOC
-* switch to another DbProvider
-* switch to log4net
-
 ## Let's get started
 
 From **NuGet**:
-* `Install-Package EventStoreKit`
+* `Install-Package EventStoreKit.Core`
+
+* Create EventStoreKit service
+```cs
+var service = new EventStoreKitService()
+    .Initialize();
+```
+
+* Create domain classes
+```cs
+class Aggregate1 : AggregateBase,
+    ICommandHandler<Command1>
+{
+    public Aggregate1( Guid id )
+    {
+        Id = id;
+        Register<Event1>( Apply );
+    }
+    public void Handle( Command1 )
+    {
+        Raise( new Event1{ Id = id, ... } );
+    }
+}
+
+service = new EventStoreKitService()
+    .RegisterAggregateCommandHandler<Aggregate1>()
+    .Initialize();
+```
+
+* Send command
+```cs
+service.SendCommand( new Command1{...} );
+```
+
+* Subscribe for events
+```cs
+public class Projection1 : SqlProjection,
+    IEventHandler<Event1>
+{
+    public Handle( Event1 message )
+    {
+    }
+}
+
+service = new EventStoreKitServie()
+    .RegisterAggregateCommandHandler<Aggregate1>()
+    .RegisterEventSubscriber<Projection1>()
+    .Initialize();
+
+projection = service.GetSubscriber<Projection1>();
+
+```
+
+
+
 
 ## EventStoreKit Extensions ##
+
+Easy migration to another technology
 
 - [EventStoreKit.linq2db](https://github.com/svjatpro/EventStoreKit/tree/2.0.0.x/EventStoreKit.linq2db) - Implementation of IDataBaseProvider and IDataBaseProviderFactory based on [linq2db](https://github.com/linq2db/linq2db)
 - [EventStoreKit.log4net](https://github.com/svjatpro/EventStoreKit/tree/2.0.0.x/EventStoreKit.log4net) - Implementation of ILogger and ILoggerFactory based on [log4net](https://github.com/apache/logging-log4net)
@@ -243,3 +292,25 @@ public HttpResponseMessage Post( CreateUserRequest user )
 }
 ```
 Please note, that it is recomended to use this methods for short live scenarios only, to not reduce performance.
+
+## ICurrentUserProvider
+
+Used to initialize published messages with UserId, to track initiators of the events
+
+```cs
+// example of custom user provider
+class CurrentUserProvider : ICurrentUserIdProvider
+{
+    public CurrentUserId
+    {
+        get
+        {
+            var login = Thread.CurrentPrincipal.Identity.Name.With( n => n.Trim().ToLower() );
+            if ( string.IsNullOrWhiteSpace( login ) )
+                return null;
+            return YourUserProjection.GetByLogin( login ).With( u => u.UserId );
+        }
+    }
+}
+```
+

@@ -1,12 +1,15 @@
 ﻿using System;
 using CommonDomain.Core;
+using EventStoreKit.Handler;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
 {
-    public class OrderDetail : AggregateBase
+    public class OrderDetail : AggregateBase,
+        ICommandHandler<CreateOrderDetailCommand>,
+        ICommandHandler<RemoveOrderDetailCommand>
     {
         #region private fields
 
@@ -46,12 +49,12 @@ namespace EventStoreKit.Northwind.Aggregates
             Register<OrderDetailRemovedEvent>( Apply );
         }
 
-        public OrderDetail( CreateOrderDetailCommand cmd ) : this( cmd.Id )
+        public void Handle( CreateOrderDetailCommand cmd )
         {
             RaiseEvent( cmd.CopyTo( c => new OrderDetailCreatedEvent() ) );
         }
 
-        public void Remove( RemoveOrderDetailCommand cmd )
+        public void Handle( RemoveOrderDetailCommand cmd )
         {
             RaiseEvent( cmd.CopyTo( c => new OrderDetailRemovedEvent() ) );
         }

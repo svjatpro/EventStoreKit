@@ -1,12 +1,15 @@
 ﻿using System;
 using CommonDomain.Core;
+using EventStoreKit.Handler;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
 {
-    public class Product : AggregateBase
+    public class Product : AggregateBase,
+        ICommandHandler<CreateProductCommand>,
+        ICommandHandler<UpdateProductCommand>
     {
         #region Private fields
 
@@ -46,12 +49,12 @@ namespace EventStoreKit.Northwind.Aggregates
             Register<ProductPriceUpdatedEvent>( Apply );
         }
         
-        public Product( CreateProductCommand cmd ) : this( cmd.Id )
+        public void Handle( CreateProductCommand cmd )
         {
             RaiseEvent( cmd.CopyTo( c => new ProductCreatedEvent()) );
         }
 
-        public void Update(UpdateProductCommand cmd)
+        public void Handle( UpdateProductCommand cmd )
         {
             if( ProductName != cmd.ProductName )
                 RaiseEvent( new ProductRenamedEvent

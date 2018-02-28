@@ -1,12 +1,15 @@
 ﻿using System;
 using CommonDomain.Core;
+using EventStoreKit.Handler;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Utility;
 
 namespace EventStoreKit.Northwind.Aggregates
 {
-    public class Customer : AggregateBase
+    public class Customer : AggregateBase,
+        ICommandHandler<CreateCustomerCommand>,
+        ICommandHandler<UpdateCustomerCommand>
     {
         #region Private fields
 
@@ -76,12 +79,12 @@ namespace EventStoreKit.Northwind.Aggregates
             Register<CustomerAddresChangedEvent>( Apply );
         }
         
-        public Customer(CreateCustomerCommand cmd ) : this( cmd.Id )
+        public void Handle( CreateCustomerCommand cmd )
         {
-            RaiseEvent( cmd.CopyTo( c => new CustomerCreatedEvent() ) ); // its Ok if all fields equal in command and event
+            RaiseEvent( cmd.CopyTo( c => new CustomerCreatedEvent() ) );
         }
 
-        public void Update( UpdateCustomerCommand cmd )
+        public void Handle( UpdateCustomerCommand cmd )
         {
             if( CompanyName != cmd.CompanyName )
                 RaiseEvent( new CustomerRenamedEvent { Id = Id, CompanyName = cmd.CompanyName } );

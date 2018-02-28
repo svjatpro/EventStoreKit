@@ -33,7 +33,6 @@ namespace EventStoreKit.Services
         private ICommandBus CommandBus;
         private IStoreEvents StoreEvents;
         private IConstructAggregates ConstructAggregates;
-        private ICurrentUserProvider CurrentUserProvider;
         private IIdGenerator IdGenerator;
         
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
@@ -57,7 +56,6 @@ namespace EventStoreKit.Services
         private void InitializeCommon()
         {
             IdGenerator = new SequentialIdgenerator();
-            CurrentUserProvider = new CurrentUserProviderStub { CurrentUserId = Guid.NewGuid() };
 
             // initialize properties
             ServiceProperties.ForEach( property => property.Initialize() );
@@ -157,8 +155,8 @@ namespace EventStoreKit.Services
 
                 if( cmd.Created == default( DateTime ) )
                     cmd.Created = DateTime.Now;
-                if( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
-                    cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
+                if( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.Value.CurrentUserId != null )
+                    cmd.CreatedBy = CurrentUserProvider.Value.CurrentUserId.Value;
 
                 handler.Handle( cmd );
                 logger.Info( "{0} processed; version = {1}", cmd.GetType().Name, cmd.Version );
@@ -217,8 +215,8 @@ namespace EventStoreKit.Services
 
                 if ( cmd.Created == default( DateTime ) )
                     cmd.Created = DateTime.Now;
-                if ( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
-                    cmd.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
+                if ( cmd.CreatedBy == Guid.Empty && CurrentUserProvider.Value.CurrentUserId != null )
+                    cmd.CreatedBy = CurrentUserProvider.Value.CurrentUserId.Value;
                 var context = new CommandHandlerContext<TEntity>( () => repository.GetById<TEntity>( cmd.Id ) );
 
                 handler.Handle( cmd, context );
@@ -373,7 +371,8 @@ namespace EventStoreKit.Services
             Scheduler = InitializeProperty<IScheduler>( () => new NewThreadScheduler( action => new Thread( action ) { IsBackground = true } ) ); // todo: repace with another scheduler
             DbProviderFactorySubscriber = InitializeProperty<IDbProviderFactory>( () => new DbProviderFactoryStub() );
             DbProviderFactoryEventStore = InitializeProperty<IDbProviderFactory>( () => new DbProviderFactoryStub() );
-            
+            CurrentUserProvider = InitializeProperty<ICurrentUserProvider>( () => new CurrentUserProviderStub { CurrentUserId = Guid.Empty } );
+
             if ( initialize )
                 Initialize();
         }
@@ -385,6 +384,7 @@ namespace EventStoreKit.Services
         public ServiceProperty<IScheduler> Scheduler { get; }
         public ServiceProperty<IDbProviderFactory> DbProviderFactorySubscriber { get; }
         public ServiceProperty<IDbProviderFactory> DbProviderFactoryEventStore { get; }
+        public ServiceProperty<ICurrentUserProvider> CurrentUserProvider { get; }
 
         public IEventStoreKitServiceBuilder SetConfiguration( IEventStoreConfiguration configuration )
         {
@@ -399,6 +399,12 @@ namespace EventStoreKit.Services
         public IEventStoreKitServiceBuilder SetScheduler( IScheduler scheduler )
         {
             Scheduler.Value = scheduler;
+            return this;
+        }
+
+        public IEventStoreKitServiceBuilder SetCurrentUserProvider( ICurrentUserProvider currentUserProvider )
+        {
+            CurrentUserProvider.Value = currentUserProvider;
             return this;
         }
 
@@ -571,15 +577,15 @@ namespace EventStoreKit.Services
             return (TSubscriber) EventSubscribers[typeof(TSubscriber)]();
         }
         
-        public void SendCommand( DomainCommand command )
+        public void SendCommand<TCommand>( TCommand command ) where TCommand : DomainCommand
         {
-            CommandBus.Send( command );
+            CommandBus.SendCommand( command );
         }
 
         public void RaiseEvent( DomainEvent message )
         {
-            if ( message.CreatedBy == Guid.Empty && CurrentUserProvider.CurrentUserId != null )
-                message.CreatedBy = CurrentUserProvider.CurrentUserId.Value;
+            if ( message.CreatedBy == Guid.Empty && CurrentUserProvider.Value.CurrentUserId != null )
+                message.CreatedBy = CurrentUserProvider.Value.CurrentUserId.Value;
             if ( message.Created == default(DateTime) || message.Created <= DateTime.MinValue )
                 message.Created = DateTime.Now.TrimMilliseconds();
 

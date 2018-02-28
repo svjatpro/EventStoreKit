@@ -17,12 +17,14 @@ namespace EventStoreKit.Services
         ServiceProperty<IScheduler> Scheduler { get; }
         ServiceProperty<IDbProviderFactory> DbProviderFactorySubscriber { get; }
         ServiceProperty<IDbProviderFactory> DbProviderFactoryEventStore { get; }
+        ServiceProperty<ICurrentUserProvider> CurrentUserProvider { get; }
 
         Dictionary<Type, Func<IEventSubscriber>> GetEventSubscribers();
 
         IEventStoreKitServiceBuilder SetConfiguration( IEventStoreConfiguration configuration );
         IEventStoreKitServiceBuilder SetLoggerFactory( ILoggerFactory factory );
         IEventStoreKitServiceBuilder SetScheduler( IScheduler scheduler );
+        IEventStoreKitServiceBuilder SetCurrentUserProvider( ICurrentUserProvider currentUserProvider );
 
         IEventStoreKitServiceBuilder SetDataBase<TDbProviderFactory>( IDataBaseConfiguration configuration ) where TDbProviderFactory : IDbProviderFactory;
         IEventStoreKitServiceBuilder SetDataBase( Type dbProviderFactoryType, IDataBaseConfiguration configuration );

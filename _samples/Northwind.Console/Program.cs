@@ -1,55 +1,58 @@
-﻿using Autofac;
-using System;
+﻿using System;
 using System.Linq;
-using EventStoreKit.Autofac;
+using EventStoreKit.Core.EventSubscribers;
 using EventStoreKit.DbProviders;
-using EventStoreKit.Handler;
 using EventStoreKit.linq2db;
 using EventStoreKit.Messages;
 using EventStoreKit.Northwind.Aggregates;
-using EventStoreKit.Northwind.AggregatesHandlers;
 using EventStoreKit.Northwind.Messages.Commands;
 using EventStoreKit.Northwind.Messages.Events;
 using EventStoreKit.Northwind.Projections.Customer;
 using EventStoreKit.Northwind.Projections.OrderDetail;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
-using EventStoreKit.Utility;
-using Module = Autofac.Module;
 
 namespace EventStoreKit.Northwind.Console
 {
+    //public class NorthwindModule : Module
+    //{
+    //    protected override void Load( ContainerBuilder builder )
+    //    {
+    //        // register command handlers
+    //        builder.RegisterType<CustomerHandler>()
+    //            .As<ICommandHandler<CreateCustomerCommand, Customer>>()
+    //            .As<ICommandHandler<UpdateCustomerCommand, Customer>>();
+    //        builder.RegisterType<ProductHandler>().AsImplementedInterfaces();
+    //        builder.RegisterType<OrderHandler>().AsImplementedInterfaces().SingleInstance();
+    //        builder.RegisterType<OrderDetailHandler>().AsImplementedInterfaces();
 
-    public class NorthwindModule : Module
-    {
-        protected override void Load( ContainerBuilder builder )
-        {
-            // register command handlers
-            builder.RegisterType<CustomerHandler>()
-                .As<ICommandHandler<CreateCustomerCommand, Customer>>()
-                .As<ICommandHandler<UpdateCustomerCommand, Customer>>();
-            builder.RegisterType<ProductHandler>().AsImplementedInterfaces();
-            builder.RegisterType<OrderHandler>().AsImplementedInterfaces().SingleInstance();
-            builder.RegisterType<OrderDetailHandler>().AsImplementedInterfaces();
+    //        // configure data base
+    //        builder
+    //            .RegisterInstance( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" ) )
+    //            .As<IDataBaseConfiguration>()
+    //            .SingleInstance();
+    //        builder
+    //            .RegisterType<Linq2DbProviderFactory>()
+    //            .As<IDbProviderFactory>()
+    //            .SingleInstance();
 
-            // configure data base
-            builder
-                .RegisterInstance( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=db1" ) )
-                .As<IDataBaseConfiguration>()
-                .SingleInstance();
-            builder
-                .RegisterType<Linq2DbProviderFactory>()
-                .As<IDbProviderFactory>()
-                .SingleInstance();
+    //        // register projections
+    //        builder.RegisterType<ProductProjection>().SingleInstance();
+    //        builder.RegisterType<CustomerProjection>().SingleInstance();
+    //        builder.RegisterType<OrderProjection>().SingleInstance();
+    //        builder.RegisterType<OrderDetailProjection>().SingleInstance();
+    //    }
+    //}
 
-            // register projections
-            builder.RegisterType<ProductProjection>().SingleInstance();
-            builder.RegisterType<CustomerProjection>().SingleInstance();
-            builder.RegisterType<OrderProjection>().SingleInstance();
-            builder.RegisterType<OrderDetailProjection>().SingleInstance();
-        }
-    }
-        
+    //var builder = new ContainerBuilder();
+    //builder.RegisterModule<NorthwindModule>();
+    //builder.InitializeEventStoreKitService();
+
+    //var container = builder.Build();
+
+    //var service = container.Resolve<IEventStoreKitService>();
+
+
     static class Program
     {
         #region Private methods
@@ -59,7 +62,7 @@ namespace EventStoreKit.Northwind.Console
             where TEvent : DomainEvent
         {
             var subscriber = service.GetSubscriber<TSubscriber>();
-            var messageHandled = subscriber.OfType<IEventCatch>().CatchMessagesAsync<TEvent>( msg => msg.Id == cmd.Id );
+            var messageHandled = subscriber.When<TEvent>( msg => msg.Id == cmd.Id );
             service.SendCommand( cmd );
             messageHandled.Wait( 1000 );
         }
@@ -135,16 +138,19 @@ namespace EventStoreKit.Northwind.Console
 
         static void Main()
         {
-            var builder = new ContainerBuilder();
-            builder.RegisterModule<NorthwindModule>();
-            builder.InitializeEventStoreKitService();
+            var service = new EventStoreKitService( false )
+                .SetDataBase<Linq2DbProviderFactory>( new DataBaseConfiguration( DataBaseConnectionType.SqlLite, "data source=northwind.db" ) )
+                .RegisterAggregateCommandHandler<Product>()
+                .RegisterAggregateCommandHandler<Customer>()
+                .RegisterAggregateCommandHandler<Order>()
+                .RegisterAggregateCommandHandler<OrderDetail>()
+                .RegisterEventSubscriber<ProductProjection>()
+                .RegisterEventSubscriber<CustomerProjection>()
+                .RegisterEventSubscriber<OrderProjection>()
+                .RegisterEventSubscriber<OrderDetailProjection>()
+                .Initialize();
 
-            var container = builder.Build();
-
-            var service = container.Resolve<IEventStoreKitService>();
             service.CleanData();
-
-            // ----------------------------------------------
 
             // create customer
             var customerId1 = service.CreateCustomer( "company1", "contact1", "contacttitle1", "contactphone", "address", "city", "country", "region", "zip" );

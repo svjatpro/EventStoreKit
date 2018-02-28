@@ -40,20 +40,17 @@ namespace EventStoreKit.DbProviders
         {
             IsolationLevel = isolationLevel;
             UseTransaction = true;
-            if ( InternalInstance != null )
-                InternalInstance.BeginTransaction( isolationLevel );
+            InternalInstance?.BeginTransaction( isolationLevel );
         }
 
         public void CommitTransaction()
         {
-            if ( InternalInstance != null )
-                InternalInstance.CommitTransaction();
+            InternalInstance?.CommitTransaction();
         }
 
         public void RollbackTransaction()
         {
-            if ( InternalInstance != null )
-                InternalInstance.RollbackTransaction();
+            InternalInstance?.RollbackTransaction();
         }
 
 
@@ -61,8 +58,7 @@ namespace EventStoreKit.DbProviders
 
         public void Dispose()
         {
-            if ( InternalInstance != null )
-                InternalInstance.Dispose();
+            InternalInstance?.Dispose();
         }
 
         #endregion
