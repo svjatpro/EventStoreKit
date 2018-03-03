@@ -7,7 +7,7 @@ namespace EventStoreKit.Projections
     {
         protected readonly ISagaRepository Repository;
 
-        protected SagaEventHandlerBase( 
+        protected SagaEventHandlerBase(
             IEventStoreSubscriberContext context,
             ISagaRepository repository )
             : base( context )

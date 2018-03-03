@@ -33,9 +33,15 @@ namespace EventStoreKit.Services
         private ICommandBus CommandBus;
         private IStoreEvents StoreEvents;
         private IConstructAggregates ConstructAggregates;
+        private IConstructSagas ConstructSagas;
         private IIdGenerator IdGenerator;
+        private Func<IRepository> RepositoryFactory;
+        private Func<ISagaRepository> SagaRepositoryFactory;
         
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
+
+        private readonly Dictionary<Type,Func<string,ISaga>> Sagas = new Dictionary<Type, Func<string, ISaga>>();
+
         private readonly List<Type> AggregateCommandHandlers = new List<Type>();
         private readonly List<Func<ICommandHandler>> CommandHandlers = new List<Func<ICommandHandler>>();
         private readonly List<IServiceProperty> ServiceProperties = new List<IServiceProperty>();
@@ -80,7 +86,10 @@ namespace EventStoreKit.Services
             var wireup = InitializeWireup();
             StoreEvents = new EventStoreAdapter( wireup, LoggerFactory.Value.Create<EventStoreAdapter>(), EventPublisher, CommandBus );
             ConstructAggregates = new EntityFactory();
-            // todo: register also SagaFactory
+            ConstructSagas = new SagaFactory();
+
+            RepositoryFactory = () => new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() );
+            SagaRepositoryFactory = () => new SagaEventStoreRepository(StoreEvents, ConstructSagas );
         }
         
         private Wireup InitializeWireup()
@@ -144,11 +153,9 @@ namespace EventStoreKit.Services
             where TAggregate : class, IAggregate
         {
             // register Action as handler to dispatcher
-            var repositoryFactory = new Func<IRepository>( () => new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() ) );
-
             var handleAction = new Action<TCommand>( cmd =>
             {
-                var repository = repositoryFactory();
+                var repository = RepositoryFactory();
                 var aggregate = repository.GetById<TAggregate>( cmd.Id );
                 var handler = aggregate.OfType<ICommandHandler<TCommand>>();
                 var logger = LoggerFactory.Value.Create<EventStoreKitService>();
@@ -205,11 +212,9 @@ namespace EventStoreKit.Services
             where TEntity : class, IAggregate
         {
             // register Action as handler to dispatcher
-            var repositoryFactory = new Func<IRepository>( () => new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() ) );
-
             var handleAction = new Action<TCommand>( cmd =>
             {
-                var repository = repositoryFactory();
+                var repository = RepositoryFactory();
                 var handler = handlerFactory();
                 var logger = LoggerFactory.Value.Create<EventStoreKitService>();
 
@@ -553,8 +558,29 @@ namespace EventStoreKit.Services
 
             return this;
         }
-
+        
         #endregion
+
+        public IEventStoreKitServiceBuilder RegisterSaga<TSaga>( Func<IEventStoreKitService, string, TSaga> sagaFactory = null, bool chached = false ) where TSaga : ISaga
+        {
+            var sagaType = typeof(TSaga);
+            var factory = sagaFactory.With( f => new Func<string,TSaga>( id => f( this, id ) ) );
+            if ( factory == null )
+            {
+                var f =
+                    TryCreateInstance( sagaType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
+                    TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
+                    TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } ) ??
+                    TryCreateInstance( factoryType, new Dictionary<Type, object>() );
+                if( factory == null )
+                    throw new InvalidOperationException( $"Can't create {factoryType.Name} instance, because there is no appropriate constructor" );
+            }
+
+                
+            Sagas.Add( typeof(TSaga), ( id => sagaFactory( this, id ) ) ?? () );
+
+            return this;
+        }
 
         public IEventStoreKitService Initialize()
         {

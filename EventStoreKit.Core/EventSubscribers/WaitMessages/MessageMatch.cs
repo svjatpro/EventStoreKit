@@ -43,7 +43,7 @@ namespace EventStoreKit.Core.EventSubscribers
         }
         private void ProcessOrdered( Message message )
         {
-            if( MandatoryHandlers.FirstOrDefault().With( match => match( message ) ) )
+            if( MandatoryHandlers.Any() && MandatoryHandlers[0].With( match => match( message ) ) )
             {
                 MandatoryHandlers.RemoveAt( 0 );
                 ResultMessages.Add( message );
@@ -71,7 +71,7 @@ namespace EventStoreKit.Core.EventSubscribers
             BreakingHandlers = new List<Func<Message, bool>>();
             ResultMessages = new List<Message>();
 
-            Timeout = 20000;
+            Timeout = 20000; // to prevent infinite task
         }
 
         public void Start()
