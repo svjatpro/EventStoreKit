@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using CommonDomain;
+using CommonDomain.Core;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
+using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services.Configuration;
 
@@ -48,6 +50,8 @@ namespace EventStoreKit.Services
         IEventStoreKitServiceBuilder RegisterAggregateCommandHandler( Type aggregateType );
         IEventStoreKitServiceBuilder RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new();
         IEventStoreKitServiceBuilder RegisterCommandHandler( Func<ICommandHandler> handlerFactory );
+
+        IEventStoreKitServiceBuilder RegisterSaga<TSaga>( Func<IEventStoreKitService,string,TSaga> sagaFactory = null, bool chached = false ) where TSaga : ISaga;
 
         IEventStoreKitService Initialize();
     }
