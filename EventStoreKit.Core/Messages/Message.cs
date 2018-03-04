@@ -5,11 +5,11 @@ namespace EventStoreKit.Messages
 {
     public abstract class Message
     {
+        public Guid Id { get; set; }
+
         public int Version { get; set; }
 
         public string BucketId { get; set; }
-
-        public string CheckpointToken { get; set; }
 
         public DateTime Created { get; set; }
 

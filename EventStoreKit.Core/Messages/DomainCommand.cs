@@ -6,7 +6,7 @@ namespace EventStoreKit.Messages
     [DataContract]
     public abstract class DomainCommand : Message
     {
-        [DataMember]
-        public Guid Id { get; set; }
+        //[DataMember]
+        //public Guid Id { get; set; }
     }
 }

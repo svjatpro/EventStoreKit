@@ -51,7 +51,7 @@ namespace EventStoreKit.Services
         IEventStoreKitServiceBuilder RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new();
         IEventStoreKitServiceBuilder RegisterCommandHandler( Func<ICommandHandler> handlerFactory );
 
-        IEventStoreKitServiceBuilder RegisterSaga<TSaga>( Func<IEventStoreKitService,string,TSaga> sagaFactory = null, bool chached = false ) where TSaga : ISaga;
+        IEventStoreKitServiceBuilder RegisterSaga<TSaga>( Func<Message,string> getSagaId, Func<IEventStoreKitService, string, TSaga> sagaFactory = null, bool chached = false ) where TSaga : ISaga;
 
         IEventStoreKitService Initialize();
     }

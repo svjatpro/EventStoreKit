@@ -39,8 +39,7 @@ namespace EventStoreKit.Services
         private Func<ISagaRepository> SagaRepositoryFactory;
         
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
-
-        private readonly Dictionary<Type,Func<string,ISaga>> Sagas = new Dictionary<Type, Func<string, ISaga>>();
+        private readonly Dictionary<Type,Func<string,ISaga>> SagasFactories = new Dictionary<Type, Func<string, ISaga>>();
 
         private readonly List<Type> AggregateCommandHandlers = new List<Type>();
         private readonly List<Func<ICommandHandler>> CommandHandlers = new List<Func<ICommandHandler>>();
@@ -77,6 +76,9 @@ namespace EventStoreKit.Services
 
             // register subscribers
             EventSubscribers.Values.ToList().ForEach( ConfigureEventSubscriberRouts );
+
+            // register sagas
+            SagasFactories.ToList().ForEach( kvp => ConfigureSagasRouts( kvp.Key, kvp.Value ) );
         }
 
         private void InitializeEventStore()
@@ -126,6 +128,39 @@ namespace EventStoreKit.Services
                     .InitializeStorageEngine()
                     .UsingJsonSerialization();
             }
+        }
+
+        private void ConfigureSagasRouts( Type sagaType, Func<string, ISaga> factory )
+        {
+            var interfaceType = typeof( IEventHandler<> );
+            var dispatcherType = Dispatcher.GetType();
+
+
+            sagaType
+                .GetInterfaces()
+                .Where( handlerIntefrace => handlerIntefrace.IsGenericType && handlerIntefrace.GetGenericTypeDefinition() == interfaceType.GetGenericTypeDefinition() )
+                .ToList()
+                .ForEach( handlerInterface =>
+                {
+                    // ReSharper disable PossibleNullReferenceException
+                    var genericArgs = handlerInterface.GetGenericArguments();
+
+                    var registerMethod = dispatcherType.GetMethod( "RegisterHandler" ).MakeGenericMethod( genericArgs[0] );
+                    var handleDelegate = new Action<Message>(message =>
+                    {
+                        
+                        var instance = factory(   );
+                        subscriber.Handle(message);
+                    });
+                    registerMethod.Invoke(Dispatcher, new object[] { handleDelegate });
+
+                    //var instance = factory();
+                    //registerCommandMehod
+                    //    .MakeGenericMethod(genericArgs[0], aggregateType)
+                    //    .Invoke(this, new object[] { });
+
+                    // ReSharper restore PossibleNullReferenceException
+                });
         }
 
         private void ConfigureAggregateCommandHandlerRouts( Type aggregateType )
@@ -561,27 +596,42 @@ namespace EventStoreKit.Services
         
         #endregion
 
-        public IEventStoreKitServiceBuilder RegisterSaga<TSaga>( Func<IEventStoreKitService, string, TSaga> sagaFactory = null, bool chached = false ) where TSaga : ISaga
+        public IEventStoreKitServiceBuilder RegisterSaga<TSaga>( 
+            Func<Message, string> getSagaId,
+            Func<IEventStoreKitService, string, TSaga> sagaFactory = null,
+            bool chached = false )
+            where TSaga : ISaga
         {
-            var sagaType = typeof(TSaga);
-            var factory = sagaFactory.With( f => new Func<string,TSaga>( id => f( this, id ) ) );
-            if ( factory == null )
-            {
-                var f =
-                    TryCreateInstance( sagaType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
-                    TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
-                    TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } ) ??
-                    TryCreateInstance( factoryType, new Dictionary<Type, object>() );
-                if( factory == null )
-                    throw new InvalidOperationException( $"Can't create {factoryType.Name} instance, because there is no appropriate constructor" );
-            }
+            // 1. register - add factory to list
+            //    if initialized, registerRoutes
+            // 2. registerRoute
+            //    2.1. get handled events
+            //    2.2. for each event register handler in dispatcher
+            //    2.3. create saga instance ( service, id )
+            //    2.4. replay stored messages
 
-                
-            Sagas.Add( typeof(TSaga), ( id => sagaFactory( this, id ) ) ?? () );
+
+            var sagaType = typeof( TSaga );
+            var factory = sagaFactory.With( f => new Func<Message,ISaga>( message => f( this, message ) ) );
+            //if ( factory == null )
+            //{
+            //    var f =
+            //        TryCreateInstance( sagaType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
+            //        TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
+            //        TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } ) ??
+            //        TryCreateInstance( factoryType, new Dictionary<Type, object>() );
+            //    if( factory == null )
+            //        throw new InvalidOperationException( $"Can't create {factoryType.Name} instance, because there is no appropriate constructor" );
+            //}
+            
+            SagasFactories.Add( sagaType, factory );
+
+            if ( Initialized )
+                ConfigureSagasRouts( sagaType, factory );
 
             return this;
         }
-
+        
         public IEventStoreKitService Initialize()
         {
             if( !Initialized )

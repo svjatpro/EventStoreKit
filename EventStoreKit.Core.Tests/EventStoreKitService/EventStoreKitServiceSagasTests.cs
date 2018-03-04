@@ -106,7 +106,8 @@ namespace EventStoreKit.Tests
 
             Service
                 .RegisterAggregateCommandHandler<Aggregate1>()
-                .RegisterSaga<Saga1>()
+                //.RegisterSaga<Saga1>( msg => $"Saga1_{msg.Id}", ( service, sagaId ) => new Saga1( sagaId ) )
+                .RegisterSaga<Saga1>( ( service, message ) => new Saga1( $"Saga1_{message.Id}" ) )
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
