@@ -8,6 +8,7 @@ namespace EventStoreKit.Services
     public interface ISagaFactory
     {
         SagaFactory RegisterSagaConstructor<TSaga>( Func<string,TSaga> sagaBuilder ) where TSaga : ISaga;
+        SagaFactory RegisterSagaConstructor( Type sagaType, Func<string, ISaga> sagaBuilder );
     }
 
     public class SagaFactory : IConstructSagas, ISagaFactory
@@ -30,6 +31,12 @@ namespace EventStoreKit.Services
         public SagaFactory RegisterSagaConstructor<TSaga>( Func<string,TSaga> sagaBuilder ) where TSaga : ISaga
         {
             SagaBuilders[typeof (TSaga)] = sagaId => sagaBuilder( sagaId );
+            return this;
+        }
+
+        public SagaFactory RegisterSagaConstructor( Type sagaType, Func<string, ISaga> sagaBuilder )
+        {
+            SagaBuilders[sagaType] = sagaBuilder;
             return this;
         }
     }

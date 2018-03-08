@@ -7,16 +7,16 @@ namespace EventStoreKit.Utility
 {
     public static class EventStoreUtility
     {
-        public static void ProcessEvent( this EventMessage evt, Action<Message> eventProcessingMethod )
+        public static void ProcessEvent( this EventMessage evt, Action<DomainEvent> eventProcessingMethod )
         {
-            if ( evt.Body is IEnumerable<Message> )
+            if ( evt.Body is IEnumerable<DomainEvent> )
             {
-                foreach ( var item in evt.Body as IEnumerable<Message> )
+                foreach ( var item in evt.Body as IEnumerable<DomainEvent> )
                     eventProcessingMethod( item );
             }
             else
             {
-                eventProcessingMethod( evt.Body as Message );
+                eventProcessingMethod( evt.Body as DomainEvent );
             }
         }
     }

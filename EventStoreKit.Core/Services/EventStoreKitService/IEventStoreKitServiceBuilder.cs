@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using CommonDomain;
-using CommonDomain.Core;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -12,6 +11,7 @@ using EventStoreKit.Services.Configuration;
 
 namespace EventStoreKit.Services
 {
+
     public interface IEventStoreKitServiceBuilder
     {
         ServiceProperty<IEventStoreConfiguration> Configuration { get; }
@@ -51,7 +51,11 @@ namespace EventStoreKit.Services
         IEventStoreKitServiceBuilder RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new();
         IEventStoreKitServiceBuilder RegisterCommandHandler( Func<ICommandHandler> handlerFactory );
 
-        IEventStoreKitServiceBuilder RegisterSaga<TSaga>( Func<Message,string> getSagaId, Func<IEventStoreKitService, string, TSaga> sagaFactory = null, bool chached = false ) where TSaga : ISaga;
+        IEventStoreKitServiceBuilder RegisterSaga<TSaga>(
+            Dictionary<Type, Func<Message, string>> sagaIdResolve = null,
+            Func<IEventStoreKitService, string, TSaga> sagaFactory = null,
+            bool cached = false )
+            where TSaga : class, ISaga;
 
         IEventStoreKitService Initialize();
     }

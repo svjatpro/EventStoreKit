@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>Northwind.Console</Description>
+    <Description>Northwind.Embedded.Console</Description>
     <Authors>svjatpro</Authors>
     <TargetFramework>net47</TargetFramework>
-    <AssemblyName>Northwind.Console</AssemblyName>
+    <AssemblyName>Northwind.Embedded.Console</AssemblyName>
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
     <ApplicationIcon />
     <OutputType>Exe</OutputType>

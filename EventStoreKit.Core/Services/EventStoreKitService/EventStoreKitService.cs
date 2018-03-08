@@ -10,6 +10,7 @@ using CommonDomain.Core;
 using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Core.EventSubscribers;
+using EventStoreKit.Core.Utility;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -33,19 +34,26 @@ namespace EventStoreKit.Services
         private ICommandBus CommandBus;
         private IStoreEvents StoreEvents;
         private IConstructAggregates ConstructAggregates;
-        private IConstructSagas ConstructSagas;
+        private SagaFactory SagasFactory;
         private IIdGenerator IdGenerator;
         private Func<IRepository> RepositoryFactory;
         private Func<ISagaRepository> SagaRepositoryFactory;
         
         private readonly Dictionary<Type, Func<IEventSubscriber>> EventSubscribers = new Dictionary<Type, Func<IEventSubscriber>>();
-        private readonly Dictionary<Type,Func<string,ISaga>> SagasFactories = new Dictionary<Type, Func<string, ISaga>>();
-
+        private readonly List<SagaRegistrationInfo> SagaRegistration = new List<SagaRegistrationInfo>();
         private readonly List<Type> AggregateCommandHandlers = new List<Type>();
         private readonly List<Func<ICommandHandler>> CommandHandlers = new List<Func<ICommandHandler>>();
+
         private readonly List<IServiceProperty> ServiceProperties = new List<IServiceProperty>();
 
         private bool Initialized;
+
+        private class SagaRegistrationInfo
+        {
+            public Type SagaType { get; set; }
+            public Func<string,ISaga> FactoryMethod { get; set; }
+            public Dictionary<Type, Func<Message, string>> IdResolvingMap { get; set; }
+        }
 
         #endregion
 
@@ -70,6 +78,9 @@ namespace EventStoreKit.Services
             EventPublisher = dispatcher;
             CommandBus = dispatcher;
 
+            ConstructAggregates = new EntityFactory();
+            SagasFactory = new SagaFactory();
+
             // register command handlers
             CommandHandlers.ForEach( ConfigureCommandHandlerRouts );
             AggregateCommandHandlers.ForEach( ConfigureAggregateCommandHandlerRouts );
@@ -78,7 +89,7 @@ namespace EventStoreKit.Services
             EventSubscribers.Values.ToList().ForEach( ConfigureEventSubscriberRouts );
 
             // register sagas
-            SagasFactories.ToList().ForEach( kvp => ConfigureSagasRouts( kvp.Key, kvp.Value ) );
+            SagaRegistration.ForEach( ConfigureSagasRouts );
         }
 
         private void InitializeEventStore()
@@ -87,11 +98,9 @@ namespace EventStoreKit.Services
             
             var wireup = InitializeWireup();
             StoreEvents = new EventStoreAdapter( wireup, LoggerFactory.Value.Create<EventStoreAdapter>(), EventPublisher, CommandBus );
-            ConstructAggregates = new EntityFactory();
-            ConstructSagas = new SagaFactory();
-
+            
             RepositoryFactory = () => new EventStoreRepository( StoreEvents, ConstructAggregates, new ConflictDetector() );
-            SagaRepositoryFactory = () => new SagaEventStoreRepository(StoreEvents, ConstructSagas );
+            SagaRepositoryFactory = () => new SagaEventStoreRepository(StoreEvents, SagasFactory );
         }
         
         private Wireup InitializeWireup()
@@ -130,36 +139,38 @@ namespace EventStoreKit.Services
             }
         }
 
-        private void ConfigureSagasRouts( Type sagaType, Func<string, ISaga> factory )
+        private void ConfigureSagasRouts( SagaRegistrationInfo sagaRegistration )
         {
+            var reg = sagaRegistration;
+
+            // register factory method
+            reg.FactoryMethod.Do( factory => SagasFactory.RegisterSagaConstructor( reg.SagaType, factory ) );
+
             var interfaceType = typeof( IEventHandler<> );
             var dispatcherType = Dispatcher.GetType();
+            var getByIdMethod = typeof(ISagaRepository).GetMethod( "GetById" )?.MakeGenericMethod( reg.SagaType );
 
-
-            sagaType
+            reg.SagaType
                 .GetInterfaces()
                 .Where( handlerIntefrace => handlerIntefrace.IsGenericType && handlerIntefrace.GetGenericTypeDefinition() == interfaceType.GetGenericTypeDefinition() )
                 .ToList()
                 .ForEach( handlerInterface =>
                 {
-                    // ReSharper disable PossibleNullReferenceException
                     var genericArgs = handlerInterface.GetGenericArguments();
-
-                    var registerMethod = dispatcherType.GetMethod( "RegisterHandler" ).MakeGenericMethod( genericArgs[0] );
-                    var handleDelegate = new Action<Message>(message =>
-                    {
-                        
-                        var instance = factory(   );
-                        subscriber.Handle(message);
-                    });
-                    registerMethod.Invoke(Dispatcher, new object[] { handleDelegate });
-
-                    //var instance = factory();
-                    //registerCommandMehod
-                    //    .MakeGenericMethod(genericArgs[0], aggregateType)
-                    //    .Invoke(this, new object[] { });
-
-                    // ReSharper restore PossibleNullReferenceException
+                    
+                    var registerMethod = dispatcherType.GetMethod( "RegisterHandler" )?.MakeGenericMethod( genericArgs[0] );
+                    var handleDelegate = new Action<Message>( 
+                        message =>
+                        {
+                            var sagaId = reg.IdResolvingMap.GetSagaId( reg.SagaType, message );
+                            var sagaRepository = SagaRepositoryFactory();
+                            var saga = getByIdMethod?
+                                .Invoke( sagaRepository, new []{ Bucket.Default, sagaId } )
+                                .OfType<ISaga>();
+                            saga?.Transition( message );
+                            sagaRepository.Save( saga, Guid.NewGuid(), a => { } );
+                        } );
+                    registerMethod?.Invoke(Dispatcher, new object[] { handleDelegate });
                 });
         }
 
@@ -276,36 +287,13 @@ namespace EventStoreKit.Services
             Dispatcher.RegisterHandler( handleAction );
         }
 
-        private TTarget TryCreateInstance<TTarget>( Dictionary<Type, object> arguments )
-        {
-            return TryCreateInstance( typeof(TTarget), arguments ).OfType<TTarget>();
-        }
-        private object TryCreateInstance( Type targetType, Dictionary<Type, object> arguments )
-        {
-            var ctor = targetType
-                .GetConstructors( BindingFlags.Public | BindingFlags.Instance )
-                .FirstOrDefault( c =>
-                {
-                    var args = c.GetParameters();
-                    if( args.Length != arguments.Count )
-                        return false;
-                    var types = arguments.Keys.ToList();
-                    for( var i = 0; i < types.Count; i++ )
-                    {
-                        if( args[i].ParameterType != types[i] )
-                            return false;
-                    }
-                    return true;
-                } );
-            return ctor.With( c => c.Invoke( arguments.Values.ToArray() ) );
-        }
         private IDbProviderFactory InitializeDbProviderFactory( Type factoryType, IDataBaseConfiguration config )
         {
             var factory =
-                TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
-                TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
-                TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } ) ??
-                TryCreateInstance( factoryType, new Dictionary<Type, object> () );
+                factoryType.TryCreateInstance( new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
+                factoryType.TryCreateInstance( new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
+                factoryType.TryCreateInstance( new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } ) ??
+                factoryType.TryCreateInstance( new Dictionary<Type, object>() );
             if( factory == null )
                 throw new InvalidOperationException( $"Can't create {factoryType.Name} instance, because there is no appropriate constructor" );
 
@@ -332,14 +320,14 @@ namespace EventStoreKit.Services
         }
         private TSubscriber InitializeEventSubscriber<TSubscriber>( IEventStoreSubscriberContext context ) where TSubscriber : class, IEventSubscriber
         {
-            var subscriber =
-                TryCreateInstance<TSubscriber>( new Dictionary<Type, object>{ { typeof( IEventStoreSubscriberContext ), context } } ) ??
-                TryCreateInstance<TSubscriber>( new Dictionary<Type, object>() );
+            var subscriberFactory =
+                typeof(TSubscriber).TryCreateInstance( new Dictionary<Type, object>{ { typeof( IEventStoreSubscriberContext ), context } } ) ??
+                typeof(TSubscriber).TryCreateInstance( new Dictionary<Type, object>() );
 
-            if( subscriber  == null )
+            if( subscriberFactory  == null )
                 throw new InvalidOperationException( $"Can't create {typeof( TSubscriber ).Name} instance, because there is no public constructore" );
 
-            return subscriber;
+            return subscriberFactory.OfType<TSubscriber>();
         }
 
         private void ConfigureEventSubscriberRouts( Func<IEventSubscriber> subscriberFactory )
@@ -593,45 +581,34 @@ namespace EventStoreKit.Services
 
             return this;
         }
-        
+
         #endregion
 
-        public IEventStoreKitServiceBuilder RegisterSaga<TSaga>( 
-            Func<Message, string> getSagaId,
+        public IEventStoreKitServiceBuilder RegisterSaga<TSaga>(
+            Dictionary<Type, Func<Message, string>> sagaIdResolve = null,
             Func<IEventStoreKitService, string, TSaga> sagaFactory = null,
-            bool chached = false )
-            where TSaga : ISaga
+            bool cached = false )
+            where TSaga : class, ISaga
         {
-            // 1. register - add factory to list
-            //    if initialized, registerRoutes
-            // 2. registerRoute
-            //    2.1. get handled events
-            //    2.2. for each event register handler in dispatcher
-            //    2.3. create saga instance ( service, id )
-            //    2.4. replay stored messages
-
-
             var sagaType = typeof( TSaga );
-            var factory = sagaFactory.With( f => new Func<Message,ISaga>( message => f( this, message ) ) );
-            //if ( factory == null )
-            //{
-            //    var f =
-            //        TryCreateInstance( sagaType, new Dictionary<Type, object> { { typeof( IDataBaseConfiguration ), config } } ) ??
-            //        TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( string ), config.ConfigurationString } } ) ??
-            //        TryCreateInstance( factoryType, new Dictionary<Type, object> { { typeof( DataBaseConnectionType ), config.DataBaseConnectionType }, { typeof( string ), config.ConnectionString } } ) ??
-            //        TryCreateInstance( factoryType, new Dictionary<Type, object>() );
-            //    if( factory == null )
-            //        throw new InvalidOperationException( $"Can't create {factoryType.Name} instance, because there is no appropriate constructor" );
-            //}
-            
-            SagasFactories.Add( sagaType, factory );
+            var sagaConstructor = sagaFactory.With( ctor => new Func<string,ISaga>( id => ctor( this, id ) ) );
+
+            // todo: cache
+
+            var sagaRegistration = new SagaRegistrationInfo
+            {
+                SagaType = sagaType,
+                FactoryMethod = sagaConstructor,
+                IdResolvingMap = sagaIdResolve
+            };
+            SagaRegistration.Add( sagaRegistration );
 
             if ( Initialized )
-                ConfigureSagasRouts( sagaType, factory );
+                ConfigureSagasRouts( sagaRegistration );
 
             return this;
         }
-        
+
         public IEventStoreKitService Initialize()
         {
             if( !Initialized )
