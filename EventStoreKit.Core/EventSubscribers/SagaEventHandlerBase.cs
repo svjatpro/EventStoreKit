@@ -29,21 +29,27 @@ namespace EventStoreKit.Projections
     {
         public SagaEventHandlerEmbedded( 
             IEventStoreSubscriberContext context,
+            ICommandBus commandBus,
             Func<ISagaRepository> sagaRepositoryFactory,
             Dictionary<Type, Func<Message, string>> idResolvingMap )
             : base( context )
         {
             var sagaType = typeof(TSaga);
             var interfaceType = typeof(IEventHandler<>);
+            var interfaceType2 = typeof(IEventHandlerShort<>);
             var getByIdMethod = typeof(ISagaRepository).GetMethod( "GetById" )?.MakeGenericMethod( sagaType );
 
             sagaType
                 .GetInterfaces()
-                .Where( handlerInterface => handlerInterface.IsGenericType && handlerInterface.GetGenericTypeDefinition() == interfaceType.GetGenericTypeDefinition() )
-                .Select(handlerInterface => handlerInterface.GetGenericArguments()[0] )
+                .Where( 
+                    handlerInterface => handlerInterface.IsGenericType && ( 
+                        handlerInterface.GetGenericTypeDefinition() == interfaceType.GetGenericTypeDefinition() ||
+                        handlerInterface.GetGenericTypeDefinition() == interfaceType2.GetGenericTypeDefinition() ) )
                 .ToList()
-                .ForEach( eventType =>
+                .ForEach( handlerInterface =>
                 {
+                    var eventType = handlerInterface.GetGenericArguments()[0];
+                    var saveSaga = handlerInterface.GetGenericTypeDefinition() == interfaceType.GetGenericTypeDefinition();
                     Register( eventType, message =>
                     {
                         var sagaId = idResolvingMap.GetSagaId( sagaType, message );
@@ -52,7 +58,24 @@ namespace EventStoreKit.Projections
                             .Invoke( sagaRepository, new[] { Bucket.Default, sagaId } )
                             .OfType<ISaga>();
                         saga?.Transition( message );
-                        sagaRepository.Save( saga, Guid.NewGuid(), a => { } );
+                        if ( saveSaga )
+                        {
+                            Enumerable.OfType<DomainCommand>( saga.GetUndispatchedMessages() )
+                                .ToList()
+                                .ForEach( commandBus.SendCommand );
+
+                            saga.ClearUndispatchedMessages();
+                            sagaRepository.Save( saga, Guid.NewGuid(), a => { } );
+                        }
+                        else
+                        {
+                            Enumerable.OfType<DomainCommand>( saga.GetUndispatchedMessages() )
+                                .ToList()
+                                .ForEach( commandBus.SendCommand );
+
+                            saga.ClearUncommittedEvents();
+                            saga.ClearUndispatchedMessages();
+                        }
                     } );
                 } );
         }

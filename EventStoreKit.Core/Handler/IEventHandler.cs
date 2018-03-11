@@ -11,4 +11,10 @@ namespace EventStoreKit.Handler
     {
         void Handle( TEvent message );
     }
+
+    public interface IEventHandlerShort<TEvent> : IEventHandler
+        where TEvent : Message
+    {
+        void Handle( TEvent message );
+    }
 }

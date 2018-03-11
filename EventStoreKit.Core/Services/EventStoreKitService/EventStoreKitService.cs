@@ -567,7 +567,7 @@ namespace EventStoreKit.Services
             RegisterEventSubscriberFactory(
                 new SubscriberInfo
                 {
-                    FactoryMethod = () => new SagaEventHandlerEmbedded<TSaga>( CreateEventSubscriberContext<SagaEventHandlerEmbedded<TSaga>>(), SagaRepositoryFactory, sagaIdResolve ),
+                    FactoryMethod = () => new SagaEventHandlerEmbedded<TSaga>( CreateEventSubscriberContext<SagaEventHandlerEmbedded<TSaga>>(), this, SagaRepositoryFactory, sagaIdResolve ),
                     SingleInstance = true
                 } );
 
