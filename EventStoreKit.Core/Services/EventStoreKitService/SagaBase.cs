@@ -28,7 +28,6 @@ namespace EventStoreKit.Services
                     var handleDelegate = Delegate.CreateDelegate( typeof( Action<> ).MakeGenericType( genericArgs[0] ), this, "Handle" );
                     registerMethod?.Invoke( this, new object[] { handleDelegate } );
                 } );
-
         }
     }
 }

@@ -15,49 +15,6 @@ using NUnit.Framework;
 
 namespace EventStoreKit.Tests
 {
-    // 1.
-    // class Saga1 : SagaBase, 
-    //     IEventHandler<Event1>
-    // {
-    //     public Saga1( string Id ){  }
-    // }
-    // .RegisterSaga<Saga1>()
-
-    // 2.
-    // class Saga1 : SagaBase, 
-    //     IEventHandler<Event1>
-    // {
-    //     public Saga1( string Id ){  }
-    // }
-    // .RegisterSaga<Saga1>( msg => $"Saga1_{msg.Id}" )
-
-    // 3.
-    // class Saga1 : SagaBase, 
-    //     IEventHandler<Event1>,
-    //     IEventHandler<Event2>
-    // {
-    //     public Saga1( string Id ){  }
-    // }
-    // .RegisterSaga<Saga1>( msg => 
-    //  {
-    //      switch( msg.GetType() )
-    //      {
-    //          case: typeof(Event1): return $"Saga1_{msg.Id}" );
-    //          case: typeof(Event2): return $"Saga1_{msg.ParentId}" );
-
-    // 3.
-    // class Saga1 : SagaBase, 
-    //     IEventHandler<Event1>,
-    //     IEventHandler<Event2>
-    // {
-    //     public Saga1( string Id ){  }
-    // }
-    // .RegisterSaga<Saga1>( 
-    //      ( srv, sagaId ) => new Saga1( srv.GetSubscriber<Projection1>() ),
-    //      { typeof( Event1 ), msg => $"Saga1_{msg.Id}" },
-    //      { typeof( Event2 ), msg => $"Saga1_{msg.ParentId}" },
-    
-
     [TestFixture]
     public class EventStoreKitServiceSagasTests
     {
@@ -221,8 +178,6 @@ namespace EventStoreKit.Tests
 
             ProcessedEvents[1].OfType<TestEvent3>().With( m => m.Count ).Should().Be( 12 );
         }
-
-        // ? lock by sagaType or use internal subscriber for inline saga process
 
         // don't save message
         // cache
