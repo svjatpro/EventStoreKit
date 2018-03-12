@@ -11,16 +11,20 @@ namespace EventStoreKit.Services
     {
         public SagaBase()
         {
-            var interfaceType = typeof( IEventHandler<> );
+            var handlerTypeEvent = typeof( IEventHandler<> );
+            var handlerTypeTransient = typeof( IEventHandlerTransient<> );
+            var handlerTypeCommand = typeof( ICommandHandler<> );
             var sagaType = GetType();
             sagaType
                 .GetInterfaces()
-                .Where( handlerIntefrace => handlerIntefrace.IsGenericType && handlerIntefrace.GetGenericTypeDefinition() == interfaceType.GetGenericTypeDefinition() )
+                .Where(
+                    handlerInterface => handlerInterface.IsGenericType && (
+                        handlerInterface.GetGenericTypeDefinition() == handlerTypeEvent.GetGenericTypeDefinition() ||
+                        handlerInterface.GetGenericTypeDefinition() == handlerTypeTransient.GetGenericTypeDefinition() ||
+                        handlerInterface.GetGenericTypeDefinition() == handlerTypeCommand.GetGenericTypeDefinition() ) )
                 .ToList()
                 .ForEach( handlerIntefrace =>
                 {
-                    // 
-
                     var genericArgs = handlerIntefrace.GetGenericArguments();
                     var registerMethod = sagaType
                         .GetMethod( "Register", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy )

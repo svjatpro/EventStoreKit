@@ -93,7 +93,6 @@ namespace EventStoreKit.Projections
                     ex, new Dictionary<string, string> 
                     { 
                         { "Event", JsonConvert.SerializeObject( message ) }
-                        //{ "User", message.CreatedBy }
                     });
             }
             finally

@@ -1,9 +1,8 @@
-﻿
-using EventStoreKit.Messages;
+﻿using EventStoreKit.Messages;
 
 namespace EventStoreKit.Handler
 {
-    public interface IEventHandler<TEvent>
+    public interface IEventHandlerTransient<TEvent>
         where TEvent : Message
     {
         void Handle( TEvent message );

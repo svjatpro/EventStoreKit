@@ -49,9 +49,30 @@ namespace EventStoreKit.Services
 
         private class SubscriberInfo
         {
+            private IEventSubscriber CachedInstance;
+
             public Func<IEventSubscriber> FactoryMethod { get; set; }
             public bool SingleInstance { get; set; }
-            public IEventSubscriber Instance { get; set; }
+            public bool InternalSubscriber { get; set; }
+
+            public IEventSubscriber Instance
+            {
+                get
+                {
+                    IEventSubscriber instance;
+                    if ( !SingleInstance || CachedInstance == null )
+                    {
+                        instance = FactoryMethod();
+                        if ( SingleInstance )
+                            CachedInstance = instance;
+                    }
+                    else
+                    {
+                        instance = CachedInstance;
+                    }
+                    return instance;
+                }
+            }
         }
 
         #endregion
@@ -304,8 +325,6 @@ namespace EventStoreKit.Services
                 var registerMethod = dispatcherType.GetMethod( "RegisterHandler" )?.MakeGenericMethod( handledEventType );
                 var handleDelegate = new Action<Message>( message =>
                 {
-                    if( subscriberInfo.Instance == null )
-                        subscriberInfo.Instance = subscriberInfo.FactoryMethod();
                     var subscriber = subscriberInfo.Instance;
                     subscriber.Handle( message );
                 } );
@@ -562,13 +581,17 @@ namespace EventStoreKit.Services
                 .With( factory => new Func<string,ISaga>( id => factory( this, id ) ) )
                 .Do( factory => SagaFactories.Add( sagaType, factory ) );
 
-            // todo: cache
-
             RegisterEventSubscriberFactory(
                 new SubscriberInfo
                 {
-                    FactoryMethod = () => new SagaEventHandlerEmbedded<TSaga>( CreateEventSubscriberContext<SagaEventHandlerEmbedded<TSaga>>(), this, SagaRepositoryFactory, sagaIdResolve ),
-                    SingleInstance = true
+                    FactoryMethod = () => new SagaEventHandlerEmbedded<TSaga>(
+                        CreateEventSubscriberContext<SagaEventHandlerEmbedded<TSaga>>(),
+                        this,
+                        SagaRepositoryFactory,
+                        sagaIdResolve,
+                        cached ),
+                    SingleInstance = true,
+                    InternalSubscriber = true
                 } );
 
             return this;
@@ -590,7 +613,10 @@ namespace EventStoreKit.Services
 
         public TSubscriber GetSubscriber<TSubscriber>() where TSubscriber : IEventSubscriber
         {
-            return (TSubscriber) EventSubscribers[typeof(TSubscriber)].FactoryMethod();
+            EventSubscribers.TryGetValue( typeof( TSubscriber ), out var subscriber );
+            return subscriber
+                .With( info => info.InternalSubscriber ? null : info.Instance )
+                .OfType<TSubscriber>();
         }
         
         public void SendCommand<TCommand>( TCommand command ) where TCommand : DomainCommand
