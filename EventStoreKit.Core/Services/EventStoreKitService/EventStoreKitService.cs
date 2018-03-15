@@ -10,6 +10,7 @@ using CommonDomain.Core;
 using CommonDomain.Persistence;
 using CommonDomain.Persistence.EventStore;
 using EventStoreKit.Core.EventSubscribers;
+using EventStoreKit.Core.Sagas;
 using EventStoreKit.Core.Utility;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
@@ -164,7 +165,7 @@ namespace EventStoreKit.Services
         private void ConfigureAggregateCommandHandlerRouts( Type aggregateType )
         {
             var commandHandlerInterfaceType = typeof( ICommandHandler<> );
-            var registerCommandMehod = GetType().GetMethod( "RegisterAggregateCommandHandler", BindingFlags.NonPublic | BindingFlags.Instance );
+            var registerCommandMehod = GetType().GetMethod( "RegisterAggregate", BindingFlags.NonPublic | BindingFlags.Instance );
 
             aggregateType
                 .GetInterfaces()
@@ -181,7 +182,7 @@ namespace EventStoreKit.Services
                 } );
         }
 
-        private void RegisterAggregateCommandHandler<TCommand,TAggregate>()
+        private void RegisterAggregate<TCommand,TAggregate>()
             where TCommand : DomainCommand
             where TAggregate : class, IAggregate
         {
@@ -287,14 +288,14 @@ namespace EventStoreKit.Services
             return factory.OfType<IDbProviderFactory>();
         }
 
-        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( IDataBaseConfiguration config = null ) where TSubscriber : class, IEventSubscriber
+        private IEventStoreSubscriberContext CreateEventSubscriberContext( IDataBaseConfiguration config = null )
         {
             var dbFactory = config.Return(
                 c => InitializeDbProviderFactory( DbProviderFactorySubscriber.GetValueOrDefault().GetType(), config ),
                 DbProviderFactorySubscriber.GetValueOrDefault() );
-            return CreateEventSubscriberContext<TSubscriber>( dbFactory );
+            return CreateEventSubscriberContext( dbFactory );
         }
-        private IEventStoreSubscriberContext CreateEventSubscriberContext<TSubscriber>( IDbProviderFactory dbProviderFactory ) where TSubscriber : class, IEventSubscriber
+        private IEventStoreSubscriberContext CreateEventSubscriberContext( IDbProviderFactory dbProviderFactory )
         {
             return new EventStoreSubscriberContext
             ( 
@@ -479,31 +480,31 @@ namespace EventStoreKit.Services
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory )
             where TSubscriber : class, IEventSubscriber
         {
-            RegisterEventSubscriberFactory( new SubscriberInfo{ FactoryMethod = () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>() ) } );
+            RegisterEventSubscriberFactory( new SubscriberInfo{ FactoryMethod = () => subscriberFactory( CreateEventSubscriberContext() ) } );
             return this;
         }
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, IDataBaseConfiguration configuration )
             where TSubscriber : class, IEventSubscriber
         {
-            RegisterEventSubscriberFactory( new SubscriberInfo { FactoryMethod = () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>( configuration ) ) } );
+            RegisterEventSubscriberFactory( new SubscriberInfo { FactoryMethod = () => subscriberFactory( CreateEventSubscriberContext( configuration ) ) } );
             return this;
         }
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( Func<IEventStoreSubscriberContext, TSubscriber> subscriberFactory, IDbProviderFactory dbProviderFactory )
             where TSubscriber : class, IEventSubscriber
         {
-            RegisterEventSubscriberFactory( new SubscriberInfo { FactoryMethod = () => subscriberFactory( CreateEventSubscriberContext<TSubscriber>( dbProviderFactory ) ) } );
+            RegisterEventSubscriberFactory( new SubscriberInfo { FactoryMethod = () => subscriberFactory( CreateEventSubscriberContext( dbProviderFactory ) ) } );
             return this;
         }
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( IDataBaseConfiguration configuration ) where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( configuration );
+            var context = CreateEventSubscriberContext( configuration );
             var subscriber = InitializeEventSubscriber<TSubscriber>( context );
             RegisterEventSubscriberFactory( new SubscriberInfo { FactoryMethod = () => subscriber } );
             return this;
         }
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>( IDbProviderFactory dbProviderFactory ) where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>( dbProviderFactory );
+            var context = CreateEventSubscriberContext( dbProviderFactory );
             var subscriber = InitializeEventSubscriber<TSubscriber>( context );
             RegisterEventSubscriberFactory( new SubscriberInfo { FactoryMethod = () => subscriber } );
             return this;
@@ -512,7 +513,7 @@ namespace EventStoreKit.Services
         public IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>()
             where TSubscriber : class, IEventSubscriber
         {
-            var context = CreateEventSubscriberContext<TSubscriber>();
+            var context = CreateEventSubscriberContext();
             var subscriber = InitializeEventSubscriber<TSubscriber>( context );
             RegisterEventSubscriberFactory( new SubscriberInfo { FactoryMethod = () => subscriber } );
             return this;
@@ -532,15 +533,15 @@ namespace EventStoreKit.Services
 
         #region Register command handlers methods
 
-        public IEventStoreKitServiceBuilder RegisterAggregateCommandHandler<TAggregate>() where TAggregate : ICommandHandler, IAggregate
+        public IEventStoreKitServiceBuilder RegisterAggregate<TAggregate>() where TAggregate : ICommandHandler, IAggregate
         {
             var aggregateType = typeof(TAggregate);
-            RegisterAggregateCommandHandler( aggregateType );
+            RegisterAggregate( aggregateType );
             
             return this;
         }
 
-        public IEventStoreKitServiceBuilder RegisterAggregateCommandHandler( Type aggregateType )
+        public IEventStoreKitServiceBuilder RegisterAggregate( Type aggregateType )
         {
             if( !typeof( IAggregate ).IsAssignableFrom( aggregateType ) )
                 throw new ArgumentException();
@@ -571,25 +572,50 @@ namespace EventStoreKit.Services
         #endregion
 
         public IEventStoreKitServiceBuilder RegisterSaga<TSaga>(
-            Dictionary<Type, Func<Message, string>> sagaIdResolve = null,
-            Func<IEventStoreKitService, string, TSaga> sagaFactory = null,
+            ISagaIdGenerator sagaIdGenerator = null,
+            Func<IEventStoreKitService, string, ISaga> sagaFactory = null,
             bool cached = false )
             where TSaga : class, ISaga
         {
             var sagaType = typeof( TSaga );
+            RegisterSaga( sagaType, sagaIdGenerator, sagaFactory, cached );
+
+            return this;
+        }
+
+        public IEventStoreKitServiceBuilder RegisterSaga( 
+            Type sagaType,
+            ISagaIdGenerator sagaIdGenerator = null, 
+            Func<IEventStoreKitService, string, ISaga> sagaFactory = null,
+            bool cached = false )
+        {
             sagaFactory
-                .With( factory => new Func<string,ISaga>( id => factory( this, id ) ) )
+                .With( factory => new Func<string, ISaga>( id => factory( this, id ) ) )
                 .Do( factory => SagaFactories.Add( sagaType, factory ) );
+
+            var handlerCtor = typeof(SagaEventHandlerEmbedded<>)
+                .MakeGenericType( sagaType )
+                .GetConstructor( new[] 
+                    { 
+                        typeof(IEventStoreSubscriberContext),
+                        typeof(ICommandBus),
+                        typeof(Func<ISagaRepository>),
+                        typeof(ISagaIdGenerator),
+                        typeof(bool)
+                    } );
 
             RegisterEventSubscriberFactory(
                 new SubscriberInfo
                 {
-                    FactoryMethod = () => new SagaEventHandlerEmbedded<TSaga>(
-                        CreateEventSubscriberContext<SagaEventHandlerEmbedded<TSaga>>(),
-                        this,
-                        SagaRepositoryFactory,
-                        sagaIdResolve,
-                        cached ),
+                    FactoryMethod = () => (IEventSubscriber) handlerCtor?
+                        .Invoke( new object []
+                        {
+                            CreateEventSubscriberContext(),
+                            this,
+                            SagaRepositoryFactory,
+                            sagaIdGenerator,
+                            cached
+                        } ),
                     SingleInstance = true,
                     InternalSubscriber = true
                 } );

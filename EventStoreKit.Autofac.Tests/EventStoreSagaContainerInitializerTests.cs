@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Autofac;
+using CommonDomain;
 using CommonDomain.Core;
 using EventStoreKit.Core.EventSubscribers;
+using EventStoreKit.Core.Sagas;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -14,7 +13,6 @@ using EventStoreKit.Tests;
 using EventStoreKit.Utility;
 using FluentAssertions;
 using NUnit.Framework;
-using NUnit.Framework.Internal;
 
 namespace EventStoreKit.Autofac.Tests
 {
@@ -23,7 +21,7 @@ namespace EventStoreKit.Autofac.Tests
     {
         #region Private members
 
-        public static List<Message> ProcessedEvents = new List<Message>();
+        private static readonly List<Message> ProcessedEvents = new List<Message>();
 
         private class TestCommand1 : DomainCommand { public int AltId; }
         private class TestCommand2 : DomainCommand { public int AltId; }
@@ -55,8 +53,13 @@ namespace EventStoreKit.Autofac.Tests
             ICommandHandler<SagaCommand1>
         {
             private int Count;
+            public static volatile int CreatedCount = 0;
 
-            public Saga1( string id ) { Id = id; }
+            public Saga1( string id )
+            {
+                Id = id;
+                CreatedCount++;
+            }
             public Saga1( string id, int count ) : this( id ) { Count = count; }
 
             public void Handle( TestEvent1 message )
@@ -94,12 +97,17 @@ namespace EventStoreKit.Autofac.Tests
             public event EventHandler<MessageEventArgs> MessageSequenceHandled;
         }
 
+        [TearDown]
+        protected void TearDown()
+        {
+            Saga1.CreatedCount = 0;
+            ProcessedEvents.Clear();
+        }
+
         #endregion
 
-        // ? factory method
-        // ? id mapping
         [Test]
-        public void SagaShouldProcessMessage()
+        public void SagaRegisteredByContainerShouldProcessMessage()
         {
             var id = Guid.NewGuid();
 
@@ -116,6 +124,126 @@ namespace EventStoreKit.Autofac.Tests
             task.Wait( 1000 );
 
             ProcessedEvents[0].OfType<TestEvent3>().With( m => m.Id ).Should().Be( id );
+        }
+
+        [Test]
+        public void SagaRegisteredByServiceShouldProcessMessage()
+        {
+            var id = Guid.NewGuid();
+
+            Builder.RegisterType<Aggregate1>();
+            Builder.RegisterType<Subscriber1>().SingleInstance();
+
+            InitializeContainer( service => service.RegisterSaga<Saga1>() );
+
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var task = subscriber.When<TestEvent3>( msg => msg.Id == id );
+            Service.SendCommand( new TestCommand1 { Id = id } );
+            task.Wait( 1000 );
+
+            ProcessedEvents[0].OfType<TestEvent3>().With( m => m.Id ).Should().Be( id );
+        }
+
+        [Test]
+        public void SagaIdShouldBeGeneratedByConfiguredRules()
+        {
+            var id = Guid.NewGuid();
+
+            Builder.RegisterType<Aggregate1>();
+            Builder.RegisterType<Subscriber1>().SingleInstance();
+            Builder
+                .RegisterType<Saga1>()
+                .WithMetadata( SagaConstants.IdGenerator, SagaId.For<Saga1>()
+                    .From<TestEvent1>( msg => $"Saga1_{msg.AltId}" )
+                    .From<TestEvent2>( msg => $"Saga1_{msg.AltId}" ) );
+
+            InitializeContainer();
+            
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var task = subscriber.When<TestEvent3>( msg => msg.Id == id );
+            Service.SendCommand( new TestCommand1 { Id = Guid.NewGuid(), AltId = 1 } );
+            Service.SendCommand( new TestCommand1 { Id = Guid.NewGuid(), AltId = 2 } );
+            Service.SendCommand( new TestCommand1 { Id = id, AltId = 1 } );
+            task.Wait( 1000 );
+
+            ProcessedEvents[2].OfType<TestEvent3>().With( m => m.Count ).Should().Be( 2 );
+        }
+
+        [Test]
+        public void SagaShouldBeResolvedByCustomFactory()
+        {
+            var id = Guid.NewGuid();
+
+            Builder.RegisterType<Aggregate1>();
+            Builder.RegisterType<Subscriber1>().SingleInstance();
+            Builder
+                .RegisterType<Saga1>()
+                .WithMetadata( SagaConstants.FactoryMethod, 
+                    new Func<IEventStoreKitService, string, ISaga>( ( service, sagaId ) => new Saga1( sagaId, 10 ) ) )
+                .WithMetadata( SagaConstants.IdGenerator, SagaId.For<Saga1>()
+                    .From<TestEvent1>( msg => $"Saga1_{msg.AltId}" )
+                    .From<TestEvent2>( msg => $"Saga1_{msg.AltId}" ) );
+
+            InitializeContainer();
+
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var task = subscriber.When<TestEvent3>( msg => msg.Id == id );
+            Service.SendCommand( new TestCommand1 { Id = Guid.NewGuid(), AltId = 1 } );
+            Service.SendCommand( new TestCommand1 { Id = id, AltId = 1 } );
+            task.Wait( 1000 );
+
+            ProcessedEvents[1].OfType<TestEvent3>().With( m => m.Count ).Should().Be( 12 );
+        }
+
+        [Test]
+        public void ByDefaultSagaInstanceShouldBeCreatedForEachHandledMessage()
+        {
+            var id = Guid.NewGuid();
+
+            Builder.RegisterType<Aggregate1>();
+            Builder.RegisterType<Subscriber1>().SingleInstance();
+            Builder.RegisterType<Saga1>().WithMetadata( SagaConstants.Cached, false );
+            InitializeContainer();
+
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var task = subscriber.When( MessageMatch
+                .Is<TestEvent3>( msg => msg.Id == id )
+                .And<TestEvent3>( msg => msg.Id == id )
+                .And<TestEvent3>( msg => msg.Id == id ) );
+            Service.SendCommand( new TestCommand1 { Id = id } );
+            Service.SendCommand( new TestCommand1 { Id = id } );
+            Service.SendCommand( new TestCommand1 { Id = id } );
+            task.Wait( 1000 );
+
+            Saga1.CreatedCount.Should().Be( 6 );
+        }
+
+        [Test]
+        public void CachedSagaCreatedShouldBeOnce()
+        {
+            var id = Guid.NewGuid();
+
+            Builder.RegisterType<Aggregate1>();
+            Builder.RegisterType<Subscriber1>().SingleInstance();
+            Builder.RegisterType<Saga1>().WithMetadata( SagaConstants.Cached, true );
+            InitializeContainer();
+
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var task = subscriber.When( MessageMatch
+                .Is<TestEvent3>( msg => msg.Id == id )
+                .And<TestEvent3>( msg => msg.Id == id )
+                .And<TestEvent3>( msg => msg.Id == id ) );
+            Service.SendCommand( new TestCommand1 { Id = id } );
+            Service.SendCommand( new TestCommand1 { Id = id } );
+            Service.SendCommand( new TestCommand1 { Id = id } );
+            task.Wait( 1000 );
+
+            Saga1.CreatedCount.Should().Be( 1 );
         }
     }
 }

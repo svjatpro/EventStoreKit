@@ -14,15 +14,16 @@ using NUnit.Framework;
 namespace EventStoreKit.Tests
 {
     [TestFixture]
-    public class EventStoreKitServiceAggregateAsHandlerTests
+    public class EventStoreKitServiceAggregateTests
     {
         #region Private members
 
         private EventStoreKitService Service;
-        private Subscriber1 Projection1;
 
         private class TestEvent1 : DomainEvent { public string Name { get; set; } }
+// ReSharper disable ClassNeverInstantiated.Local
         private class Subscriber1 : EventQueueSubscriber,
+// ReSharper restore ClassNeverInstantiated.Local
             IEventHandler<TestEvent1>
         {
             public Subscriber1( IEventStoreSubscriberContext context ) : base( context ){}
@@ -36,7 +37,9 @@ namespace EventStoreKit.Tests
         private class Command1 : DomainCommand { }
         private class Command2 : DomainCommand { }
 
+// ReSharper disable ClassNeverInstantiated.Local
         private class Aggregate1 : AggregateBase,
+// ReSharper restore ClassNeverInstantiated.Local
             ICommandHandler<Command1>,
             ICommandHandler<Command2>
         {
@@ -77,7 +80,7 @@ namespace EventStoreKit.Tests
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
@@ -98,12 +101,38 @@ namespace EventStoreKit.Tests
         }
 
         [Test]
+        public void CommandHandlerCanBeRegisterByTypeInInitializedService()
+        {
+            var id1 = Guid.NewGuid();
+            var id2 = Guid.NewGuid();
+            Service.Initialize();
+            Service
+                .RegisterAggregate<Aggregate1>()
+                .RegisterEventSubscriber<Subscriber1>();
+            var subscriber = Service.GetSubscriber<Subscriber1>();
+
+            var wait = subscriber.When( MessageMatch
+                .Is<TestEvent1>( msg => msg.Id == id1 )
+                .And<TestEvent1>( msg => msg.Id == id2 ) );
+            Service.SendCommand( new Command1 { Id = id1 } );
+            Service.SendCommand( new Command2 { Id = id2 } );
+            wait.Wait( 1000 );
+
+            var processed = subscriber.ProcessedEvents.OrderBy( e => e.Name ).ToList();
+            processed.Count.Should().Be( 2 );
+            processed[0].Id.Should().Be( id1 );
+            processed[0].Name.Should().Be( typeof( Command1 ).Name );
+            processed[1].Id.Should().Be( id2 );
+            processed[1].Name.Should().Be( typeof( Command2 ).Name );
+        }
+
+        [Test]
         public void CommandHandlerCanBeRegisterByFactory()
         {
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
@@ -132,7 +161,7 @@ namespace EventStoreKit.Tests
             var id2 = Guid.NewGuid();
             Service
                 .SetCurrentUserProvider( userProvider )
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
@@ -154,7 +183,7 @@ namespace EventStoreKit.Tests
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
@@ -176,7 +205,7 @@ namespace EventStoreKit.Tests
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();
@@ -197,7 +226,7 @@ namespace EventStoreKit.Tests
             var id1 = Guid.NewGuid();
             var id2 = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
             var subscriber = Service.GetSubscriber<Subscriber1>();

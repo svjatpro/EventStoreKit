@@ -5,11 +5,12 @@ using CommonDomain;
 using CommonDomain.Persistence;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
+using EventStoreKit.Projections;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
 using NEventStore;
 
-namespace EventStoreKit.Projections
+namespace EventStoreKit.Core.Sagas
 {
     public class SagaEventHandlerEmbedded<TSaga> : EventQueueSubscriber
         where TSaga : ISaga
@@ -20,7 +21,7 @@ namespace EventStoreKit.Projections
             IEventStoreSubscriberContext context,
             ICommandBus commandBus,
             Func<ISagaRepository> sagaRepositoryFactory,
-            Dictionary<Type, Func<Message, string>> idResolvingMap,
+            ISagaIdGenerator sagaIdGenerator,
             bool cached )
             : base( context )
         {
@@ -29,6 +30,9 @@ namespace EventStoreKit.Projections
             var handlerTypeTransient = typeof(IEventHandlerTransient<>);
             var handlerTypeCommand = typeof(ICommandHandler<>);
             var getByIdMethod = typeof(ISagaRepository).GetMethod( "GetById" )?.MakeGenericMethod( sagaType );
+
+            if( sagaIdGenerator == null )
+                sagaIdGenerator = new SagaIdGenerator<TSaga>();
 
             sagaType
                 .GetInterfaces()
@@ -45,7 +49,7 @@ namespace EventStoreKit.Projections
                     Register( eventType, message =>
                     {
                         // restore saga
-                        var sagaId = idResolvingMap.GetSagaId( sagaType, message );
+                        var sagaId = sagaIdGenerator.GetSagaId( message );
                         var sagaRepository = sagaRepositoryFactory();
 
                         ISaga saga;

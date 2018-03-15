@@ -120,7 +120,7 @@ namespace EventStoreKit.Tests
             Service = new EventStoreKitService( false );
             Service
                 .SetCurrentUserProvider( userProvider )
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
 

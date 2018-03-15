@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Concurrency;
 using System.Reflection;
@@ -6,6 +7,7 @@ using Autofac;
 using Autofac.Core;
 using Autofac.Features.GeneratedFactories;
 using CommonDomain;
+using EventStoreKit.Core.Sagas;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -152,7 +154,7 @@ namespace EventStoreKit.Autofac
                                 i.IsGenericType && i.GetGenericTypeDefinition() == typeof( ICommandHandler<> ).GetGenericTypeDefinition() ) )
                         .Select( registration => registration.Activator.LimitType )
                         .ToList();
-                    cmdAggregatesHandlers.ForEach( type => service.RegisterAggregateCommandHandler( type ) );
+                    cmdAggregatesHandlers.ForEach( type => service.RegisterAggregate( type ) );
 
                     // Register command handlers
                     var cmdHandlers = ctx
@@ -184,6 +186,34 @@ namespace EventStoreKit.Autofac
                         .Where( factory => factory != null )
                         .ToList();
                     subscribers.ForEach( s => service.RegisterEventSubscriber( s ) );
+
+                    // Register Sagas
+                    ctx
+                        .ComponentRegistry
+                        .Registrations
+                        .Where( registration => 
+                            registration.Activator.LimitType.IsAssignableTo<SagaBase>() &&
+                            !registeredSubscribers.Contains( registration.Activator.LimitType ) ) // prevent cyclic registration
+                        .ToList()
+                        .ForEach( registration =>
+                        {
+                            var sagaType = registration.Activator.LimitType;
+                            var factoryMethod = 
+                                registration.Metadata.ContainsKey( SagaConstants.FactoryMethod ) ? 
+                                registration.Metadata[SagaConstants.FactoryMethod].OfType<Func<IEventStoreKitService,string,ISaga>>() : null;
+                            var idGenerator = 
+                                registration.Metadata.ContainsKey( SagaConstants.IdGenerator ) ? 
+                                registration.Metadata[SagaConstants.IdGenerator].OfType<ISagaIdGenerator>() : null;
+                            var cached = 
+                                registration.Metadata.ContainsKey( SagaConstants.Cached ) && 
+                                registration.Metadata[SagaConstants.Cached].OfType<bool>();
+
+                            service.RegisterSaga(
+                                sagaType,
+                                sagaFactory: factoryMethod,
+                                sagaIdGenerator: idGenerator,
+                                cached: cached);
+                        } );
 
                     service.Initialize();
                     return service;

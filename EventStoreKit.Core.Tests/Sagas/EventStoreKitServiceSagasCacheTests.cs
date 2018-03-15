@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using CommonDomain.Core;
 using EventStoreKit.Core.EventSubscribers;
+using EventStoreKit.Core.Sagas;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -95,7 +96,7 @@ namespace EventStoreKit.Tests
         {
             var id = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterSaga<Saga1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
@@ -118,7 +119,7 @@ namespace EventStoreKit.Tests
         {
             var id = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterSaga<Saga1>( cached: true )
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reactive.Concurrency;
 using CommonDomain;
+using EventStoreKit.Core.Sagas;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Handler;
 using EventStoreKit.Logging;
@@ -46,16 +47,13 @@ namespace EventStoreKit.Services
         IEventStoreKitServiceBuilder RegisterEventSubscriber<TSubscriber>() where TSubscriber : class, IEventSubscriber;
         IEventStoreKitServiceBuilder RegisterEventSubscriber( Func<IEventSubscriber> subscriberFactory );
 
-        IEventStoreKitServiceBuilder RegisterAggregateCommandHandler<TAggregate>() where TAggregate : ICommandHandler, IAggregate;
-        IEventStoreKitServiceBuilder RegisterAggregateCommandHandler( Type aggregateType );
+        IEventStoreKitServiceBuilder RegisterAggregate<TAggregate>() where TAggregate : ICommandHandler, IAggregate;
+        IEventStoreKitServiceBuilder RegisterAggregate( Type aggregateType );
         IEventStoreKitServiceBuilder RegisterCommandHandler<THandler>() where THandler : class, ICommandHandler, new();
         IEventStoreKitServiceBuilder RegisterCommandHandler( Func<ICommandHandler> handlerFactory );
 
-        IEventStoreKitServiceBuilder RegisterSaga<TSaga>(
-            Dictionary<Type, Func<Message, string>> sagaIdResolve = null,
-            Func<IEventStoreKitService, string, TSaga> sagaFactory = null,
-            bool cached = false )
-            where TSaga : class, ISaga;
+        IEventStoreKitServiceBuilder RegisterSaga<TSaga>( ISagaIdGenerator sagaIdGenerator = null, Func<IEventStoreKitService, string, ISaga> sagaFactory = null, bool cached = false ) where TSaga : class, ISaga;
+        IEventStoreKitServiceBuilder RegisterSaga( Type sagaType, ISagaIdGenerator sagaIdGenerator = null, Func<IEventStoreKitService, string, ISaga> sagaFactory = null, bool cached = false );
 
         IEventStoreKitService Initialize();
     }

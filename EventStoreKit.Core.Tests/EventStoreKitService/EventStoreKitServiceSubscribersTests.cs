@@ -16,9 +16,9 @@ namespace EventStoreKit.Tests
 
         private EventStoreKitService Service;
 
-        public static List<Message> ProcessedEvents = new List<Message>();
+        private static readonly List<Message> ProcessedEvents = new List<Message>();
 
-        private class TestEvent1 : DomainEvent { public string Name { get; set; } }
+        private class TestEvent1 : DomainEvent {}
         private interface ISubscriber1 : IEventSubscriber { }
         private interface ISubscriber2 : ISubscriber1 { }
         private class Subscriber1 : ISubscriber2
@@ -35,7 +35,9 @@ namespace EventStoreKit.Tests
             public event EventHandler<MessageEventArgs> MessageHandled;
             public event EventHandler<MessageEventArgs> MessageSequenceHandled;
         }
+// ReSharper disable ClassNeverInstantiated.Local
         private class Subscriber2 : Subscriber1{}
+// ReSharper restore ClassNeverInstantiated.Local
         
         [SetUp]
         protected void Setup()
@@ -47,12 +49,13 @@ namespace EventStoreKit.Tests
         protected void Teardown()
         {
             Service?.Dispose();
+            ProcessedEvents.Clear();
         }
 
         private TestEvent1 RaiseEvent()
         {
             var id = Guid.NewGuid();
-            var msg = new TestEvent1 { Id = id, Name = "name_" + id };
+            var msg = new TestEvent1 { Id = id };
             Service.RaiseEvent( msg );
             Service.Wait();
             return msg;
@@ -61,11 +64,22 @@ namespace EventStoreKit.Tests
         #endregion
 
         [Test]
-        public void ServerShouldRegisterSubscriberAndConfigureMessageRoutes()
+        public void ServiceShouldRegisterSubscriberAndConfigureMessageRoutes()
         {
             Service
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
+
+            var msg = RaiseEvent();
+
+            ProcessedEvents[0].Should().Be( msg );
+        }
+
+        [Test]
+        public void InitializedServiceShouldRegisterSubscriberAndConfigureMessageRoutes()
+        {
+            Service.Initialize();
+            Service.RegisterEventSubscriber<Subscriber1>();
 
             var msg = RaiseEvent();
 

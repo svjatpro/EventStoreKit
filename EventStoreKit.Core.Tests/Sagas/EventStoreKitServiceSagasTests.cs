@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using CommonDomain.Core;
 using EventStoreKit.Core.EventSubscribers;
+using EventStoreKit.Core.Sagas;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 using EventStoreKit.Projections;
@@ -23,11 +24,11 @@ namespace EventStoreKit.Tests
 
         private class TestCommand1 : DomainCommand { public int AltId; }
         private class TestCommand2 : DomainCommand { public int AltId; }
-        private class TestCommand3 : DomainCommand { public int AltId; public int Count; }
+        private class TestCommand3 : DomainCommand { public int Count; }
         private class SagaCommand1 : DomainCommand {}
         private class TestEvent1 : DomainEvent { public int AltId; }
         private class TestEvent2 : DomainEvent { public int AltId; }
-        private class TestEvent3 : DomainEvent { public int AltId; public int Count; }
+        private class TestEvent3 : DomainEvent { public int Count; }
 
         private class Aggregate1 : AggregateBase,
             ICommandHandler<TestCommand1>,
@@ -43,7 +44,7 @@ namespace EventStoreKit.Tests
             }
             public void Handle( TestCommand1 cmd ) { RaiseEvent( new TestEvent1{ Id = cmd.Id, AltId = cmd.AltId } ); }
             public void Handle( TestCommand2 cmd ) { RaiseEvent( new TestEvent2{ Id = cmd.Id, AltId = cmd.AltId } ); }
-            public void Handle( TestCommand3 cmd ) { RaiseEvent( new TestEvent3{ Id = cmd.Id, AltId = cmd.AltId, Count = cmd.Count } ); }
+            public void Handle( TestCommand3 cmd ) { RaiseEvent( new TestEvent3{ Id = cmd.Id, Count = cmd.Count } ); }
         }
         private class Saga1 : SagaBase,
             IEventHandler<TestEvent1>,
@@ -63,7 +64,7 @@ namespace EventStoreKit.Tests
             public void Handle( TestEvent2 message )
             {
                 Count++;
-                Dispatch( new TestCommand3 { Id = message.Id, AltId = message.AltId, Count = Count } );
+                Dispatch( new TestCommand3 { Id = message.Id, Count = Count } );
             }
 
             public void Handle( SagaCommand1 cmd )
@@ -111,7 +112,7 @@ namespace EventStoreKit.Tests
             var id = Guid.NewGuid();
 
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterSaga<Saga1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
@@ -130,7 +131,7 @@ namespace EventStoreKit.Tests
             var id = Guid.NewGuid();
 
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterSaga<Saga1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
@@ -147,7 +148,7 @@ namespace EventStoreKit.Tests
         public void EmbeddedSagaHandlerShouldBeInternal()
         {
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterSaga<Saga1>()
                 .RegisterEventSubscriber<Subscriber1>()
                 .Initialize();
@@ -161,9 +162,9 @@ namespace EventStoreKit.Tests
         {
             var id = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterSaga<Saga1>( 
-                    sagaIdResolve: SagaId
+                    sagaIdGenerator: SagaId.For<Saga1>()
                         .From<TestEvent1>( msg => $"Saga1_{msg.AltId}" )
                         .From<TestEvent2>( msg => $"Saga1_{msg.AltId}" ) )
                 .RegisterEventSubscriber<Subscriber1>()
@@ -184,9 +185,9 @@ namespace EventStoreKit.Tests
         {
             var id = Guid.NewGuid();
             Service
-                .RegisterAggregateCommandHandler<Aggregate1>()
+                .RegisterAggregate<Aggregate1>()
                 .RegisterSaga<Saga1>(
-                    sagaIdResolve: SagaId
+                    sagaIdGenerator: SagaId.For<Saga1>()
                         .From<TestEvent1>( msg => $"Saga1_{msg.AltId}" )
                         .From<TestEvent2>( msg => $"Saga1_{msg.AltId}" ),
                     sagaFactory: ( service, sagaId ) => new Saga1( sagaId, 10 ) )

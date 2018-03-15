@@ -5,11 +5,11 @@ using CommonDomain.Core;
 using EventStoreKit.Handler;
 using EventStoreKit.Messages;
 
-namespace EventStoreKit.Services
+namespace EventStoreKit.Core.Sagas
 {
-    public class SagaBase : SagaBase<Message>
+    public abstract class SagaBase : SagaBase<Message>
     {
-        public SagaBase()
+        protected SagaBase()
         {
             var handlerTypeEvent = typeof( IEventHandler<> );
             var handlerTypeTransient = typeof( IEventHandlerTransient<> );

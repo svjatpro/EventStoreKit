@@ -1,73 +1,145 @@
 # EventStoreKit #
 
 EventStoreKit is a library, which provide various tool to work with EventSourcing / CQRS projects.
+And the goal is to combine several principles, which are not combined easily: 
 
-## The goal of this libraries is to combine low-entry barier to start new project, and 
+* Easy start. 
 
-## Easy start to make project prototypes or experiment with EventSourcing
+One can start to code/prototyping with single small piece of code, even without any extension. And this code will work.
+See the minimalystic samples:
 
-* small code examples, registration, and use of stuff, probably dummy code
+- Dummy
+- [Northwind.Console](https://github.com/svjatpro/EventStoreKit/tree/2.0.0.x/_samples/Northwind.Console) - Simple console example, based on Northwind domain model
+
+* Modularity.
+
+* To be a library, and not to be a framework
+
+
+The goal of this libraries is to combine low-entry barier to start new project, and 
+Easy start to make project prototypes or experiment with EventSourcing
+
 
 ## Let's get started
 
+* First we need to install the core package
+
 From **NuGet**:
-* `Install-Package EventStoreKit.Core`
+`Install-Package EventStoreKit.Core`
 
-* Create EventStoreKit service
-```cs
-var service = new EventStoreKitService()
-    .Initialize();
-```
+* Lets create simplest application, kind of event sourcing 'Hello World'
 
-* Create domain classes
+we need an aggregate class, which raises the events, when handle appropriate commands:
 ```cs
 class Aggregate1 : AggregateBase,
-    ICommandHandler<Command1>
+    ICommandHandler<CreateCommand1>,
+    ICommandHandler<RenameCommand1>
 {
+    private string Name;
+
+    private bool ValidateName( string name ){ ... }
+
     public Aggregate1( Guid id )
     {
         Id = id;
-        Register<Event1>( Apply );
+        Register<CreatedEvent1>( message => {} );
+        Register<RenamedEvent1>( message => { Name = message.Name; } );
     }
-    public void Handle( Command1 )
+    public void Handle( CreateCommand1 cmd )
     {
-        Raise( new Event1{ Id = id, ... } );
+        Raise( new CreatedEvent1{ Id = id } );
+        Raise( new CreatedEvent1{ Id = id, Name = cmd.Name } );
+    }
+    public void Handle( RenameCommand1 cmd )
+    {
+        if( cmd.Name == Name )
+            return;
+        if( !ValidateName( cmd.Name ) )
+            throw new InvalidNameException( ... );
+
+        Raise( new RenamedEvent1{ Id = id, Name = cmd.Name } );
     }
 }
 
-service = new EventStoreKitService()
-    .RegisterAggregateCommandHandler<Aggregate1>()
-    .Initialize();
-```
-
-* Send command
-```cs
-service.SendCommand( new Command1{...} );
-```
-
-* Subscribe for events
-```cs
-public class Projection1 : SqlProjection,
-    IEventHandler<Event1>
+class CreateCommand1 : DomainCommand 
+{ 
+    public string Name { get; set; }
+}
+class RenameCommand1 : DomainCommand 
+{ 
+    public string Name { get; set; }
+}
+class CreatedEvent1 : DomainEvent 
 {
-    public Handle( Event1 message )
+}
+class RenamedEvent1 : DomainEvent 
+{
+    public string Name { get; set; }
+}
+```
+
+Then we need a projection, which receives events and holds current state of all entities, associated with aggregate class: 
+```cs
+class Projection1 : SqlProjection<ReadModel1>,
+    IEventHandler<CreatedEvent1>,
+    IEventHandler<RenamedEvent1>
+{
+    public Handle( CreatedEvent1 message )
     {
+        DbProviderFactory.Run( db => db.Insert( new ReadModel1{ Id = message.Id, Name = '' } ) ) );
+    }
+
+    public Handle( RenamedEvent1 message )
+    {
+        DbProviderFactory.Run( db => db.Update<ReadModel1>( 
+            model => model.Id == message.Id, 
+            model => new ReadModel1{ Name = message.Name } ) ) );
+    }
+
+    public List<ReadModel1> GetAll()
+    {
+        return DbProviderFactory.Run( db => db.Query<ReadModel1>().ToList<>() );
     }
 }
 
-service = new EventStoreKitServie()
-    .RegisterAggregateCommandHandler<Aggregate1>()
-    .RegisterEventSubscriber<Projection1>()
-    .Initialize();
-
-projection = service.GetSubscriber<Projection1>();
-
+class ReadModel1
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+}
 ```
 
+Initialize Mediator Service: 
+```cs
+var service = new EventStoreKitService()
+    .RegisterAggregate<Aggregate1>()
+    .RegisterSubscriber<Projection1>();
+```
 
+Now we can start to use our 'application', 
+lets send several commands
+```cs
+service.SendCommand( new CreateCommand1{ id = ( id1 = Guid.NewGuid() ), Name = 'name1' } );
+service.SendCommand( new CreateCommand1{ id = Guid.NewGuid(), Name = 'name2' } );
+service.SendCommand( new CreateCommand1{ id = id1, Name = 'name1 updated' } );
+```
+now get the projection instance,
+```cs
+projection = service.GetSubscriber<Projection1>();
+```
+wait until it handle all events in the queue, and get the current state of all entities:
+```cs
+projection.QueuedMessages().Wait();
+projection.GetAll().ForEach( model => Console.WriteLine( model.Name ) );
+```
 
+## Configure DataBase
 
-## EventStoreKit Extensions ##
+## Integrate with IoC containers
+
+## Configure logging
+
+EventStoreKit Extensions
 
 Easy migration to another technology
 
@@ -316,10 +388,11 @@ class CurrentUserProvider : ICurrentUserIdProvider
 
 ## Sagas
 
-* simple saga example
+* Lets start with simple example.
 
+First we need to create saga class, inherited from (EventStoreKit) SagaBase; 
+and signup to required events/commands:
 ```cs
-// create saga class
 private class Saga1 : SagaBase,
     IEventHandler<TestEvent1>, 
     IEventHandler<TestEvent2>, 
@@ -327,7 +400,7 @@ private class Saga1 : SagaBase,
 {
     public Saga1( string id )
     { 
-        Id = id; 
+        Id = id; // Id initialization is required, otherwise saga can't be saved
     }
 
     public void Handle( TestEvent1 message )
@@ -345,7 +418,10 @@ private class Saga1 : SagaBase,
         Dispatch( new TestCommand4 { Id = command.Id } );
     }
 }
+```
 
+Then we need to register saga class in mediator service:
+```cs
 // register
 Service
     ... 
@@ -353,9 +429,12 @@ Service
     ... 
     .Initialize();
 ```
+If saga registered in this minimalistic way, then each time the one of subscribed message published, 
+saga with id = "{SagaType.Name}_{message.Id}" is instantiated from stored events, process message, and save the message in saga stream.
 
-* Custom factory for saga
+* Instantiation of Saga can be customized. 
 
+If saga have to be instantiated with custom constructor, like this: 
 ```cs
 private class Saga1 : SagaBase,
     IEventHandler<TestEvent1>,
@@ -378,7 +457,10 @@ private class Saga1 : SagaBase,
     }
     ... 
 }
+```
 
+Then it should be registered with appropriate factory method:
+```cs
 Service
     ... 
     .RegisterSaga<Saga1>( 
@@ -389,25 +471,12 @@ Service
     .Initialize();
 ```
 
-* Custom saga id mapping
+* Custom saga id mapping.
 
-By default sagaId generated by following pattern "{SagaClassName}_{message.Id}".
-To use another patterns, one can configure patterns for each message type on saga registration
-
+By default sagaId generated by following pattern "{SagaClass.Name}_{message.Id}".
+It is not what we need, if saga covers several entities, related by some parent object, or whatever logic, which goes beyond the single entity.
+In this case we need to define saga id pattern for each message, which handled by saga:
 ```cs
-private class Saga1 : SagaBase,
-    IEventHandler<TestEvent1>,
-    IEventHandler<TestEvent2>
-{
-    public Saga1( string id ) { Id = id; }
-
-    public void Handle( TestEvent1 message )
-    {
-        Dispatch( new TestCommand2 { Id = message.Id, Some } );
-    }
-    ... 
-}
-
 Service
     ... 
     .RegisterSaga<Saga1>( 
@@ -418,11 +487,10 @@ Service
     .Initialize();
 ```
 
-* Transien message handling
+* Transient message handling.
 
-Transiend handling means, that message will not saved in saga's stream. 
-You can mix both messages in single saga. 
-
+Transient handling means that message will processed by saga, but not saved in saga's stream.
+You can mix both style in single saga:
 ```cs
 private class Saga1 : SagaBase,
     IEventHandler<TestEvent1>,
@@ -445,8 +513,10 @@ private class Saga1 : SagaBase,
 
 * Saga instances can be Cached. 
 
-this can be usefull for sagas with long lifecicle.
-
+This can be usefull for sagas with long lifecicle and a lot of messages, stored in saga's stream, 
+in this way, first time ( after service recycling ) saga handle new message it instantiated in regular way, 
+and then instance is reused for all further messages. All processed messages stored in saga's stream in regular way, so 
+the cached instance can be recreated at any time.
 ```cs
 Service
     ... 
