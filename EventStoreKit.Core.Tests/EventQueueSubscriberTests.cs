@@ -86,13 +86,7 @@ namespace EventStoreKit.Tests
         [Test]
         public void EventQueueSubscriberShouldReturnRegisteredEventHandlers()
         {
-            Subscriber1.HandledEventTypes.ShouldBeEquivalentTo( new []
-            {
-                typeof(SequenceMarkerEvent),
-                typeof(StreamOnIdleEvent),
-                typeof(Message1),
-                typeof(Message2)
-            } ); 
+            Subscriber1.HandledEventTypes.Should().BeEquivalentTo( typeof(SequenceMarkerEvent), typeof(StreamOnIdleEvent), typeof(Message1), typeof(Message2) ); 
         }
 
         #region Process messages

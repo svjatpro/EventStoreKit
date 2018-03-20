@@ -223,7 +223,7 @@ namespace EventStoreKit.Tests
             Subscriber1.Handle( new Message1 { Id = "2" } );
             Subscriber1.Handle( new Message2 { Id = "3" } );
 
-            new Action( () => task.Wait() ).ShouldThrow<Exception>().WithMessage( exception.Message );
+            new Action( () => task.Wait() ).Should().Throw<Exception>().WithMessage( exception.Message );
         }
 
 
@@ -267,7 +267,7 @@ namespace EventStoreKit.Tests
             Subscriber1.Handle( new Message1 { Id = "2" } );
             Subscriber1.Handle( new Message2 { Id = "3" } );
 
-            new Action( () => task.Wait() ).ShouldThrow<Exception>().WithMessage( exception.Message );
+            new Action( () => task.Wait() ).Should().Throw<Exception>().WithMessage( exception.Message );
         }
 
 
@@ -282,7 +282,7 @@ namespace EventStoreKit.Tests
             Thread.Sleep( 110 );
             Subscriber1.Handle( new Message1 { Id = "1" } );
 
-            new Action( () => task.Wait() ).ShouldThrow<TimeoutException>();
+            new Action( () => task.Wait() ).Should().Throw<TimeoutException>();
         }
 
     }

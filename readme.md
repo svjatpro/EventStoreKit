@@ -48,7 +48,7 @@ class Aggregate1 : AggregateBase,
     public void Handle( CreateCommand1 cmd )
     {
         Raise( new CreatedEvent1{ Id = id } );
-        Raise( new CreatedEvent1{ Id = id, Name = cmd.Name } );
+        Raise( new RenamedEvent1{ Id = id, Name = cmd.Name } );
     }
     public void Handle( RenameCommand1 cmd )
     {
@@ -63,7 +63,6 @@ class Aggregate1 : AggregateBase,
 
 class CreateCommand1 : DomainCommand 
 { 
-    public string Name { get; set; }
 }
 class RenameCommand1 : DomainCommand 
 { 
@@ -86,7 +85,7 @@ class Projection1 : SqlProjection<ReadModel1>,
 {
     public Handle( CreatedEvent1 message )
     {
-        DbProviderFactory.Run( db => db.Insert( new ReadModel1{ Id = message.Id, Name = '' } ) ) );
+        DbProviderFactory.Run( db => db.Insert( new ReadModel1{ Id = message.Id } ) ) );
     }
 
     public Handle( RenamedEvent1 message )

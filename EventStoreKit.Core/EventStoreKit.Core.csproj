@@ -6,7 +6,7 @@
     <TargetFrameworks>net47</TargetFrameworks>
     <AssemblyName>EventStoreKit.Core</AssemblyName>
 
-    <PackageId>EventStoreKit.Core</PackageId>
+    <PackageId>EventStoreKit</PackageId>
     <PackageTags>EventStoreKit;NEventStore;Event Sourcing;CQRS</PackageTags>
     <PackageProjectUrl>https://github.com/svjatpro/EventStoreKit</PackageProjectUrl>
 

@@ -83,8 +83,7 @@ namespace EventStoreKit.Projections
                     Log.Info( "{0} handled ( version = {1} ). Unprocessed events: {2}", msgType.Name, message.Version, MessageQueue.Count );
                 }
 
-                if( !IsRebuild )
-                    MessageHandled.ExecuteAsync( this, new MessageEventArgs( message ) );
+                Execute( MessageHandled, this, new MessageEventArgs( message ), message );
             }
             catch ( Exception ex )
             {
