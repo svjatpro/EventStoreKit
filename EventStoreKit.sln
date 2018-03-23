@@ -21,6 +21,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.linq2db.Tests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.log4net.Tests", "EventStoreKit.log4net.Tests\EventStoreKit.log4net.Tests.csproj", "{644F4D78-52F7-48B8-B5F4-8657E0C65345}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.NEventStore.Tests", "EventStoreKit.NEventStore.Tests\EventStoreKit.NEventStore.Tests.csproj", "{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -135,6 +137,18 @@ Global
 		{644F4D78-52F7-48B8-B5F4-8657E0C65345}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{644F4D78-52F7-48B8-B5F4-8657E0C65345}.Release|x86.ActiveCfg = Release|Any CPU
 		{644F4D78-52F7-48B8-B5F4-8657E0C65345}.Release|x86.Build.0 = Release|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Debug|x86.Build.0 = Debug|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Release|x86.ActiveCfg = Release|Any CPU
+		{49DA4FBF-0B62-48E5-B386-9ACD44403DBC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
