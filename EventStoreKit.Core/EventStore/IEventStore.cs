@@ -100,9 +100,10 @@ namespace EventStoreKit.Core.EventStore
 
         public void AppendToStream(Message message)
         {
-            using (var stream = StoreEvents.CreateStream(Bucket.Default, message.Id))
+            using(var stream = StoreEvents.CreateStream(message.Id))
             {
-                
+                stream.Add(new EventMessage { Body=message });
+                stream.CommitChanges(Guid.NewGuid());
             }
         }
     }
