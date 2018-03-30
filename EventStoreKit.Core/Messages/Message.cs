@@ -16,6 +16,7 @@ namespace EventStoreKit.Messages
         public Guid CreatedBy { get; set; }
 
 
+
         /// <summary>
         /// Indicates, that the message is a part of message group, logically related
         /// </summary>

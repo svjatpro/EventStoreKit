@@ -8,7 +8,7 @@ namespace EventStoreKit.Projections
     {
         public readonly Message Message;
 
-        public MessageEventArgs( Message message )
+        public MessageEventArgs(Message message)
         {
             Message = message;
         }

@@ -8,6 +8,13 @@
     <GenerateRuntimeConfigurationFiles>false</GenerateRuntimeConfigurationFiles>
   </PropertyGroup>
 
+  <!--ItemGroup>
+    <AssemblyAttribute Include="NUnit.Framework.Parallelizable">
+        <IsLiteral>true</IsLiteral>
+        <_Parameter1>NUnit.Framework.ParallelScope.Fixtures</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup-->
+
   <ItemGroup Condition=" '$(TargetFramework)' == 'net47' ">
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />

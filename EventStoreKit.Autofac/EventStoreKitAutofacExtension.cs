@@ -34,7 +34,7 @@ namespace EventStoreKit.Autofac
             };
         }
     }
-
+    
     public static class EventStoreKitAutofacExtension
     {
         public static void InitializeEventStoreKitService( this ContainerBuilder builder,

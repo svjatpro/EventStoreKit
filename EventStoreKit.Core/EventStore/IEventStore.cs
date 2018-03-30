@@ -16,12 +16,54 @@ using NEventStore.Persistence.Sql.SqlDialects;
 
 namespace EventStoreKit.Core.EventStore
 {
+    // message interfaces - no need
+    // basic class Message - no need for local stuff, dispatcher can be splitted to command / events
+
+    // #1. send command
+    // #2. saga process event
+    // #3. projection process event
+
+    // save event:
+    //  domain: just an event, it will be serialized, get all meta properties from domain event itself
+    //  saga: streamId, domain event
+
+    //public interface IMessage
+    //{
+    //    DateTime Created { get; }
+    //    Guid EventId { get; }
+    //}
+    public interface IEvent
+    {
+        DateTime Created { get; }
+        Guid EventId { get; }
+    }
+    public interface ICommand
+    {
+        
+    }
+
+
+    public class MessageEventArgs : EventArgs
+    {
+        public readonly Message Message;
+
+        public MessageEventArgs(Message message)
+        {
+            Message = message;
+        }
+    }
 
     public interface IEventStore
     {
         event EventHandler<MessageEventArgs> MessagePublished;
 
         void AppendToStream( Message message );
+
+        // void SubscribeForAll();
+        // void SubscribeForStream();
+    
+        // void DeleteStream( string streamId )
+        // void DeleteMessage( string streamId, Guid messageId )
     }
 
     public class NEventStoreAdapter : IEventStore
