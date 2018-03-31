@@ -5,7 +5,6 @@ using NUnit.Framework;
 namespace EventStoreKit.Logging.Tests
 {
     [TestFixture]
-    [Parallelizable(ParallelScope.Fixtures)]
     public class LoggerTests
     {
         private MemoryAppender Appender;

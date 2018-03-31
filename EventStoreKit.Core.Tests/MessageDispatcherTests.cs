@@ -7,7 +7,7 @@ using NUnit.Framework;
 
 //[assembly: Parallelizable(ParallelScope.Fixtures)]
 
-namespace EventStoreKit.Core.Tests.MessageDispatcher
+namespace EventStoreKit.Core.Tests
 {
     [TestFixture]
     [Parallelizable(ParallelScope.Children)]
@@ -42,24 +42,24 @@ namespace EventStoreKit.Core.Tests.MessageDispatcher
         {
             var count1 = 0;
             var count2 = 0;
-            var dispatcher = new MessageDispatcher<Message>(Substitute.For<ILogger<MessageDispatcher<Message>>>());
+            var dispatcher = new MessageDispatcher<Message>( Substitute.For<ILogger<MessageDispatcher<Message>>>() );
 
-            dispatcher.RegisterHandler<Event1>(msg => { count1++; });
-            dispatcher.RegisterHandler<Event1>(msg => { count2++; });
-            dispatcher.RegisterHandler<Event2>(msg => { count2++; });
+            dispatcher.RegisterHandler<Event1>( msg => { count1++; } );
+            dispatcher.RegisterHandler<Event1>( msg => { count2++; } );
+            dispatcher.RegisterHandler<Event2>( msg => { count2++; } );
 
-            dispatcher.Dispatch(new Event1());
-            dispatcher.Dispatch(new Event2());
-            dispatcher.Dispatch(new Event1());
+            dispatcher.Dispatch( new Event1() );
+            dispatcher.Dispatch( new Event2() );
+            dispatcher.Dispatch( new Event1() );
 
-            count1.Should().Be(2);
-            count2.Should().Be(3);
+            count1.Should().Be( 2 );
+            count2.Should().Be( 3 );
         }
 
         [Test]
         public void DispatcherShouldDispatchNotAllowMultipleRoutesForSingleMessage()
         {
-            var dispatcher = new MessageDispatcher<Message>(Substitute.For<ILogger<MessageDispatcher<Message>>>());
+            var dispatcher = new MessageDispatcher<Message>( Substitute.For<ILogger<MessageDispatcher<Message>>>() );
 
             dispatcher.RegisterHandler<Event1>( msg => {}, false );
             Assert.Throws<InvalidOperationException>( () => dispatcher.RegisterHandler<Event1>( msg => {}, false ) );
@@ -68,7 +68,7 @@ namespace EventStoreKit.Core.Tests.MessageDispatcher
         [Test]
         public void DispatcherShouldIgnoreMessageOfWrongType()
         {
-            var dispatcher = new MessageDispatcher<Message>(Substitute.For<ILogger<MessageDispatcher<Message>>>());
+            var dispatcher = new MessageDispatcher<Message>( Substitute.For<ILogger<MessageDispatcher<Message>>>() );
             dispatcher.Dispatch( (object)new Event3() );
         }
     }

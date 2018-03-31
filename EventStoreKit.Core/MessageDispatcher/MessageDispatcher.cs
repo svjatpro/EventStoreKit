@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Configuration;
-using System.Text;
-using System.Threading.Tasks;
 using EventStoreKit.Logging;
-using EventStoreKit.Messages;
 using EventStoreKit.Services;
 using EventStoreKit.Utility;
 
@@ -32,11 +28,13 @@ namespace EventStoreKit.Core
                 handlers = new List<Action<TBasic>>();
                 Routes.Add( typeof(TMessage), handlers );
             }
-            if( !allowMultiple && handlers.Count != 0  )
+            if ( !allowMultiple && handlers.Count != 0 )
+            {
                 throw new InvalidOperationException( "Multiple routes is not allowed for this message");
+            }
 
             handlers.Add( DelegateAdjuster.CastArgument<TBasic, TMessage>( handler ) );
-            Logger.Debug( "Handler registered: {0}", typeof(TMessage).Name );
+            Logger.Debug( $"Handler registered: {typeof(TMessage).Name}" );
         }
 
         public void Dispatch( object message )
@@ -55,7 +53,7 @@ namespace EventStoreKit.Core
                 .ToList()
                 .ForEach( handler => handler( message ) );
 
-            Logger.Debug( $"Event dispatched: {message.GetType().Name}" );
+            Logger.Debug( $"Event dispatched: {typeof(TMessage).Name}" );
         }
     }
 }
