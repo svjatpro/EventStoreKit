@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.Serialization;
 
 namespace EventStoreKit.Messages
 {
@@ -14,13 +13,5 @@ namespace EventStoreKit.Messages
         public DateTime Created { get; set; }
 
         public Guid CreatedBy { get; set; }
-
-
-
-        /// <summary>
-        /// Indicates, that the message is a part of message group, logically related
-        /// </summary>
-        [IgnoreDataMember]
-        public bool IsBulk { get; set; }
     }
 }

@@ -83,7 +83,7 @@ namespace EventStoreKit.Projections
                     Log.Info( "{0} handled ( version = {1} ). Unprocessed events: {2}", msgType.Name, message.Version, MessageQueue.Count );
                 }
 
-                Execute( MessageHandled, this, new MessageEventArgs( message ), message );
+                Execute( MessageHandled, this, new MessageEventArgs( message ) );
             }
             catch ( Exception ex )
             {
@@ -189,10 +189,9 @@ namespace EventStoreKit.Projections
         /// <param name="event">Event handler</param>
         /// <param name="sender">Sender object</param>
         /// <param name="args">Generic event argument</param>
-        /// <param name="message">Initial message</param>
-        protected void Execute<TArgs>( EventHandler<TArgs> @event, object sender, TArgs args, Message message = null ) where TArgs : EventArgs
+        protected void Execute<TArgs>( EventHandler<TArgs> @event, object sender, TArgs args ) where TArgs : EventArgs
         {
-            if ( @event != null && !IsRebuild && ( message == null || !message.IsBulk ) )
+            if ( @event != null && !IsRebuild )
                 @event.BeginInvoke( sender, args, result =>
                 {
                     try { ( (EventHandler<TArgs>)( (AsyncResult)result ).AsyncDelegate ).EndInvoke( result ); }
@@ -202,9 +201,9 @@ namespace EventStoreKit.Projections
                     }
                 }, null );
         }
-        protected void Execute( EventHandler @event, object sender, EventArgs args, Message message = null )
+        protected void Execute( EventHandler @event, object sender, EventArgs args )
         {
-            if ( @event != null && !IsRebuild && ( message == null || !message.IsBulk ) )
+            if ( @event != null && !IsRebuild )
             {
                 @event.BeginInvoke( sender, args, result =>
                 {
