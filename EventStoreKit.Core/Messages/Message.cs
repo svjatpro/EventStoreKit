@@ -4,6 +4,9 @@ namespace EventStoreKit.Messages
 {
     public abstract class Message
     {
+
+
+
         public Guid Id { get; set; }
 
         public int Version { get; set; }

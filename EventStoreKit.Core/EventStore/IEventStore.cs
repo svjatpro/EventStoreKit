@@ -5,9 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using EventStoreKit.DbProviders;
 using EventStoreKit.Logging;
-using EventStoreKit.Messages;
 using EventStoreKit.Projections;
 using EventStoreKit.Services;
+using EventStoreKit.Services.IdGenerators;
 using EventStoreKit.Utility;
 using NEventStore;
 using NEventStore.Dispatcher;
@@ -32,22 +32,62 @@ namespace EventStoreKit.Core.EventStore
     //    DateTime Created { get; }
     //    Guid EventId { get; }
     //}
-    public interface IEvent
+    //public interface IEvent
+    //{
+    //    DateTime Created { get; }
+    //    Guid EventId { get; }
+    //}
+    //public interface ICommand
+    //{
+        
+    //}
+
+    public interface IMessage
     {
+        string StreamId { get; }
         DateTime Created { get; }
         Guid EventId { get; }
+        //long EventNumber { get; }
     }
-    public interface ICommand
+    public class Message : IMessage
     {
-        
+        // string StreamId  // commit.StreamId
+        // Guid EventId ?
+        // DateTime Created // commit.CommitStamp
+        // long EventNumber ?
+
+        public string StreamId { get; set; }
+        public DateTime Created { get; set; }
+        public Guid EventId { get; set; }
+        //public long EventNumber { get; set; }
+    }
+
+    public interface IDomainMessage : IMessage
+    {
+        int Version { get; }
+        Guid Id { get; }
+        Guid CreatedBy { get; }
+    }
+    public class DomainEvent : Message, IDomainMessage
+    {
+        public int Version { get; set; }
+        public Guid Id { get; set; }
+        public Guid CreatedBy { get; set; }
+    }
+
+    public class DomainCommand : Message, IDomainMessage
+    {
+        public int Version { get; set; }
+        public Guid Id { get; set; }
+        public Guid CreatedBy { get; set; }
     }
 
 
     public class MessageEventArgs : EventArgs
     {
-        public readonly Message Message;
+        public readonly IMessage Message;
 
-        public MessageEventArgs(Message message)
+        public MessageEventArgs( IMessage message )
         {
             Message = message;
         }
@@ -57,7 +97,7 @@ namespace EventStoreKit.Core.EventStore
     {
         event EventHandler<MessageEventArgs> MessagePublished;
 
-        void AppendToStream( Message message );
+        void AppendToStream( IMessage message );
 
         // void SubscribeForAll();
         // void SubscribeForStream();
@@ -68,10 +108,13 @@ namespace EventStoreKit.Core.EventStore
 
     public class NEventStoreAdapter : IEventStore
     {
+        private IIdGenerator IdGenerator;
         private readonly IStoreEvents StoreEvents;
         
         public NEventStoreAdapter( Wireup wireup = null, IDataBaseConfiguration configuration = null, ILoggerFactory loggerFactory = null )
         {
+            IdGenerator = new SequentialIdgenerator();
+
             if( wireup == null )
             {
                 wireup = Wireup.Init();
@@ -140,12 +183,12 @@ namespace EventStoreKit.Core.EventStore
 
         public event EventHandler<MessageEventArgs> MessagePublished;
 
-        public void AppendToStream(Message message)
+        public void AppendToStream( IMessage message )
         {
-            using(var stream = StoreEvents.CreateStream(message.Id))
+            using( var stream = StoreEvents.CreateStream( message.StreamId ) )
             {
-                stream.Add(new EventMessage { Body=message });
-                stream.CommitChanges(Guid.NewGuid());
+                stream.Add( new EventMessage { Body = message } );
+                stream.CommitChanges( IdGenerator.NewGuid() );
             }
         }
     }
