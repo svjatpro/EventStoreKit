@@ -49,6 +49,15 @@ namespace EventStoreKit.Core.EventStore
         Guid EventId { get; }
         //long EventNumber { get; }
     }
+    public interface IDomainMessage : IMessage
+    {
+        int Version { get; }
+        Guid Id { get; }
+        Guid CreatedBy { get; }
+    }
+
+
+
     public class Message : IMessage
     {
         // string StreamId  // commit.StreamId
@@ -62,12 +71,7 @@ namespace EventStoreKit.Core.EventStore
         //public long EventNumber { get; set; }
     }
 
-    public interface IDomainMessage : IMessage
-    {
-        int Version { get; }
-        Guid Id { get; }
-        Guid CreatedBy { get; }
-    }
+   
     public class DomainEvent : Message, IDomainMessage
     {
         public int Version { get; set; }
@@ -108,7 +112,7 @@ namespace EventStoreKit.Core.EventStore
 
     public class NEventStoreAdapter : IEventStore
     {
-        private IIdGenerator IdGenerator;
+        private readonly IIdGenerator IdGenerator;
         private readonly IStoreEvents StoreEvents;
         
         public NEventStoreAdapter( Wireup wireup = null, IDataBaseConfiguration configuration = null, ILoggerFactory loggerFactory = null )
