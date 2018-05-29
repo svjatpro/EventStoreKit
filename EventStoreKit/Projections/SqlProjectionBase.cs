@@ -32,6 +32,8 @@ namespace EventStoreKit.Projections
 
         private void CleanUpProjection( SystemCleanedUpEvent message )
         {
+            ProjectionTemplates.ForEach( template => template.Flush() );
+
             DbProviderFactory.Run( db =>
             {
                 var createTableMethod = db.GetType().GetMethod( "CreateTable", BindingFlags.Public | BindingFlags.Instance );
