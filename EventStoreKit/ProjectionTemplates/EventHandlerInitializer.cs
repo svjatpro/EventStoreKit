@@ -299,10 +299,9 @@ namespace EventStoreKit.ProjectionTemplates
         /// <summary>
         /// Initialize handler to Delete entity;
         /// </summary>
-        public EventHandlerInitializer<TReadModel, TEvent> AsDeleteAction(
-            Func<Action<IDbProvider, TEvent>> deleteAction = null,
-            Func<Func<TEvent, bool>> validateEvent = null )
+        public EventHandlerInitializer<TReadModel, TEvent> AsDeleteAction()
         {
+            var eventType = typeof( TEvent );
             EventRegister(
                 typeof( TEvent ),
                 @event =>
@@ -310,15 +309,22 @@ namespace EventStoreKit.ProjectionTemplates
                     DbFactory.Run(
                         db =>
                         {
-                            var validate = validateEvent.With( a => a() );
-                            if ( validate != null && !validate( (TEvent) @event ) )
+                            // run validation expression
+                            if( !ValidateExpression.Return( v => v( db, (TEvent)@event ), true ) )
                                 return;
 
-                            DbStrategy.Flush(); // todo: is it make sence to delete from buffer without adding to DB?
+                            if( EventsToFlush.Contains( eventType ) )
+                                DbStrategy.Flush();
+
+                            // run custom action before update
+                            BeforeExpression.Do( a => a( db, (TEvent)@event ) );
 
                             var predicat = GetReadModelPredicat( (TEvent) @event );
                             if ( predicat != null )
                                 db.Delete( predicat );
+
+                            // run custom action after update
+                            AfterExpression.Do( a => a( db, (TEvent)@event ) );
 
                             // delete from cache
                             if ( predicat != null && Cache != null )
@@ -327,11 +333,6 @@ namespace EventStoreKit.ProjectionTemplates
                                 TReadModel m;
                                 Cache.TryRemove( id, out m );
                             }
-
-                            // run custom action
-                            var action = deleteAction.With( a => a() );
-                            if ( action != null )
-                                action( db, (TEvent) @event );
                         },
                         processException: RunOnErrorExpression.With( exceptionHandler => new Action<Exception>( exc => exceptionHandler( (TEvent)@event, exc ) ) ) );
 
