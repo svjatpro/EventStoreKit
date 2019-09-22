@@ -26,13 +26,13 @@ namespace EventStoreKit.NEventStore.Tests
         {
             var adapter = new NEventStoreAdapter();
 
-            adapter.MessagePublished += (o, msg) =>
-            {
-                Console.WriteLine( msg.Message.Id );
-            };
+            //adapter.MessagePublished += (o, msg) =>
+            //{
+            //    Console.WriteLine( msg.Message.Id );
+            //};
 
-            adapter.AppendToStream( new TestEvent1 { Id = Guid.NewGuid() } );
-            adapter.AppendToStream( new TestEvent1 { Id = Guid.NewGuid() } );
+            //adapter.AppendToStream( new TestEvent1 { Id = Guid.NewGuid() } );
+            //adapter.AppendToStream( new TestEvent1 { Id = Guid.NewGuid() } );
 
             Thread.Sleep(1000);
         }

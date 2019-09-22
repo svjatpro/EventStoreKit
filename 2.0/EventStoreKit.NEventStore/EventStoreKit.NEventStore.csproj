@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Description>EventStoreKit.NEventStore</Description>
     <Authors>svjatpro</Authors>
-    <TargetFramework>netstandard2.2.108</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>EventStoreKit.NEventStore</AssemblyName>
 
     <PackageId>EventStoreKit.NEventStore</PackageId>
@@ -28,5 +28,13 @@
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="dotnet pack --no-build --output ../.packages" ContinueOnError="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" />
   </Target>
+
+  <ItemGroup>
+    <PackageReference Include="NEventStore" Version="7.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EventStoreKit.Core\EventStoreKit.Core.csproj" />
+  </ItemGroup>
 
 </Project>
