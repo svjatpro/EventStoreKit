@@ -1,15 +1,88 @@
 ﻿using System;
+using System.Linq;
 using System.Net;
+using System.Threading.Tasks;
 using EventStore.ClientAPI;
 using EventStore.ClientAPI.SystemData;
+using EventStoreKit.Core.EventStore;
+using EventStoreKit.NEventStore;
 using NEventStore;
 
 namespace NESTest
 {
+    public class Message1 : Message
+    {
+        public string Text { get; set; }
+    }
     class Program
     {
         static void Main( string[] args )
         {
+            var store = new NEventStoreAdapter( w => w
+                .UsingInMemoryPersistence()
+                .InitializeStorageEngine()
+                .Build());
+
+            //var store = Wireup.Init()
+            //    //.UsingSqlPersistence( new NetStandardConnectionFactory(SqlClientFactory.Instance, "osbb" ))
+            //    //.WithDialect( new MySqlDialect() )
+            //    .UsingInMemoryPersistence()
+            //    .InitializeStorageEngine()
+            //    //.UsingJsonSerialization()
+            //    //.Compress()
+            //    //.EncryptWith(  )
+            //    //.HookIntoPipelineUsing()
+            //    .Build();
+
+            var id = Guid.NewGuid().ToString();
+            var message1 = new Message1 { StreamId = id, Text = "test1" };
+            var message2 = new Message1 { StreamId = id, Text = "test2" };
+
+            store.AppendToStream( id, message1 );
+            store.AppendToStream( id, message2 );
+
+            //using ( var stream = store.CreateStream( id ) )
+            //{
+            //    stream.Add( new EventMessage { Body = message1 } );
+            //    stream.CommitChanges( Guid.NewGuid() );
+
+            //    stream.Add( new EventMessage { Body = message2 } );
+            //    stream.CommitChanges( Guid.NewGuid() );
+            //}
+
+            //using ( var stream = store.OpenStream( id, 0, int.MaxValue ) )
+            //{
+            //    foreach ( var @event in stream.CommittedEvents )
+            //    {
+            //        Console.WriteLine( @event.Body );
+            //    }
+            //}
+
+            // -------------------
+
+            //// Read the Store with a Polling Client
+            //using ( store )
+            //{
+            //    Int64 checkpointToken = LoadCheckpoint();
+            //    var client = new PollingClient2( store.Advanced, commit =>
+            //        {
+            //            // Project / Dispatch the commit etc
+            //            Console.WriteLine( Resources.CommitInfo, commit.BucketId, commit.StreamId, commit.CommitSequence );
+            //            // Track the most recent checkpoint
+            //            checkpointToken = commit.CheckpointToken;
+            //            return PollingClient2.HandlingResult.MoveToNext;
+            //        },
+            //        waitInterval: 3000 );
+            //    // start the polling client
+            //    client.StartFrom( checkpointToken );
+            //    // before terminating the execution...
+            //    client.Stop();
+            //    SaveCheckpoint( checkpointToken );
+            //}
+        }
+
+        public async Task Test()
+        { 
             var connection = EventStoreConnection.Create( new IPEndPoint( IPAddress.Loopback, 1113 ) );
             // Don't forget to tell the connection to connect!
             //connection.ConnectAsync().Wait();
@@ -27,7 +100,8 @@ namespace NESTest
 
             // read from stream
             //connection.GetStreamMetadataAsync( "stream" ).Result.StreamMetadata.;
-            connection.ReadStreamEventsForwardAsync( "stream", 0, 1000, false );
+            var slice = await connection.ReadStreamEventsForwardAsync( "stream", 0, 1000, false );
+            slice.Events.First().Event.
             connection.ReadStreamEventsForwardAsync( "stream", 0, 1000, false, login );
 
             // read all
@@ -36,39 +110,6 @@ namespace NESTest
 
             // subscribe for events
             //connection.
-
-            // --------------------------------------
-
-            var store = Wireup.Init()
-                //.UsingSqlPersistence( new NetStandardConnectionFactory(SqlClientFactory.Instance, "osbb" ))
-                //.WithDialect( new MySqlDialect() )
-                .UsingInMemoryPersistence()
-                .InitializeStorageEngine()
-                //.UsingJsonSerialization()
-                //.Compress()
-                //.EncryptWith(  )
-                //.HookIntoPipelineUsing()
-                .Build();
-
-            // write to stream
-            var stream = store.OpenStream( "stream" );
-            stream.UncommittedEvents.Add( new EventMessage() );
-            stream.UncommittedEvents.Add( new EventMessage() );
-            stream.CommitChanges( Guid.NewGuid() );
-
-            // read from stream
-            store.Advanced.GetFrom( "bucketId", "stream", 0, 1000 );
-
-            foreach ( var @event in stream.CommittedEvents )
-                // business processing...
-                
-            // read all
-            store.Advanced.GetFrom( "bucket", 0 );
-
-            // subscribe for events
-
-            //store.Advanced.
-            
         }
     }
 }

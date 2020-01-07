@@ -83,19 +83,34 @@ namespace EventStoreKit.NEventStore
 
         //public event EventHandler<MessageEventArgs> MessagePublished;
 
-        public NEventStoreAdapter()
+        public NEventStoreAdapter(Func<Wireup, IStoreEvents> initialize)
         {
-
-        }
-
-        public void AppendToStream( string streamId, IMessage message )
-        {
-            throw new NotImplementedException();
+            StoreEvents = initialize(Wireup.Init());
+                //.UsingSqlPersistence( new NetStandardConnectionFactory(SqlClientFactory.Instance, "osbb" ))
+                //.WithDialect( new MySqlDialect() )
+                //.UsingInMemoryPersistence()
+                //.InitializeStorageEngine()
+                ////.UsingJsonSerialization()
+                ////.Compress()
+                ////.EncryptWith(  )
+                ////.HookIntoPipelineUsing()
+                //.Build();
         }
 
         public void AppendToStream( string streamId, params IMessage[] messages )
         {
-            throw new NotImplementedException();
+            using ( var stream = StoreEvents.CreateStream( streamId ) )
+            {
+                foreach ( var message in messages )
+                    stream.Add( new EventMessage { Body = message } );
+                stream.CommitChanges( Guid.NewGuid() );
+            }
         }
+
+        //Task<AppendResult> AppendToStream(
+        //    StreamId streamId,
+        //    int expectedVersion,
+        //    NewStreamMessage[] messages,
+        //    CancellationToken cancellationToken = default );
     }
 }

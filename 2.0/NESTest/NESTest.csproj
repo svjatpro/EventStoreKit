@@ -11,6 +11,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\EventStoreKit.NEventStore\EventStoreKit.NEventStore.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="ConnectionStrings.config">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

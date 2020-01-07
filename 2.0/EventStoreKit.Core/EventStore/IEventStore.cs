@@ -3,6 +3,24 @@ using System.Collections.Generic;
 
 namespace EventStoreKit.Core.EventStore
 {
+    //public readonly string JsonData;
+    //public readonly Guid MessageId;
+    //public readonly string Type;
+    //public readonly string JsonMetadata;
+    //public NewStreamMessage( Guid messageId, string type, string jsonData, string jsonMetadata = null )
+    //{
+        //Ensure.That( messageId, "MessageId" ).IsNotEmpty();
+        //Ensure.That( type, "type" ).IsNotNullOrEmpty();
+        //Ensure.That( jsonData, "data" ).IsNotNullOrEmpty();
+
+        //MessageId = messageId;
+        //Type = type;
+        //JsonData = jsonData;
+        //JsonMetadata = jsonMetadata ?? string.Empty;
+    //}
+
+
+    
     // message interfaces - no need
     // basic class Message - no need for local stuff, dispatcher can be splitted to command / events
 
@@ -26,8 +44,9 @@ namespace EventStoreKit.Core.EventStore
     //}
     //public interface ICommand
     //{
-        
+
     //}
+
 
     public interface IMessage
     {
@@ -93,10 +112,15 @@ namespace EventStoreKit.Core.EventStore
 
         //event EventHandler<MessageEventArgs> MessagePublished;
 
-        void AppendToStream( string streamId, IMessage message );
+        //Task<AppendResult> AppendToStream(
+        //    StreamId streamId,
+        //    int expectedVersion,
+        //    NewStreamMessage[] messages,
+        //    CancellationToken cancellationToken = default );
+
+        //void AppendToStream( string streamId, IMessage message );
         void AppendToStream( string streamId, params IMessage[] messages );
-
-
+        
         // void SubscribeForAll();
         // void SubscribeForStream();
     
