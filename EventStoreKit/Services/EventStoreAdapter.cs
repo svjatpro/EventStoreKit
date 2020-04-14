@@ -93,13 +93,30 @@ namespace EventStoreKit.Services
             Logger = logger.CheckNull( "logger" );
             EventPublisher = eventPublisher.CheckNull( "eventPublisher" );
 
+            var assemblies = AppDomain.CurrentDomain
+                .GetAssemblies()
+                .Select(a =>
+                {
+                    try
+                    {
+                        var types = a.GetTypes();
+                        return a;
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                })
+                .Where(a => a != null)
+                .ToArray();
+
             InternalStore = 
                 new AsynchronousDispatchSchedulerWireup( 
                     wireup.CheckNull( "wireup" ), 
                     new DelegateMessageDispatcher( DispatchCommit ),
                     DispatcherSchedulerStartup.Auto )
                 .UsingEventUpconversion()
-                .WithConvertersFrom( AppDomain.CurrentDomain.GetAssemblies() /*.Where( a => a.FullName.StartsWith( "Code.CL.Domain" ) )*/.ToArray() )
+                //.WithConvertersFrom( assemblies /*.Where( a => a.FullName.StartsWith( "Code.CL.Domain" ) )*/ )
                 .Build();
         }
 
