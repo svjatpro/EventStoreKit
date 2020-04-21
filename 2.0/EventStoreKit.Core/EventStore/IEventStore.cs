@@ -18,8 +18,7 @@ namespace EventStoreKit.Core.EventStore
         //JsonData = jsonData;
         //JsonMetadata = jsonMetadata ?? string.Empty;
     //}
-
-
+    
     
     // message interfaces - no need
     // basic class Message - no need for local stuff, dispatcher can be splitted to command / events

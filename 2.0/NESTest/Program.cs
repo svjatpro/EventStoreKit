@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using EventStore.ClientAPI.SystemData;
 using EventStoreKit.Core.EventStore;
 using EventStoreKit.NEventStore;
 using NEventStore;
+using NEventStore.Persistence.Sql;
 
 namespace NESTest
 {
@@ -18,45 +20,51 @@ namespace NESTest
     {
         static void Main( string[] args )
         {
-            var store = new NEventStoreAdapter( w => w
+            TestEventStore();
+        }
+
+        public static void TestEventStore()
+        {
+            var store = Wireup.Init()
+                .UsingSqlPersistence( new NetStandardConnectionFactory( SqlClientFactory.Instance, "osbb" ) )
+                //.UsingSqlPersistence( new NetStandardConnectionFactory(SqlClientFactory.Instance, "osbb" ))
+                //.WithDialect( new MySqlDialect() )
                 .UsingInMemoryPersistence()
                 .InitializeStorageEngine()
-                .Build());
-
-            //var store = Wireup.Init()
-            //    //.UsingSqlPersistence( new NetStandardConnectionFactory(SqlClientFactory.Instance, "osbb" ))
-            //    //.WithDialect( new MySqlDialect() )
-            //    .UsingInMemoryPersistence()
-            //    .InitializeStorageEngine()
-            //    //.UsingJsonSerialization()
-            //    //.Compress()
-            //    //.EncryptWith(  )
-            //    //.HookIntoPipelineUsing()
-            //    .Build();
-
+                //.UsingJsonSerialization()
+                //.Compress()
+                //.EncryptWith(  )
+                //.HookIntoPipelineUsing()
+                .Build();
+            
             var id = Guid.NewGuid().ToString();
             var message1 = new Message1 { StreamId = id, Text = "test1" };
             var message2 = new Message1 { StreamId = id, Text = "test2" };
 
-            store.AppendToStream( id, message1 );
-            store.AppendToStream( id, message2 );
+            using ( var stream = store.CreateStream( id ) )
+            {
+                stream.Add( new EventMessage { Body = message1 } );
+                stream.CommitChanges( Guid.NewGuid() );
 
-            //using ( var stream = store.CreateStream( id ) )
-            //{
-            //    stream.Add( new EventMessage { Body = message1 } );
-            //    stream.CommitChanges( Guid.NewGuid() );
+                stream.Add( new EventMessage { Body = message2 } );
+                stream.CommitChanges( Guid.NewGuid() );
+            }
 
-            //    stream.Add( new EventMessage { Body = message2 } );
-            //    stream.CommitChanges( Guid.NewGuid() );
-            //}
+            using ( var stream = store.OpenStream( id, 0, int.MaxValue ) )
+            {
+                foreach ( var @event in stream.CommittedEvents )
+                {
+                    Console.WriteLine( ((Message1)@event.Body).Text );
+                }
+            }
 
-            //using ( var stream = store.OpenStream( id, 0, int.MaxValue ) )
-            //{
-            //    foreach ( var @event in stream.CommittedEvents )
-            //    {
-            //        Console.WriteLine( @event.Body );
-            //    }
-            //}
+            //var store = new NEventStoreAdapter( w => w
+            //    .UsingInMemoryPersistence()
+            //    .InitializeStorageEngine()
+            //    .Build() );
+
+            //store.AppendToStream( id, message1 );
+            //store.AppendToStream( id, message2 );
 
             // -------------------
 
@@ -92,21 +100,21 @@ namespace NESTest
             var login = new UserCredentials( "login", "pw" );
 
             // write to stream
-            connection.AppendToStreamAsync( "qwer", ExpectedVersion.Any, event1 );
-            connection.AppendToStreamAsync( "qwer", ExpectedVersion.Any, login, event1 );
+            await connection.AppendToStreamAsync( "qwer", ExpectedVersion.Any, event1 );
+            await connection.AppendToStreamAsync( "qwer", ExpectedVersion.Any, login, event1 );
 
-            connection.ConditionalAppendToStreamAsync( "qwer", 123, new []{ event1 } );
-            connection.ConditionalAppendToStreamAsync( "qwer", 123, new []{ event1 }, login );
+            await connection.ConditionalAppendToStreamAsync( "qwer", 123, new []{ event1 } );
+            await connection.ConditionalAppendToStreamAsync( "qwer", 123, new []{ event1 }, login );
 
             // read from stream
             //connection.GetStreamMetadataAsync( "stream" ).Result.StreamMetadata.;
             var slice = await connection.ReadStreamEventsForwardAsync( "stream", 0, 1000, false );
-            slice.Events.First().Event.
-            connection.ReadStreamEventsForwardAsync( "stream", 0, 1000, false, login );
+            //slice.Events.First().Event.
+            await connection.ReadStreamEventsForwardAsync( "stream", 0, 1000, false, login );
 
             // read all
-            connection.ReadAllEventsForwardAsync( Position.Start, 50000, false );
-            connection.ReadAllEventsForwardAsync( Position.Start, 50000, false, login );
+            await connection.ReadAllEventsForwardAsync( Position.Start, 50000, false );
+            await connection.ReadAllEventsForwardAsync( Position.Start, 50000, false, login );
 
             // subscribe for events
             //connection.
