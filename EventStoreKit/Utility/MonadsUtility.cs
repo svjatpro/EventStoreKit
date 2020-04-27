@@ -91,7 +91,7 @@ namespace EventStoreKit.Utility
                     {
                         try
                         {
-                            a.OfType<AsyncResult>().AsyncDelegate.OfType<EventHandler>().EndInvoke( a );
+                            a.OfType<AsyncResult>().AsyncDelegate.OfType<EventHandler>()?.EndInvoke( a );
                         }
 // ReSharper disable EmptyGeneralCatchClause
                         catch ( Exception ) { }
