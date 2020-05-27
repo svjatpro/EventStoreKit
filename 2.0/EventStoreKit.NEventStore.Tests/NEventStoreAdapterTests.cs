@@ -23,7 +23,7 @@ namespace EventStoreKit.NEventStore.Tests
         {
             var store = Wireup.Init()
                 //.UsingSqlPersistence( new MySqlClientFactory(), "neventstore" )
-                .UsingSqlPersistence( new MySqlClientFactory(), "Server=127.0.0.1;Port=3306;Database=dev.tests;Uid=root;Pwd=Vfhszyf1!;charset=utf8;AutoEnlist=false;" )
+                .UsingSqlPersistence( new MySqlClientFactory(), "Server=127.0.0.1;Port=3306;Database=tmp.tests;Uid=root;Pwd=Jc,,,ktfnm1!;charset=utf8;AutoEnlist=false;" )
                 //.UsingSqlPersistence( new NetStandardConnectionFactory( SqlClientFactory.Instance, "neventstore" ) )
                     //"Server=127.0.0.1;Port=3306;Database=dev.tests;Uid=root;Pwd=Vfhszyf1!;charset=utf8;AutoEnlist=false;" ) )
                 //.UsingSqlPersistence( new NetStandardConnectionFactory(SqlClientFactory.Instance, "osbb" ))
