@@ -1,52 +1,48 @@
 syntax: glob
+# Visual Studio & .NET project files
 *.config
-*.bak
-*.o
-*.lo
-*.la
-#*#
-.*.rej
-*.rej
-.*~
-*~
-.#*
 *.suo
 *.user
 *.webinfo
-[Bb]in
-*/[Bb]in
-[Oo]bj
-*/[Oo]bj
-*.[Bb][Aa][Kk]
-*.~??
-*[Tt][Mm][Pp]
-.~*
-*.~*
-[Rr]elease
-*/[Rr]elease
-[Dd]ebug
-*/[Dd]ebug
-[Aa]nkh.[Ll]oad
-*/_ReSharper*
-_ReSharper*
-*resharper*
-*.[Cc]ache
-*.StyleCop
-*.ReSharper
 *.ncb
-*.resharper.user
 *.orig
-_bin/*
 buildlog.txt
 build.log
 TestResult.xml
-*[Pp]ublish.xml
+*.publish.xml
 Thumbs.db
-**/packages/*.*
-*/log.txt
-*/log*.txt
-.packages/**
-**/.vs
-**/.vs/**
+
+# Build output directories
+[Bb]in/
+[Oo]bj/
+[Rr]elease/
+[Dd]ebug/
+
+# ReSharper files
+_ReSharper*/
+*.ReSharper
+*.resharper.user
+*resharper*
+
+# Cache and logs
+*.cache
+*.StyleCop
+*.log
+log*.txt
 **/*.db
-**/*.db-journal 
+**/*.db-journal
+
+# Packages
+**/packages/*
+.packages/**
+
+# VS specific
+.vs/
+.vs/**
+
+# Temporary files
+*.bak
+*.tmp
+*.~??
+*.rej
+*~

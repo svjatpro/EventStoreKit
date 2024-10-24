@@ -1,50 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <Description>EventStoreKit.Core</Description>
-    <Authors>svjatpro</Authors>
-    <TargetFrameworks>net47</TargetFrameworks>
-    <AssemblyName>EventStoreKit.Core</AssemblyName>
-
-    <PackageId>EventStoreKit</PackageId>
-    <PackageTags>EventStoreKit;NEventStore;Event Sourcing;CQRS</PackageTags>
-    <PackageProjectUrl>https://github.com/svjatpro/EventStoreKit</PackageProjectUrl>
-
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
-    <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
-    <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
-    <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
-    <GenerateAssemblyCopyrightAttribute>false</GenerateAssemblyCopyrightAttribute>
-
-    <BuildNumber>$([System.DateTime]::Now.ToString(MMddHHmm))</BuildNumber>
-    <Version>2.0.0.0</Version>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
-
-  <ItemGroup Condition=" '$(TargetFramework)' == 'net47' ">
-    <Reference Include="System" />
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="NEventStore" Version="5.2.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
-    <PackageReference Include="Rx-Core" Version="2.2.5" />
-    <PackageReference Include="Rx-Interfaces" Version="2.2.5" />
-    <PackageReference Include="Rx-Linq" Version="2.2.5" />
-    <PackageReference Include="Rx-PlatformServices" Version="2.2.5" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="System.Configuration" />
-  </ItemGroup>
-
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="dotnet pack --no-build --output ../.packages" ContinueOnError="true" IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" />
-  </Target>
 
 </Project>
