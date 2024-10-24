@@ -5,7 +5,7 @@ namespace EventStoreKit.Core
         where TCommand : class
         where TAggregate : class
     {
-        TEvent Handle( TCommand command );
+        IEnumerable<object> Handle( TCommand command, TAggregate aggregate );
     }
 
     public interface ICommandHandler<TCommand> where TCommand : class
