@@ -9,13 +9,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.Marten", "Eve
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.NEventStore", "EventStoreKit.NEventStore\EventStoreKit.NEventStore.csproj", "{51F8FE86-89BA-40F2-93E2-71CE9347249E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.CommandLine", "EventStoreKit.CommandLine\EventStoreKit.CommandLine.csproj", "{7B737FBB-CB6B-43C9-A2F8-B680FE4DD6AC}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventStoreKit.NATS", "EventStoreKit.NATS\EventStoreKit.NATS.csproj", "{A7454763-498A-4E2D-8002-BA65BC9B1761}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{A83BB51E-A204-4C49-92FD-8D8D62E45063}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Northwind.Domain", "_samples\Northwind.Domain\Northwind.Domain.csproj", "{077B813F-1EDD-4093-B88C-4EC2C50B6CC1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventStoreKit", "EventStoreKit\EventStoreKit.csproj", "{59BBA2C7-57EF-581B-7CAF-61AD951DF571}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,10 +35,6 @@ Global
 		{51F8FE86-89BA-40F2-93E2-71CE9347249E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{51F8FE86-89BA-40F2-93E2-71CE9347249E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{51F8FE86-89BA-40F2-93E2-71CE9347249E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{7B737FBB-CB6B-43C9-A2F8-B680FE4DD6AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7B737FBB-CB6B-43C9-A2F8-B680FE4DD6AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7B737FBB-CB6B-43C9-A2F8-B680FE4DD6AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7B737FBB-CB6B-43C9-A2F8-B680FE4DD6AC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A7454763-498A-4E2D-8002-BA65BC9B1761}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A7454763-498A-4E2D-8002-BA65BC9B1761}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A7454763-498A-4E2D-8002-BA65BC9B1761}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -47,6 +43,10 @@ Global
 		{077B813F-1EDD-4093-B88C-4EC2C50B6CC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{077B813F-1EDD-4093-B88C-4EC2C50B6CC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{077B813F-1EDD-4093-B88C-4EC2C50B6CC1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59BBA2C7-57EF-581B-7CAF-61AD951DF571}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59BBA2C7-57EF-581B-7CAF-61AD951DF571}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59BBA2C7-57EF-581B-7CAF-61AD951DF571}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59BBA2C7-57EF-581B-7CAF-61AD951DF571}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
