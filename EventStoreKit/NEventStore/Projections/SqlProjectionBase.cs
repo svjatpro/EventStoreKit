@@ -18,7 +18,7 @@ public abstract class SqlProjectionBase : EventQueueSubscriber
     private void InitReadModel( IDbProvider db, Type modelType )
     {
         var createTableMethod = db.GetType().GetMethod( "CreateTable", BindingFlags.Public | BindingFlags.Instance );
-        createTableMethod?.MakeGenericMethod( modelType ).Invoke( db, new object[] { false } );
+        createTableMethod?.MakeGenericMethod( modelType ).Invoke( db, [false]);
     }
 
     #endregion

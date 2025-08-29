@@ -5,16 +5,30 @@ namespace EventStoreKit;
 
 public interface IEventStoreKitServiceBuilder
 {
-    IEventStoreKitServiceBuilder AddCommandHandler<TCommand>(Func<TCommand, (Guid streamId, object data)> handler)
+    IEventStoreKitServiceBuilder AddCommandHandler<TCommand>(
+        Func<TCommand, (Guid streamId, object data)> handler)
         where TCommand : class;
+
+    IEventStoreKitServiceBuilder AddCommandHandler<TCommand, TAggregate>(
+        Func<TAggregate, Guid, Func<TCommand, object>> handler)
+        where TCommand : class
+        where TAggregate : class, new();
+    IEventStoreKitServiceBuilder AddCommandHandler<TCommand, TAggregate>(
+        Func<TCommand, Guid> streamIdGetter,
+        Func<TAggregate, Func<TCommand, object>> handler)
+        where TCommand : class
+        where TAggregate : class, new();
 
     IEventStoreKitServiceBuilder AddEventsSubscriber<TSubscriber>(TSubscriber subscriber)
         where TSubscriber : IEventSubscriber;
 
+    IEventStoreKitServiceBuilder AddAggregate<TAggregate>()
+        where TAggregate : class, new();
+
     IEventStoreKit Initialize(string connectionString);
 }
 
-public interface IEventStoreKit
+public interface IEventStoreKit : IDisposable
 {
     IQueryEventsStore Events { get; }
     ICommandSender Commands { get; }
@@ -42,7 +56,12 @@ public interface IMessageDispatcher
     void Dispatch<TMessage>(TMessage? message) where TMessage : class;
 }
 
-//public interface ICommandHandler<in TCommand> where TCommand : class
-//{
-//    Task Handle(TCommand command);
-//}
+public interface IDomainCommand
+{
+    Guid StreamId { get; }
+}
+public interface ICommandHandler<TCommand> where TCommand : class //IDomainCommand
+{
+    object Handle(TCommand command);
+    Guid GetStreamId(TCommand command);
+}

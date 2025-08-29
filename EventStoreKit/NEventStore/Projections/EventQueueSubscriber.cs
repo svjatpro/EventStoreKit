@@ -1,7 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Reflection;
 
 namespace EventStoreKit.NEventStore.Projections
 {
@@ -31,9 +30,10 @@ namespace EventStoreKit.NEventStore.Projections
             return e => handler.Handle((TEvent)e);
         }
         
-        private void ProcessMessages( object message)
+        private void ProcessMessages( EventInfo message )
         {
-            var msgType = message.GetType();
+            var @event = message.Event;
+            var msgType = @event.GetType();
             try
             {
                 // process static handlers
@@ -41,7 +41,7 @@ namespace EventStoreKit.NEventStore.Projections
                 {
                     foreach ( var handler in handlers )
                     {
-                        handler( message );
+                        handler(@event);
                     }
                 }
             }
@@ -102,15 +102,16 @@ namespace EventStoreKit.NEventStore.Projections
             {
                 var eventType = handlerType.GetGenericArguments()[0];
 
-                var handler = typeof(EventQueueSubscriber)
-                    .GetMethod(nameof(CreateHandler), BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .MakeGenericMethod(eventType)
-                    .Invoke(this, []) as Action<object>;
+                var handleMethod = handlerType.GetMethod(nameof(IEventHandler<object>.Handle))!;
+                Action<object> handler = msg =>
+                {
+                    handleMethod.Invoke(this, [msg]);
+                };
                 Register(eventType, handler!, true);
             }
         }
 
-        public void Handle<TEvent>(TEvent @event) where TEvent : class
+        public void HandleEvent( object @event )
         {
             Handle( @event, false );
         }
